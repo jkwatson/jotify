@@ -32,6 +32,11 @@ public class Channel {
 		this.headerLength = 0;
 		this.dataLength   = 0;
 		this.listener     = listener;
+		
+		/* Force data state for AES key channel. */
+		if(this.type.equals(Type.TYPE_AESKEY)){
+			this.state = State.STATE_DATA;
+		}
 	}
 	
 	public int getId(){
@@ -107,9 +112,11 @@ public class Channel {
 					return;
 				}
 				
-				channel.listener.channelHeader(channel,
-					Arrays.copyOfRange(payload, offset, offset + headerLength)
-				);
+				if(channel.listener != null){
+					channel.listener.channelHeader(channel,
+						Arrays.copyOfRange(payload, offset, offset + headerLength)
+					);
+				}
 				
 				offset         += headerLength;
 				consumedLength += headerLength;
@@ -139,15 +146,28 @@ public class Channel {
 		if(length == 0){
 			channel.state = State.STATE_END;
 			
-			channel.listener.channelEnd(channel);
+			if(channel.listener != null){
+				channel.listener.channelEnd(channel);
+			}
 		}
 		else{
-			channel.listener.channelData(channel,
-				Arrays.copyOfRange(payload, offset, offset + length)
-			);
+			if(channel.listener != null){
+				channel.listener.channelData(channel,
+					Arrays.copyOfRange(payload, offset, offset + length)
+				);
+			}
 		}
 		
 		channel.dataLength += length;
+		
+		/* If this is an AES key channel, force end state. */
+		if(channel.type.equals(Type.TYPE_AESKEY)){
+			channel.state = State.STATE_END;
+			
+			if(channel.listener != null){
+				channel.listener.channelEnd(channel);
+			}
+		}
 	}
 	
 	public static void error(byte[] payload){
@@ -160,7 +180,9 @@ public class Channel {
 			return;
 		};
 		
-		channel.listener.channelError(channel);
+		if(channel.listener != null){
+			channel.listener.channelError(channel);
+		}
 		
 		Channel.channels.remove(channel.getId());
 	}

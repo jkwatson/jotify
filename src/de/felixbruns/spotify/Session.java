@@ -41,10 +41,10 @@ public class Session {
 	protected String country;
 	
 	/* DH and RSA keys. */
-	protected DHKeyPair dhClientKeyPair;
-	protected DHPublicKey          dhServerPublicKey;
-	protected byte[]               dhSharedKey;
-	protected RSAKeyPair           rsaClientKeyPair;
+	protected DHKeyPair   dhClientKeyPair;
+	protected DHPublicKey dhServerPublicKey;
+	protected byte[]      dhSharedKey;
+	protected RSAKeyPair  rsaClientKeyPair;
 	
 	/* 
 	 * Output form HMAC SHA-1, used for keying HMAC
@@ -79,7 +79,8 @@ public class Session {
 		
 		/* Set client identification (Spotify 0.3.11 / r43065 / Windows). */
 		this.clientOs       = 0x00; /* 0x00: Windows, 0x01: Mac OS X */
-		this.clientId       = new byte[]{0x01, 0x09, 0x10, 0x01}; /* new byte[]{0x01, 0x04, 0x03, 0x01} (official) */
+		//this.clientId       = new byte[]{0x01, 0x09, 0x10, 0x01};
+		this.clientId       = new byte[]{0x01, 0x04, 0x03, 0x01}; /* (official) */
 		this.clientRevision = 43065;
 		
 		/* Client and server generate 16 random bytes each. */

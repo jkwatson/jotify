@@ -11,6 +11,7 @@ import java.util.List;
 
 import de.felixbruns.spotify.crypto.DH;
 import de.felixbruns.spotify.util.Buffer;
+import de.felixbruns.spotify.util.Hex;
 import de.felixbruns.spotify.util.IntegerUtilities;
 import de.felixbruns.spotify.util.ServerLookup;
 import de.felixbruns.spotify.util.ServerLookup.Server;
@@ -139,6 +140,7 @@ public class Protocol {
 			 * Substatuses:
 			 * 0x01    : Client upgrade required
 			 * 0x03    : Non-existant user
+			 * 0x09    : Your current country doesn't match that set in your profile.
 			 * Default : Unknown error
 			 */
 			System.out.format("Status: %d, Substatus: %d => %s.\n",
@@ -436,14 +438,14 @@ public class Protocol {
 	}
 	
 	/* Request image using a 20 byte hash. The response is a JPG. */
-	public void sendImageRequest(ChannelListener listener, byte[] hash){
+	public void sendImageRequest(ChannelListener listener, String id){
 		/* Create channel and buffer. */
 		Channel channel = new Channel("Image-Channel", Channel.Type.TYPE_IMAGE, listener);
 		Buffer  buffer  = new Buffer();
 		
 		/* Append channel id and image hash. */
-		buffer.appendInt(channel.getId());
-		buffer.appendBytes(hash);
+		buffer.appendShort((short)channel.getId());
+		buffer.appendBytes(Hex.toBytes(id));
 		
 		/* Register channel. */
 		Channel.register(channel);
@@ -478,15 +480,15 @@ public class Protocol {
 		this.sendPacket(Command.COMMAND_TOKENNOTIFY);
 	}
 	
-	/* Request AES key for a file/track. */
-	public void sendAesKeyRequest(ChannelListener listener, byte[] fileId, byte[] trackId){
+	/* Request AES key for a track. */
+	public void sendAesKeyRequest(ChannelListener listener, Track track){
 		/* Create channel and buffer. */
 		Channel channel = new Channel("AES-Key-Channel", Channel.Type.TYPE_AESKEY, listener);
 		Buffer  buffer  = new Buffer();
 		
 		/* Request the AES key for this file by sending the file id and track id. */
-		buffer.appendBytes(fileId); /* 20 bytes */
-		buffer.appendBytes(trackId); /* 16 bytes */
+		buffer.appendBytes(Hex.toBytes(track.getFiles().get(0))); /* 20 bytes */
+		buffer.appendBytes(Hex.toBytes(track.getId())); /* 16 bytes */
 		buffer.appendShort((short)0x0000);
 		buffer.appendShort((short)channel.getId());
 		
@@ -498,7 +500,7 @@ public class Protocol {
 	}
 	
 	/* A demo wrapper for playing a track. */
-	public void sendPlayRequest(ChannelListener listener, byte[] fileId, byte[] trackId){
+	public void sendPlayRequest(ChannelListener listener, Track track){
 		/* 
 		 * Notify the server about our intention to play music, there by allowing
 		 * it to request other players on the same account to pause.
@@ -508,7 +510,7 @@ public class Protocol {
 		 * play commercials and waste bandwidth in vain.
 		 */
 		this.sendPacket(Command.COMMAND_REQUESTPLAY);
-		this.sendAesKeyRequest(listener, fileId, trackId);
+		this.sendAesKeyRequest(listener, track);
 	}
 	
 	/*
@@ -518,7 +520,7 @@ public class Protocol {
 	 * with AES key provided and a static IV, incremented for
 	 * each 16 byte data processed.
 	 */
-	public void sendSubstreamRequest(ChannelListener listener, byte[] fileId, int offset, int length, int unknown_200k){
+	public void sendSubstreamRequest(ChannelListener listener, Track track, int offset, int length){
 		/* Create channel and buffer. */
 		Channel channel = new Channel("Substream-Channel", Channel.Type.TYPE_SUBSTREAM, listener);
 		Buffer  buffer  = new Buffer();
@@ -533,11 +535,11 @@ public class Protocol {
 		buffer.appendShort((short)0x0000);
 		buffer.appendShort((short)0x4e20);
 		
-		/* Unknown... */
-		buffer.appendInt(unknown_200k);
+		/* Unknown (static value) */
+		buffer.appendInt(200 * 1000);
 		
 		/* 20 bytes file id. */
-		buffer.appendBytes(fileId);
+		buffer.appendBytes(Hex.toBytes(track.getFiles().get(0)));
 		
 		if(offset % 4096 != 0 || length % 4096 != 0){
 			throw new IllegalArgumentException("Offset and length need to be a multiple of 4096.");	
@@ -561,17 +563,17 @@ public class Protocol {
 	 * Get metadata for an artist (type = 1), album (type = 2) or a
 	 * list of tracks (type = 3). The response comes as compressed XML.
 	 */
-	public void sendBrowseRequest(ChannelListener listener, int type, Collection<byte[]> ids){
+	public void sendBrowseRequest(ChannelListener listener, int type, Collection<String> ids){
 		/* Create channel and buffer. */
 		Channel channel = new Channel("Browse-Channel", Channel.Type.TYPE_BROWSE, listener);
 		Buffer  buffer  = new Buffer();
 		
 		/* Check arguments. */
-		if(type != 1 || type != 2 || type != 3){
+		if(type != 1 && type != 2 && type != 3){
 			throw new IllegalArgumentException("Type needs to be 1, 2 or 3.");
 		}
-		else if((type != 1 || type != 2) && ids.size() != 1){
-			throw new IllegalArgumentException("Type 1 and 2 only accept one id.");
+		else if((type == 1 && type == 2) && ids.size() != 1){
+			throw new IllegalArgumentException("Types 1 and 2 only accept a single id.");
 		}
 		
 		/* Append channel id and type. */
@@ -579,8 +581,8 @@ public class Protocol {
 		buffer.appendByte((byte)type);
 		
 		/* Append id's. */
-		for(byte[] id : ids){
-			buffer.appendBytes(id);
+		for(String id : ids){
+			buffer.appendBytes(Hex.toBytes(id));
 		}
 		
 		/* Append zero. */
@@ -596,15 +598,15 @@ public class Protocol {
 	}
 	
 	/* Browse with only one id. */
-	public void sendBrowseRequest(ChannelListener listener, int type, byte[] id){
-		ArrayList<byte[]> list = new ArrayList<byte[]>();
+	public void sendBrowseRequest(ChannelListener listener, int type, String id){
+		ArrayList<String> list = new ArrayList<String>();
 		
 		list.add(id);
 		
 		this.sendBrowseRequest(listener, type, list);
 	}
 	
-	/* Request playlist details. The response comaes as plain XML. */
+	/* Request playlist details. The response comes as plain XML. */
 	public void sendPlaylistRequest(ChannelListener listener, byte[] playlistId, int unknown){
 		/* Create channel and buffer. */
 		Channel channel = new Channel("Playlist-Channel", Channel.Type.TYPE_PLAYLIST, listener);

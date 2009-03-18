@@ -101,7 +101,7 @@ public class Buffer {
 	}
 	
 	public void appendByte(byte b){
-		if(this.position + 1 >= this.size){
+		while(this.position + 1 >= this.size){
 			this.grow();
 		}
 		
@@ -115,7 +115,7 @@ public class Buffer {
 	}
 	
 	public void appendBytes(byte[] buffer, int n){
-		if(this.position + n >= this.size){
+		while(this.position + n >= this.size){
 			this.grow();
 		}
 		
@@ -125,7 +125,7 @@ public class Buffer {
 	}
 	
 	public void appendShort(short s){
-		if(this.position + 2 >= this.size){
+		while(this.position + 2 >= this.size){
 			this.grow();
 		}
 		
@@ -135,7 +135,7 @@ public class Buffer {
 	}
 	
 	public void appendInt(int i){
-		if(this.position + 4 >= this.size){
+		while(this.position + 4 >= this.size){
 			this.grow();
 		}
 		
@@ -145,7 +145,7 @@ public class Buffer {
 	}
 	
 	public void appendLong(long l){
-		if(this.position + 8 >= this.size){
+		while(this.position + 8 >= this.size){
 			this.grow();
 		}
 		
@@ -155,7 +155,7 @@ public class Buffer {
 	}
 	
 	public void appendString(String s){
-		if(this.position + s.length() >= this.size){
+		while(this.position + s.length() >= this.size){
 			this.grow();
 		}
 		
