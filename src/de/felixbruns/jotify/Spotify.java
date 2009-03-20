@@ -119,7 +119,7 @@ public class Spotify extends Thread implements CommandListener {
 		ChannelCallback callback = new ChannelCallback();
 		
 		/* Send browse request. */
-		this.protocol.sendBrowseRequest(callback, 1, id);
+		this.protocol.sendBrowseRequest(callback, type, id);
 		
 		/* Get data and inflate it. */
 		byte[] data = GZIP.inflate(callback.getData());
@@ -150,12 +150,12 @@ public class Spotify extends Thread implements CommandListener {
 	}
 	
 	/* Browse a track. */
-	public Track browse(Track track){
+	public Result browse(Track track){
 		/* Browse. */
-		XMLElement trackElement = this.browse(3, track.getId());
+		XMLElement resultElement = this.browse(3, track.getId());
 		
 		/* Create result from XML. */
-		return Track.fromXMLElement(trackElement);
+		return Result.fromXMLElement(resultElement);
 	}
 	
 	public void play(Track track){

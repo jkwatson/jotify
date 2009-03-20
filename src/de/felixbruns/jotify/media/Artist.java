@@ -3,6 +3,7 @@ package de.felixbruns.jotify.media;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.felixbruns.jotify.util.Hex;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class Artist {
@@ -85,5 +86,11 @@ public class Artist {
 	
 	public String toString(){
 		return String.format("[%s]", this.name);
+	}
+	
+	public static Artist fromURI(String uri) {
+		Artist artist = new Artist();
+		artist.id = Hex.URIToId(uri);
+		return artist;
 	}
 }
