@@ -1,5 +1,6 @@
 package de.felixbruns.jotify.media;
 
+import de.felixbruns.jotify.util.Hex;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class Album {
@@ -59,10 +60,10 @@ public class Album {
 		}
 		
 		/* Set artist. */
-		if(albumElement.hasChild("artist-id") && albumElement.hasChild("artist-name")){
+		if(albumElement.hasChild("artist-id") && albumElement.hasChild("artist")){
 			album.artist = new Artist(
 				albumElement.getChildText("artist-id"),
-				albumElement.getChildText("artist-name")
+				albumElement.getChildText("artist")
 			);
 		}
 		
@@ -83,5 +84,11 @@ public class Album {
 	
 	public String toString(){
 		return String.format("[Album: %s by %s]", this.name, this.artist);
+	}
+
+	public static Album fromURI(String uri) {
+		Album album = new Album();
+		album.id = Hex.URIToId(uri);
+		return album;
 	}
 }

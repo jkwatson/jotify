@@ -3,6 +3,7 @@ package de.felixbruns.jotify.media;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.felixbruns.jotify.util.Hex;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class Track {
@@ -150,6 +151,12 @@ public class Track {
 			track.popularity = Float.parseFloat(trackElement.getChildText("popularity"));
 		}
 		
+		return track;
+	}
+
+	public static Track fromURI(String uri) {
+		Track track = new Track();
+		track.id = Hex.URIToId(uri);
 		return track;
 	}
 }
