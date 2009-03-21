@@ -303,7 +303,7 @@ public class Protocol {
 	}
 	
 	/* Send command with payload (will be encrypted with stream cipher). */
-	public void sendPacket(int command, ByteBuffer payload){
+	public synchronized void sendPacket(int command, ByteBuffer payload){
 		ByteBuffer buffer = ByteBuffer.allocate(1 + 2 + payload.remaining());
 		
 		this.session.shannonSend.nonce(IntegerUtilities.toBytes(this.session.keySendIv));
