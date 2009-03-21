@@ -1,10 +1,9 @@
 package de.felixbruns.jotify.protocol;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -20,10 +19,8 @@ import de.felixbruns.jotify.util.ServerLookup;
 import de.felixbruns.jotify.util.ServerLookup.Server;
 
 public class Protocol {
-	/* Socket connection to spotify server */
-	private Socket       socket;
-	private InputStream  input;
-	private OutputStream output;
+	/* Socket connection to Spotify server. */
+	private SocketChannel channel;
 	
 	/* Current server and port */
 	private Server server;
@@ -46,9 +43,7 @@ public class Protocol {
 		for(Server server : ServerLookup.lookupServers("_spotify-client._tcp.spotify.com")){
 			try{
 				/* Connect to server. */
-				this.socket = new Socket(server.getHostname(), server.getPort());
-				
-				System.out.format("Connected to '%s'\n", server);
+				this.channel = SocketChannel.open(new InetSocketAddress(server.getHostname(), server.getPort()));
 				
 				/* Save server for later use. */
 				this.server = server;
@@ -61,18 +56,11 @@ public class Protocol {
 		}
 		
 		/* If connection was not established, return false. */
-		if(this.socket == null){
+		if(this.channel == null){
 			return false;
 		}
 		
-		/* Get input and output stream. */
-		try{
-			this.input  = this.socket.getInputStream();
-			this.output = this.socket.getOutputStream();
-		}
-		catch (IOException e){
-			System.err.println("Error getting input or output streams: " + e.getMessage());
-		}
+		System.out.format("Connected to '%s'\n", this.server);
 		
 		return true;
 	}
@@ -81,7 +69,7 @@ public class Protocol {
 	public void disconnect(){
 		try{
 			/* Close connection to server. */
-			this.socket.close();
+			this.channel.close();
 			
 			System.out.format("Disconnected from '%s'\n", this.server);
 		}
@@ -97,15 +85,14 @@ public class Protocol {
 	/* Send initial packet (key exchange). */
 	public void sendInitialPacket(){
 		ByteBuffer buffer = ByteBuffer.allocate(
-			2 + 2 + 1 + this.session.clientId.length + 4 + this.session.clientRandom.length +
-			96 + 128 + 1 + this.session.username.length + 1 + 1 + 1
+			2 + 2 + 1 + 4 + 4 + 16 + 96 + 128 + 1 + this.session.username.length + 1 + 1 + 1
 		);
 		
 		/* Append fields to buffer. */
 		buffer.putShort((short)2); /* Version: 2 */
 		buffer.putShort((short)0); /* Length (update later) */
 		buffer.put(this.session.clientOs);
-		buffer.put(this.session.clientId);
+		buffer.put(this.session.clientId); /* 4 bytes */
 		buffer.putInt(this.session.clientRevision);
 		buffer.put(this.session.clientRandom); /* 16 bytes */
 		buffer.put(this.session.dhClientKeyPair.getPublicKeyBytes()); /* 96 bytes */
@@ -123,9 +110,10 @@ public class Protocol {
 		
 		/* Update length byte. */
 		buffer.putShort(2, (short)buffer.position());
+		buffer.flip();
 		
 		/* Send it. */
-		this.send(buffer.array());
+		this.send(buffer);
 	}
 	
 	/* Receive initial packet (key exchange). */
@@ -198,7 +186,7 @@ public class Protocol {
 			return false;
 		}
 		
-		session.username = Arrays.copyOfRange(buffer, 0, usernameLength);
+		this.session.username = Arrays.copyOfRange(buffer, 0, usernameLength);
 		
 		/* Read server public key (Diffie Hellman key exchange). */
 		if((ret = this.receive(buffer, 96)) != 96){
@@ -212,20 +200,20 @@ public class Protocol {
 		 * using the DHParameterSpec (for P and G values) of our
 		 * public key. Y value is taken from raw bytes.
 		 */
-		session.dhServerPublicKey = DH.bytesToPublicKey(
-			session.dhClientKeyPair.getPublicKey().getParams(),
+		this.session.dhServerPublicKey = DH.bytesToPublicKey(
+				this.session.dhClientKeyPair.getPublicKey().getParams(),
 			Arrays.copyOfRange(buffer, 0, 96)
 		);
 		
 		/* Read server blob (256 bytes). */
-		if((ret = this.receive(session.serverBlob, 0, 256)) != 256){
+		if((ret = this.receive(this.session.serverBlob, 0, 256)) != 256){
 			System.err.println("Failed to read server blob.");
 			
 			return false;
 		}
 		
 		/* Read salt (10 bytes). */
-		if((ret = this.receive(session.salt, 0, 10)) != 10){
+		if((ret = this.receive(this.session.salt, 0, 10)) != 10){
 			System.err.println("Failed to read salt.");
 			
 			return false;
@@ -269,9 +257,10 @@ public class Protocol {
 		buffer.put((byte)0x00); /* Unknown. */
 		/* Payload length + junk byte. Payload can be anything and doesn't appear to be used. */
 		buffer.put((byte)0x01); /* Zero payload. */
+		buffer.flip();
 		
 		/* Send it. */
-		this.send(buffer.array());
+		this.send(buffer);
 	}
 	
 	/* Receive authentication packet (status). */
@@ -314,14 +303,14 @@ public class Protocol {
 	}
 	
 	/* Send command with payload (will be encrypted with stream cipher). */
-	public void sendPacket(int command, byte[] payload){
-		ByteBuffer buffer = ByteBuffer.allocate(1 + 2 + payload.length);
+	public void sendPacket(int command, ByteBuffer payload){
+		ByteBuffer buffer = ByteBuffer.allocate(1 + 2 + payload.remaining());
 		
 		this.session.shannonSend.nonce(IntegerUtilities.toBytes(this.session.keySendIv));
 		
 		/* Build packet. */
 		buffer.put((byte)command);
-		buffer.putShort((short)payload.length);
+		buffer.putShort((short)payload.remaining());
 		buffer.put(payload);
 		
 		byte[] bytes = buffer.array();
@@ -337,7 +326,7 @@ public class Protocol {
 		buffer.flip();
 		
 		/* Send encrypted packet. */
-		this.send(buffer.array());
+		this.send(buffer);
 		
 		/* Increment IV. */
 		this.session.keySendIv++;
@@ -345,44 +334,55 @@ public class Protocol {
 	
 	/* Send a command without payload. */
 	public void sendPacket(int command){
-		this.sendPacket(command, new byte[]{});
+		this.sendPacket(command, ByteBuffer.allocate(0));
 	}
 	
 	/* Receive a packet (will be decrypted with stream cipher). */
 	public boolean receivePacket(){
-		byte[] bytes = new byte[3];
-		int ret, command, payloadLength;
+		byte[] header = new byte[3];
+		int command, payloadLength, headerLength = 3, macLength = 4;
 		
 		/* Read header. */
-		if((ret = this.receive(bytes, 3)) != 3){
+		if(this.receive(header, headerLength) != headerLength){
 			System.err.println("Failed to read header.");
 			
 			return false;
 		}
 		
 		/* Save encrypted header for later. Please read below. */
-		byte[] header = Arrays.copyOf(bytes, 3);
+		byte[] rawHeader = Arrays.copyOf(header, headerLength);
 		
 		/* Decrypt header. */
 		this.session.shannonRecv.nonce(IntegerUtilities.toBytes(this.session.keyRecvIv));
-		this.session.shannonRecv.decrypt(bytes);
+		this.session.shannonRecv.decrypt(header);
 		
-		/* Get command from header. */
-		command = bytes[0] & 0x00FF;
+		/* Get command and payload length from header. */
+		ByteBuffer headerBuffer = ByteBuffer.wrap(header);
 		
-		/* Get length of payload. */
-		payloadLength = ((bytes[1] & 0x00FF) << 8) | (bytes[2] & 0x00FF);
+		command       = headerBuffer.get() & 0xff;
+		payloadLength = headerBuffer.getShort() & 0xffff;
 		
-		/* Account for MAC. */
-		payloadLength += 4;
+		/* Allocate buffer. Account for MAC. */
+		byte[] bytes      = new byte[headerLength + payloadLength + macLength];
+		ByteBuffer buffer = ByteBuffer.wrap(bytes);
 		
-		/* Allocate buffer. */
-		bytes = new byte[payloadLength];
+		buffer.put(rawHeader);
+		buffer.limit(headerLength + payloadLength);
 		
-		if((ret = this.receive(bytes, payloadLength)) != payloadLength){
-			System.err.format("Failed to read payload! %d != %d.", payloadLength, ret);
-			
-			return false;
+		try{
+			for(int n = payloadLength, r; n > 0 && (r = this.channel.read(buffer)) > 0; n -= r);
+		}
+		catch(IOException e){
+			System.err.format("Failed to read payload. (%s)\n", e.getMessage());
+		}
+		
+		buffer.limit(headerLength + payloadLength + macLength);
+		
+		try{
+			for(int n = macLength, r; n > 0 && (r = this.channel.read(buffer)) > 0; n -= r);
+		}
+		catch(IOException e){
+			System.err.format("Failed to read MAC. (%s)\n", e.getMessage());
 		}
 		
 		/*
@@ -391,28 +391,22 @@ public class Protocol {
 		 * To get around this problem, set nonce again, prepend those
 		 * encrypted header bytes and successfully decrypt the whole thing.
 		 */
-		/* Start HACK. */
 		this.session.shannonRecv.nonce(IntegerUtilities.toBytes(this.session.keyRecvIv));
-		
-		ByteBuffer buffer = ByteBuffer.allocate(3 + payloadLength);
-		
-		buffer.put(header);
-		buffer.put(bytes);
-		
-		bytes = buffer.array();
-		/* End HACK. */
-		
 		this.session.shannonRecv.decrypt(bytes);
 		
 		/* Remove Header and MAC bytes. */
-		bytes = Arrays.copyOfRange(bytes, 3, payloadLength - 4 + 3);
+		byte[] payload = new byte[payloadLength];
+		
+		buffer.flip();
+		buffer.position(headerLength);
+		buffer.get(payload);
 		
 		/* Increment IV. */
 		this.session.keyRecvIv++;
 		
 		/* Fire events. */
 		for(CommandListener listener : this.listeners){
-			listener.commandReceived(command, bytes);
+			listener.commandReceived(command, payload);
 		}
 		
 		return true;
@@ -420,7 +414,12 @@ public class Protocol {
 	
 	/* Send cache hash. */
 	public void sendCacheHash(){
-		this.sendPacket(Command.COMMAND_CACHEHASH, this.session.cacheHash);
+		ByteBuffer buffer = ByteBuffer.allocate(20);
+		
+		buffer.put(this.session.cacheHash);
+		buffer.flip();
+		
+		this.sendPacket(Command.COMMAND_CACHEHASH, buffer);
 	}
 	
 	/* Request ads. The response is GZIP compressed XML. */
@@ -432,12 +431,13 @@ public class Protocol {
 		/* Append channel id and ad type. */
 		buffer.putShort((short)channel.getId());
 		buffer.put((byte)type);
+		buffer.flip();
 		
 		/* Register channel. */
 		Channel.register(channel);
 		
 		/* Send packet. */
-		this.sendPacket(Command.COMMAND_REQUESTAD, buffer.array());
+		this.sendPacket(Command.COMMAND_REQUESTAD, buffer);
 	}
 	
 	/* Request image using a 20 byte id. The response is a JPG. */
@@ -449,12 +449,13 @@ public class Protocol {
 		/* Append channel id and image hash. */
 		buffer.putShort((short)channel.getId());
 		buffer.put(Hex.toBytes(id));
+		buffer.flip();
 		
 		/* Register channel. */
 		Channel.register(channel);
 		
 		/* Send packet. */
-		this.sendPacket(Command.COMMAND_IMAGE, buffer.array());
+		this.sendPacket(Command.COMMAND_IMAGE, buffer);
 	}
 	
 	/* Search music. The response comes as GZIP compressed XML. */
@@ -470,12 +471,13 @@ public class Protocol {
 		buffer.putShort((short)0x0000);
 		buffer.put((byte)query.length());
 		buffer.put(query.getBytes());
+		buffer.flip();
 		
 		/* Register channel. */
 		Channel.register(channel);
 		
 		/* Send packet. */
-		this.sendPacket(Command.COMMAND_SEARCH, buffer.array());
+		this.sendPacket(Command.COMMAND_SEARCH, buffer);
 	}
 	
 	/* Notify server we're going to play. */
@@ -494,12 +496,13 @@ public class Protocol {
 		buffer.put(Hex.toBytes(track.getId())); /* 16 bytes */
 		buffer.putShort((short)0x0000);
 		buffer.putShort((short)channel.getId());
+		buffer.flip();
 		
 		/* Register channel. */
 		Channel.register(channel);
 		
 		/* Send packet. */
-		this.sendPacket(Command.COMMAND_REQKEY, buffer.array());
+		this.sendPacket(Command.COMMAND_REQKEY, buffer);
 	}
 	
 	/* A demo wrapper for playing a track. */
@@ -554,12 +557,13 @@ public class Protocol {
 		/* Append offset and length. */
 		buffer.putInt(offset);
 		buffer.putInt(offset + length);
+		buffer.flip();
 		
 		/* Register channel. */
 		Channel.register(channel);
 		
 		/* Send packet. */
-		this.sendPacket(Command.COMMAND_GETSUBSTREAM, buffer.array());
+		this.sendPacket(Command.COMMAND_GETSUBSTREAM, buffer);
 	}
 	
 	/*
@@ -593,11 +597,13 @@ public class Protocol {
 			buffer.putInt(0);
 		}
 		
+		buffer.flip();
+		
 		/* Register channel. */
 		Channel.register(channel);
 		
 		/* Send packet. */
-		this.sendPacket(Command.COMMAND_BROWSE, buffer.array());
+		this.sendPacket(Command.COMMAND_BROWSE, buffer);
 	}
 	
 	/* Browse with only one id. */
@@ -622,12 +628,13 @@ public class Protocol {
 		buffer.putInt(0x00000000);
 		buffer.putInt(0xffffffff);
 		buffer.put((byte)0x01);
+		buffer.flip();
 		
 		/* Register channel. */
 		Channel.register(channel);
 		
 		/* Send packet. */
-		this.sendPacket(Command.COMMAND_PLAYLIST, buffer.array());
+		this.sendPacket(Command.COMMAND_PLAYLIST, buffer);
 	}
 	
 	/* Ping reply (pong). */
@@ -636,28 +643,35 @@ public class Protocol {
 		
 		/* TODO: Append timestamp? */
 		buffer.putInt(0x00000000);
+		buffer.flip();
 		
 		/* Send packet. */
-		this.sendPacket(Command.COMMAND_PONG, buffer.array());
+		this.sendPacket(Command.COMMAND_PONG, buffer);
 	}
 	
 	/* Send bytes. */
-	private void send(byte[] buffer){
+	private void send(ByteBuffer buffer){
 		try{
-			this.output.write(buffer);
+			this.channel.write(buffer);
 		}
 		catch (IOException e){
-			System.out.format("DEBUG: Error writing data to socket (%s).", e.getMessage());
+			System.out.format("Error writing data to socket (%s).", e.getMessage());
 		}
 	}
 	
 	/* Receive a single byte. */
 	private int receive(){
+		ByteBuffer buffer = ByteBuffer.allocate(1);
+		
 		try{
-			return this.input.read();
+			this.channel.read(buffer);
+			
+			buffer.flip();
+			
+			return buffer.get() & 0xff;
 		}
-		catch (IOException e){
-			System.out.format("DEBUG: Error reading data from socket (%s).", e.getMessage());
+		catch(IOException e){
+			System.out.format("Error reading data from socket (%s).", e.getMessage());
 		}
 		
 		return -1;
@@ -669,21 +683,20 @@ public class Protocol {
 	}
 	
 	/* Receive bytes. */
-	private int receive(byte[] buffer, int off, int len){
-		int read = 0, ret = -1;
+	private int receive(byte[] bytes, int off, int len){
+		ByteBuffer buffer = ByteBuffer.wrap(bytes, off, len);
+		int n = 0;
 		
-		do{
-			try{
-				ret   = this.input.read(buffer, off, len - read);
-				off  += ret;
-				read += ret;
-			}
-			catch (IOException e){
-				System.out.format("DEBUG: Error reading data from socket (%s).", e.getMessage());
-			}
-		} while(read < len);
+		try{
+			for(int r; n < len && (r = this.channel.read(buffer)) > 0; n += r);
+		}
+		catch(IOException e){
+			System.out.format("Error reading data from socket (%s).\n", e.getMessage());
+			
+			return -1;
+		}
 		
-		return read;
+		return n;
 	}
 	
 	/*private void logPacket(byte[] bytes, String sr, String hp, int k){
