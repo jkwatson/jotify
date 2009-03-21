@@ -57,6 +57,10 @@ public class Spotify extends Thread implements CommandListener {
 	/* Closes Spotify connection. */
 	public void close(){
 		this.close = true;
+		
+		/* This will make receivePacket return immediately. */
+		if(this.protocol != null)
+			this.protocol.disconnect();
 	}
 	
 	/* This runs all packet IO stuff in a thread. */
@@ -69,7 +73,9 @@ public class Spotify extends Thread implements CommandListener {
 		
 		while(!close && this.protocol.receivePacket());
 		
-		this.protocol.disconnect();
+		/* Don't call disconnect twice. */
+		if(!close)
+			this.protocol.disconnect();
 	}
 	
 	/* Search for something. */
