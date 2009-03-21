@@ -1,5 +1,9 @@
 package de.felixbruns.jotify.util;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.Reader;
 import java.io.StringReader;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -9,7 +13,7 @@ import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
 public class XML {
-	public static XMLElement load(String xml){
+	public static XMLElement load(Reader xml){
 		/* Document and elements */
 		DocumentBuilder documentBuilder = null;
 		Document        document        = null;
@@ -17,7 +21,7 @@ public class XML {
 		/* Create document. */
 		try{
 			documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-			document        = documentBuilder.parse(new InputSource(new StringReader(xml)));
+			document        = documentBuilder.parse(new InputSource(xml));
 		}
 		catch(Exception e){
 			return null;
@@ -25,6 +29,14 @@ public class XML {
 		
 		/* Return root element. */
 		return new XMLElement(document.getDocumentElement());
+	}
+	
+	public static XMLElement load(File xml) throws FileNotFoundException{
+		return load(new FileReader(xml));
+	}
+	
+	public static XMLElement load(String xml){
+		return load(new StringReader(xml));
 	}
 	
 	public static XMLElement load(byte[] xml){
