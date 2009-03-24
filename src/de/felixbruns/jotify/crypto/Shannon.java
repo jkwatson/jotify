@@ -1,17 +1,25 @@
 package de.felixbruns.jotify.crypto;
 
-import java.util.Arrays;
-
 public class Shannon {
-	private static int N = 16;
+	/*
+	 * Fold is how many register cycles need to be performed after combining the
+	 * last byte of key and non-linear feedback, before every byte depends on every
+	 * byte of the key. This depends on the feedback and nonlinear functions, and
+	 * on where they are combined into the register. Making it same as the register
+	 * length is a safe and conservative choice.
+	 */
+	private static final int N         = 16;
+	private static final int FOLD      = N;          /* How many iterations of folding to do. */
+	private static final int INITKONST = 0x6996c53a; /* Value of konst to use during key loading. */
+	private static final int KEYP      = 13;         /* Where to insert key/MAC/counter words. */
 	
-	private int[] R;
-	private int[] CRC;
-	private int[] initR;
-	private int   konst;
-	private int   sbuf;
-	private int   mbuf;
-	private int   nbuf;
+	private int[] R;     /* Working storage for the shift register. */
+	private int[] CRC;   /* Working storage for CRC accumulation. */
+	private int[] initR; /* Saved register contents. */
+	private int   konst; /* Key dependant semi-constant. */
+	private int   sbuf;  /* Encryption buffer. */
+	private int   mbuf;  /* Partial word MAC buffer. */
+	private int   nbuf;  /* Number of part-word stream bits buffered. */
 	
 	public Shannon(){
 		/* Registers with length N. */
@@ -20,7 +28,7 @@ public class Shannon {
 		this.initR = new int[N];
 	}
 	
-	/* Nonlinear transform (sbox) of a word. There are two slightly different combinations */
+	/* Nonlinear transform (sbox) of a word. There are two slightly different combinations. */
 	private int sbox(int i){
 		i ^= Integer.rotateLeft(i,  5) | Integer.rotateLeft(i,  7);
 		i ^= Integer.rotateLeft(i, 19) | Integer.rotateLeft(i, 22);
@@ -45,7 +53,7 @@ public class Shannon {
 		t = this.sbox(t) ^ Integer.rotateLeft(this.R[0], 1);
 		
 		/* Shift register. */
-		for(int i = 1; i < N; ++i){
+		for(int i = 1; i < N; i++){
 			this.R[i - 1] = this.R[i];
 		}
 		
@@ -56,9 +64,19 @@ public class Shannon {
 		this.sbuf  = t ^ this.R[8] ^ this.R[12];
 	}
 	
+	/*
+	 * The Shannon MAC function is modelled after the concepts of Phelix and SHA.
+	 * Basically, words to be accumulated in the MAC are incorporated in two
+	 * different ways:
+	 * 1. They are incorporated into the stream cipher register at a place
+	 *    where they will immediately have a nonlinear effect on the state.
+	 * 2. They are incorporated into bit-parallel CRC-16 registers; the
+	 *    contents of these registers will be used in MAC finalization.
+	 */
+	
 	/* 
 	 * Accumulate a CRC of input words, later to be fed into MAC.
-	 * This is actualy 32 parallel CRC-16s, using the IBM CRC-16
+	 * This is actually 32 parallel CRC-16s, using the IBM CRC-16
 	 * polynomian x^16 + x^15 + x^2 + 1
 	 */
 	private void crcFunc(int i){
@@ -79,7 +97,7 @@ public class Shannon {
 	private void macFunc(int i){
 		this.crcFunc(i);
 		
-		this.addKey(i);
+		this.R[KEYP] ^= i;
 	}
 	
 	/* Initialize to known state. */
@@ -93,7 +111,7 @@ public class Shannon {
 		}
 		
 		/* Initialization constant. */
-		this.konst = 0x6996c53a;
+		this.konst = INITKONST;
 	}
 	
 	/* Save the current register state. */
@@ -117,12 +135,12 @@ public class Shannon {
 	
 	/* Load key material into the register. */
 	private void addKey(int k){
-		this.R[13] ^= k;
+		this.R[KEYP] ^= k;
 	}
 	
 	/* Extra nonlinear diffusion of register for key and MAC. */
 	private void diffuse(){
-		for(int i = 0; i < N; i++){
+		for(int i = 0; i < FOLD; i++){
 			this.cycle();
 		}
 	}
@@ -134,18 +152,19 @@ public class Shannon {
 	 */
 	private void loadKey(byte[] key){
 		byte[] extra = new byte[4];
-		int i, j, k;
+		int i, j;
+		int t;
 		
 		/* Start folding key. */
 		for(i = 0; i < (key.length & ~0x03); i += 4){
 			/* Shift 4 bytes into one word. */
-			k =	((key[i + 3] & 0xFF) << 24) |
+			t =	((key[i + 3] & 0xFF) << 24) |
 				((key[i + 2] & 0xFF) << 16) |
 				((key[i + 1] & 0xFF) << 8)  |
 				((key[i    ] & 0xFF));
 			
 			/* Insert key word at index 13. */
-			this.addKey(k);
+			this.addKey(t);
 			
 			/* Cycle register. */
 			this.cycle();
@@ -164,13 +183,13 @@ public class Shannon {
 			}
 			
 			/* Shift 4 extra bytes into one word. */
-			k =	((extra[3] & 0xFF) << 24) |
+			t =	((extra[3] & 0xFF) << 24) |
 				((extra[2] & 0xFF) << 16) |
 				((extra[1] & 0xFF) << 8)  |
 				((extra[0] & 0xFF));
 			
 			/* Insert key word at index 13. */
-			this.addKey(k);
+			this.addKey(t);
 			
 			/* Cycle register. */
 			this.cycle();
@@ -183,7 +202,9 @@ public class Shannon {
 		this.cycle();
 		
 		/* Save a copy of the register. */
-		this.CRC = Arrays.copyOf(this.R, N);
+		for(i = 0; i < N; i++){
+			this.CRC[i] = this.R[i];
+		}
 		
 		/* Now diffuse. */
 		this.diffuse();
@@ -212,13 +233,13 @@ public class Shannon {
 		this.nbuf = 0;
 	}
 	
-	/* Set "IV" */
+	/* Set IV */
 	public void nonce(byte[] nonce){
 		/* Reload register state. */
 		this.reloadState();
 		
 		/* Set initialization constant. */
-		this.konst = 0x6996c53a;
+		this.konst = INITKONST;
 		
 		/* Load "IV" material. */
 		this.loadKey(nonce);
@@ -288,7 +309,8 @@ public class Shannon {
 	 * Note that plaintext is accumulated for MAC.
 	 */
 	public void macOnly(byte[] buffer){
-		int i = 0, j, k, n = buffer.length;
+		int i = 0, j, n = buffer.length;
+		int t;
 		
 		/* Handle any previously buffered bytes. */
 		if(this.nbuf != 0){
@@ -316,12 +338,12 @@ public class Shannon {
 			this.cycle();
 			
 			/* Shift 4 bytes into one word. */
-			k =	((buffer[i + 3] & 0xFF) << 24) |
+			t =	((buffer[i + 3] & 0xFF) << 24) |
 				((buffer[i + 2] & 0xFF) << 16) |
 				((buffer[i + 1] & 0xFF) << 8)  |
 				((buffer[i    ] & 0xFF));
 			
-			this.macFunc(k);
+			this.macFunc(t);
 			
 			i += 4;
 		}
@@ -338,7 +360,7 @@ public class Shannon {
 			
 			while(this.nbuf != 0 && n != 0){
 				this.mbuf ^= buffer[i++] << (32 - this.nbuf);
-				this.nbuf  -= 8;
+				this.nbuf -= 8;
 				
 				n--;
 			}
@@ -358,13 +380,14 @@ public class Shannon {
 	 * Note that plaintext is accumulated for MAC.
 	 */
 	public void encrypt(byte[] buffer, int n){
-		int i = 0, j, k;
+		int i = 0, j;
+		int t;
 		
 		/* Handle any previously buffered bytes. */
 		if(this.nbuf != 0){
 			while(this.nbuf != 0 && n != 0){
-				this.mbuf ^= buffer[i]  << (32 - this.nbuf);
-				buffer[i] ^= (this.sbuf >> (32 - this.nbuf)) & 0xFF;
+				this.mbuf ^= (buffer[i] & 0xFF) << (32 - this.nbuf);
+				buffer[i] ^= (this.sbuf         >> (32 - this.nbuf)) & 0xFF;
 				
 				i++;
 				
@@ -390,20 +413,20 @@ public class Shannon {
 			this.cycle();
 			
 			/* Shift 4 bytes into one word. */
-			k =	((buffer[i + 3] & 0xFF) << 24) |
+			t =	((buffer[i + 3] & 0xFF) << 24) |
 				((buffer[i + 2] & 0xFF) << 16) |
 				((buffer[i + 1] & 0xFF) << 8)  |
 				((buffer[i    ] & 0xFF));
 			
-			this.macFunc(k);
+			this.macFunc(t);
 			
-			k ^= this.sbuf;
+			t ^= this.sbuf;
 			
 			/* Put word into byte buffer. */
-			buffer[i + 3] = (byte)((k >> 24) & 0xFF);
-			buffer[i + 2] = (byte)((k >> 16) & 0xFF);
-			buffer[i + 1] = (byte)((k >>  8) & 0xFF);
-			buffer[i    ] = (byte)((k      ) & 0xFF);
+			buffer[i + 3] = (byte)((t >> 24) & 0xFF);
+			buffer[i + 2] = (byte)((t >> 16) & 0xFF);
+			buffer[i + 1] = (byte)((t >>  8) & 0xFF);
+			buffer[i    ] = (byte)((t      ) & 0xFF);
 			
 			i += 4;
 		}
@@ -419,12 +442,12 @@ public class Shannon {
 			this.nbuf = 32;
 			
 			while(this.nbuf != 0 && n != 0){
-				this.mbuf ^= buffer[i]  << (32 - this.nbuf);
-				buffer[i] ^= (this.sbuf >> (32 - this.nbuf)) & 0xFF;
+				this.mbuf ^= (buffer[i] & 0xFF) << (32 - this.nbuf);
+				buffer[i] ^= (this.sbuf         >> (32 - this.nbuf)) & 0xFF;
 				
 				i++;
 				
-				this.nbuf  -= 8;
+				this.nbuf -= 8;
 				
 				n--;
 			}
@@ -444,13 +467,14 @@ public class Shannon {
 	 * Note that plaintext is accumulated for MAC.
 	 */
 	public void decrypt(byte[] buffer, int n){
-		int i = 0, j, k;
+		int i = 0, j;
+		int t;
 		
 		/* Handle any previously buffered bytes. */
 		if(this.nbuf != 0){
 			while(this.nbuf != 0 && n != 0){
-				buffer[i] ^= (this.sbuf >> (32 - this.nbuf)) & 0xFF;
-				this.mbuf ^= buffer[i]  << (32 - this.nbuf);
+				buffer[i] ^= (this.sbuf         >> (32 - this.nbuf)) & 0xFF;
+				this.mbuf ^= (buffer[i] & 0xFF) << (32 - this.nbuf);
 				
 				i++;
 				
@@ -476,20 +500,20 @@ public class Shannon {
 			this.cycle();
 			
 			/* Shift 4 bytes into one word. */
-			k =	((buffer[i + 3] & 0xFF) << 24) |
+			t =	((buffer[i + 3] & 0xFF) << 24) |
 				((buffer[i + 2] & 0xFF) << 16) |
 				((buffer[i + 1] & 0xFF) << 8)  |
 				((buffer[i    ] & 0xFF));
 			
-			k ^= this.sbuf;
+			t ^= this.sbuf;
 			
-			this.macFunc(k);
+			this.macFunc(t);
 			
 			/* Put word into byte buffer. */
-			buffer[i + 3] = (byte)((k >> 24) & 0xFF);
-			buffer[i + 2] = (byte)((k >> 16) & 0xFF);
-			buffer[i + 1] = (byte)((k >>  8) & 0xFF);
-			buffer[i    ] = (byte)((k      ) & 0xFF);
+			buffer[i + 3] = (byte)((t >> 24) & 0xFF);
+			buffer[i + 2] = (byte)((t >> 16) & 0xFF);
+			buffer[i + 1] = (byte)((t >>  8) & 0xFF);
+			buffer[i    ] = (byte)((t      ) & 0xFF);
 			
 			i += 4;
 		}
@@ -505,12 +529,12 @@ public class Shannon {
 			this.nbuf = 32;
 			
 			while(this.nbuf != 0 && n != 0){
-				buffer[i] ^= (this.sbuf >> (32 - this.nbuf)) & 0xFF;
-				this.mbuf ^= buffer[i]  << (32 - this.nbuf);
+				buffer[i] ^= (this.sbuf         >> (32 - this.nbuf)) & 0xFF;
+				this.mbuf ^= (buffer[i] & 0xFF) << (32 - this.nbuf);
 				
 				i++;
 				
-				this.nbuf  -= 8;
+				this.nbuf -= 8;
 				
 				n--;
 			}
@@ -519,7 +543,7 @@ public class Shannon {
 	
 	/*
 	 * Having accumulated a MAC, finish processing and return it.
-	 * Note that any unprocessed bytesare treated as if they were
+	 * Note that any unprocessed bytes are treated as if they were
 	 * encrypted zero bytes, so plaintext (zero) is accumulated.
 	 */
 	public void finish(byte[] buffer){
@@ -528,7 +552,7 @@ public class Shannon {
 	
 	/*
 	 * Having accumulated a MAC, finish processing and return it.
-	 * Note that any unprocessed bytesare treated as if they were
+	 * Note that any unprocessed bytes are treated as if they were
 	 * encrypted zero bytes, so plaintext (zero) is accumulated.
 	 */
 	public void finish(byte[] buffer, int n){
@@ -547,12 +571,12 @@ public class Shannon {
 		 * hence defeating any kind of extension attack.
 		 */
 		this.cycle();
-		this.addKey(0x6996c53a ^ (this.nbuf << 3));
+		this.addKey(INITKONST ^ (this.nbuf << 3));
 		
 		this.nbuf = 0;
 		
 		/* Now add the CRC to the stream register and diffuse it. */
-		for(j = 0; j < N; ++j){
+		for(j = 0; j < N; j++){
 			this.R[j] ^= this.CRC[j];
 		}
 		
@@ -580,69 +604,5 @@ public class Shannon {
 				break;
 			}
 		}
-	}
-	
-	public static void main(String args[]){
-		Shannon.selfTest();
-	}
-	
-	public static void selfTest(){
-		/* Cipher instance. */
-		Shannon shannon = new Shannon();
-		
-		/* Key. */
-		byte[] key = new byte[]{
-			(byte)0xda, (byte)0x3c, (byte)0x70, (byte)0xf5, (byte)0x3a, (byte)0x89, (byte)0xa1, (byte)0x2c,
-			(byte)0x36, (byte)0x9e, (byte)0x1a, (byte)0xca, (byte)0x5e, (byte)0xa0, (byte)0xdc, (byte)0x6f,
-			(byte)0xb1, (byte)0x6c, (byte)0xe3, (byte)0x5f, (byte)0x14, (byte)0xb6, (byte)0xe6, (byte)0xbe,
-			(byte)0xcf, (byte)0x73, (byte)0x86, (byte)0xc8, (byte)0x74, (byte)0xda, (byte)0xc0, (byte)0x69
-		};
-		
-		/* Nonce. */
-		byte[] nonce = new byte[]{
-			(byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
-		};
-		
-		/* Plaintext. */
-		String dataString = "This is a secret text. And I need to make it longer. Longer. And even longer. And even longer. And longer.";
-		byte[] dataBuffer = dataString.getBytes();
-		
-		/* Print info. */
-		System.out.println("--------------------------------------------------");
-		System.out.println("Shannon stream cipher self test:");
-		System.out.println("Plaintext: " + dataString);
-		
-		/* Set key and nonce, then encrypt. */
-		shannon.key(key);
-		shannon.nonce(nonce);
-		shannon.encrypt(dataBuffer);
-		
-		/* Print encrypted data. */
-		System.out.println("Encrypted: " + new String(dataBuffer));
-		
-		
-		/* Set key and nonce, then decrypt. */
-		shannon.key(key);
-		shannon.nonce(nonce);
-		
-		byte[] a = Arrays.copyOfRange(dataBuffer, 0, 3);
-		shannon.decrypt(a);
-		
-		byte[] b = Arrays.copyOfRange(dataBuffer, 3, dataBuffer.length);
-		shannon.decrypt(b);
-
-		/* Print decrypted data. */
-		System.out.println("Decrypted: " + new String(a) + new String(b));
-		
-		/* Check for success. */
-		if((new String(a) + new String(b)).equals(dataString)){
-			System.out.println("Self-test successful!");
-		}
-		else{
-			System.err.println("Self-test failed!");
-		}
-		
-		/* Print end marker. */
-		System.out.println("--------------------------------------------------");
 	}
 }
