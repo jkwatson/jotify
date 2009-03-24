@@ -1,14 +1,21 @@
 package de.felixbruns.jotify.util;
 
 import java.math.BigInteger;
-import java.util.Arrays;
 
 public class Hex {
+	/* Safe with leading zeroes (unlike BigInteger) and with negative byte values (unlike Byte.parseByte). */
 	public static byte[] toBytes(String hex){
-		byte[] bytes = new BigInteger(hex, 16).toByteArray();
+		if(hex.length() % 2 != 0){
+			throw new IllegalArgumentException("Input string must contain an even number of characters");
+		}
 		
-		if(bytes.length != hex.length() / 2 && bytes[0] == 0x00){
-			bytes = Arrays.copyOfRange(bytes, 1, bytes.length);
+		byte[] bytes = new byte[hex.length() / 2];
+		
+		for(int i = 0; i < hex.length(); i+= 2){
+			bytes[i / 2] = (byte)(
+				(Character.digit(hex.charAt(i    ), 16) << 4) +
+				 Character.digit(hex.charAt(i + 1), 16)
+			);
 		}
 		
 		return bytes;
