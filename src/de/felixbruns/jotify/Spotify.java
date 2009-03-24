@@ -67,7 +67,7 @@ public class Spotify extends Thread implements CommandListener {
 			return;
 		}
 		
-		while(!close && this.protocol.receivePacket());
+		while(!this.close && this.protocol.receivePacket());
 		
 		this.protocol.disconnect();
 	}
@@ -158,7 +158,29 @@ public class Spotify extends Thread implements CommandListener {
 		return Result.fromXMLElement(resultElement);
 	}
 	
-	public void play(Track track){
+	public XMLElement playlist(String id){
+		/* Create channel callback */
+		ChannelCallback callback = new ChannelCallback();
+		
+		/* Send browse request. */
+		this.protocol.sendPlaylistRequest(callback, id);
+		
+		/* Get data and inflate it. */
+		byte[] data = callback.getData();
+		
+		/* Load XML. */
+		return XML.load(
+			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
+			new String(data) +
+			"</playlist>"
+		);
+	}
+	
+	public void playlists(){
+		this.playlist("0000000000000000000000000000000000");
+	}
+	
+	public void play(final Track track){
 		/* Create channel callback */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -168,9 +190,9 @@ public class Spotify extends Thread implements CommandListener {
 		/* Get AES key. */
 		byte[] key = callback.getData();
 		
-		/* Create piped streams (128 kilobyte buffer). */
+		/* Create piped streams (512 kilobyte buffer). */
 		PipedOutputStream output = new PipedOutputStream();
-		PipedInputStream  input  = new PipedInputStream(0x20000);
+		PipedInputStream  input  = new PipedInputStream(0x80000);
 		
 		/* Connect piped streams. */
 		try{
@@ -183,12 +205,23 @@ public class Spotify extends Thread implements CommandListener {
 		int offset = 0;
 		int length = 160 * 1024 * 5 / 8; /* 160 kbit * 5 seconds. */
 		
+		ChannelAudioHandler handler = new ChannelAudioHandler(key, output);
+		
 		/* Send substream request. */
-		this.protocol.sendSubstreamRequest(new ChannelAudioHandler(key, output), track, offset, length);
+		this.protocol.sendSubstreamRequest(handler, track, offset, length);
 		
 		/* Play */
 		if(this.player.open(input)){
 			this.player.play();
+		}
+		
+		/* FIXME: This is a really crappy playing method :-P */
+		while(true){
+			offset += length;
+			
+			this.protocol.sendSubstreamRequest(handler, track, offset, length);
+				
+			try{Thread.sleep(3500);}catch(InterruptedException e){}
 		}
 	}
 	
@@ -266,7 +299,7 @@ public class Spotify extends Thread implements CommandListener {
 			}
 			case Command.COMMAND_PRODINFO: {
 				/* Payload is uncompressed XML. */
-				if(!new String(payload).contains("<catalogue>premium</catalogue>")){
+				if(!new String(payload).contains("<type>premium</type>")){
 					System.err.println(
 						"Sorry, you need a premium account to use jotify (this is a restriction by Spotify)."
 					);
@@ -294,14 +327,22 @@ public class Spotify extends Thread implements CommandListener {
 		
 		spotify.login("username", "password");
 		
+		/* Start packet IO in the background. */
 		spotify.start();
 		
-		Result result = spotify.search("Clocks");
+		/* Get a list of this users playlists. */
+		spotify.playlists();
 		
+		/* Search for an artist / album / track. */
+		Result result = spotify.search("Coldplay");
+		
+		/* Play first track in result. */
 		spotify.play(result.getTracks().get(0));
 		
+		/* Browse */
 		//Artist artist = spotify.browse(result.getArtists().get(0));
-		//artist = result.getArtists().get(0);
+		
+		/* Load an image and save it. */
 		//Image image = spotify.image(artist.getPortrait());
 		//ImageIO.write((RenderedImage)image, "JPEG", new File(artist.getPortrait() + ".jpg"));
 	}

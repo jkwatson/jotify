@@ -80,8 +80,8 @@ public class Session {
 		
 		/* Set client identification (Spotify 0.3.11 / r43065 / Windows). */
 		this.clientOs       = 0x00; /* 0x00: Windows, 0x01: Mac OS X */
-		//this.clientId       = new byte[]{0x01, 0x09, 0x10, 0x01};
-		this.clientId       = new byte[]{0x01, 0x04, 0x03, 0x01}; /* (official) */
+		this.clientId       = new byte[]{0x01, 0x09, 0x10, 0x01};
+		//this.clientId       = new byte[]{0x01, 0x04, 0x03, 0x01}; /* (official) */
 		this.clientRevision = 43065;
 		
 		/* Client and server generate 16 random bytes each. */
@@ -177,11 +177,14 @@ public class Session {
 		buffer.put(this.clientRandom);
 		buffer.put(this.serverRandom);
 		buffer.put((byte)0x00); /* Changed later */
+		buffer.flip();
 		
 		/* Get message bytes and allocate space for HMACs. */
-		byte[] bytes  = buffer.array();
+		byte[] bytes  = new byte[buffer.remaining()];
 		byte[] hmac   = new byte[5 * 20];
 		int    offset = 0;
+		
+		buffer.get(bytes);
 		
 		/* Run HMAC SHA-1 over message. 5 times. */
 		for(int i = 1; i <= 5; i++){
@@ -234,7 +237,7 @@ public class Session {
 	private void generateAuthHash(){
 		ByteBuffer buffer = ByteBuffer.allocate(this.salt.length + 1 + this.password.length);
 		
-		buffer.put(this.salt);
+		buffer.put(this.salt); /* 10 bytes */
 		buffer.put((byte)' ');
 		buffer.put(this.password);
 		
@@ -252,8 +255,8 @@ public class Session {
 			rsaClientPublicKeyBytes.length + 1 + this.username.length + 1 + 1
 		);
 		
-		buffer.put(this.clientRandom);
-		buffer.put(this.serverRandom);
+		buffer.put(this.clientRandom); /* 16 bytes */
+		buffer.put(this.serverRandom); /* 16 bytes */
 		buffer.put(dhClientPublicKeyBytes);
 		buffer.put(dhServerPublicKeyBytes);
 		buffer.put(rsaClientPublicKeyBytes);

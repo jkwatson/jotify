@@ -85,7 +85,7 @@ public class Protocol {
 	/* Send initial packet (key exchange). */
 	public void sendInitialPacket(){
 		ByteBuffer buffer = ByteBuffer.allocate(
-			2 + 2 + 1 + 4 + 4 + 16 + 96 + 128 + 1 + this.session.username.length + 1 + 1 + 1
+			2 + 2 + 1 + 4 + 4 + 16 + 96 + 128 + 1 + this.session.username.length + 2 + 1
 		);
 		
 		/* Append fields to buffer. */
@@ -99,8 +99,7 @@ public class Protocol {
 		buffer.put(this.session.rsaClientKeyPair.getPublicKeyBytes()); /* 128 bytes */
 		buffer.put((byte)this.session.username.length);
 		buffer.put(this.session.username);
-		buffer.put((byte)0x01);
-		buffer.put((byte)0x40);
+		buffer.putShort((short)0x0140);
 		
 		/*
 		 * Append zero or more random bytes.
@@ -201,7 +200,7 @@ public class Protocol {
 		 * public key. Y value is taken from raw bytes.
 		 */
 		this.session.dhServerPublicKey = DH.bytesToPublicKey(
-				this.session.dhClientKeyPair.getPublicKey().getParams(),
+			this.session.dhClientKeyPair.getPublicKey().getParams(),
 			Arrays.copyOfRange(buffer, 0, 96)
 		);
 		
@@ -303,9 +302,10 @@ public class Protocol {
 	}
 	
 	/* Send command with payload (will be encrypted with stream cipher). */
-	public void sendPacket(int command, ByteBuffer payload){
+	public synchronized void sendPacket(int command, ByteBuffer payload){
 		ByteBuffer buffer = ByteBuffer.allocate(1 + 2 + payload.remaining());
 		
+		/* Set IV. */
 		this.session.shannonSend.nonce(IntegerUtilities.toBytes(this.session.keySendIv));
 		
 		/* Build packet. */
@@ -349,25 +349,24 @@ public class Protocol {
 			return false;
 		}
 		
-		/* Save encrypted header for later. Please read below. */
-		byte[] rawHeader = Arrays.copyOf(header, headerLength);
+		/* Set IV. */
+		this.session.shannonRecv.nonce(IntegerUtilities.toBytes(this.session.keyRecvIv));
 		
 		/* Decrypt header. */
-		this.session.shannonRecv.nonce(IntegerUtilities.toBytes(this.session.keyRecvIv));
 		this.session.shannonRecv.decrypt(header);
 		
 		/* Get command and payload length from header. */
 		ByteBuffer headerBuffer = ByteBuffer.wrap(header);
 		
-		command       = headerBuffer.get() & 0xff;
+		command       = headerBuffer.get()      & 0xff;
 		payloadLength = headerBuffer.getShort() & 0xffff;
 		
 		/* Allocate buffer. Account for MAC. */
-		byte[] bytes      = new byte[headerLength + payloadLength + macLength];
+		byte[]     bytes  = new byte[payloadLength + macLength];
 		ByteBuffer buffer = ByteBuffer.wrap(bytes);
 		
-		buffer.put(rawHeader);
-		buffer.limit(headerLength + payloadLength);
+		/* Limit buffer to payload length, so we can read the payload. */
+		buffer.limit(payloadLength);
 		
 		try{
 			for(int n = payloadLength, r; n > 0 && (r = this.channel.read(buffer)) > 0; n -= r);
@@ -376,7 +375,8 @@ public class Protocol {
 			System.err.format("Failed to read payload. (%s)\n", e.getMessage());
 		}
 		
-		buffer.limit(headerLength + payloadLength + macLength);
+		/* Extend it again to payload and mac length. */
+		buffer.limit(payloadLength + macLength);
 		
 		try{
 			for(int n = macLength, r; n > 0 && (r = this.channel.read(buffer)) > 0; n -= r);
@@ -385,20 +385,13 @@ public class Protocol {
 			System.err.format("Failed to read MAC. (%s)\n", e.getMessage());
 		}
 		
-		/*
-		 * Decrypting the remaining buffer should work, but it doesn't!
-		 * And in my test case for the Shannon stream cipher, it works...
-		 * To get around this problem, set nonce again, prepend those
-		 * encrypted header bytes and successfully decrypt the whole thing.
-		 */
-		this.session.shannonRecv.nonce(IntegerUtilities.toBytes(this.session.keyRecvIv));
+		/* Decrypt payload. */
 		this.session.shannonRecv.decrypt(bytes);
 		
-		/* Remove Header and MAC bytes. */
+		/* Get payload bytes from buffer (throw away MAC). */
 		byte[] payload = new byte[payloadLength];
 		
 		buffer.flip();
-		buffer.position(headerLength);
 		buffer.get(payload);
 		
 		/* Increment IV. */
@@ -459,15 +452,23 @@ public class Protocol {
 	}
 	
 	/* Search music. The response comes as GZIP compressed XML. */
-	public void sendSearchQuery(ChannelListener listener, String query){
+	public void sendSearchQuery(ChannelListener listener, String query, int offset, int limit){
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Search-Channel", Channel.Type.TYPE_SEARCH, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 4 + 4 + 2 + 1 + query.getBytes().length);
 		
+		/* Check offset and limit. */
+		if(offset < 0){
+			throw new IllegalArgumentException("Offset needs to be >= 0");
+		}
+		else if((limit < 0 && limit != -1) || limit == 0){
+			throw new IllegalArgumentException("Limit needs to be either -1 for no limit or > 0");
+		}
+		
 		/* Append channel id, some values, query length and query. */
 		buffer.putShort((short)channel.getId());
-		buffer.putInt(0x00000000);
-		buffer.putInt(0xffffffff);
+		buffer.putInt(offset); /* Result offset. */
+		buffer.putInt(limit); /* Reply limit. */
 		buffer.putShort((short)0x0000);
 		buffer.put((byte)query.length());
 		buffer.put(query.getBytes());
@@ -478,6 +479,11 @@ public class Protocol {
 		
 		/* Send packet. */
 		this.sendPacket(Command.COMMAND_SEARCH, buffer);
+	}
+	
+	/* Search music. The response comes as GZIP compressed XML. */
+	public void sendSearchQuery(ChannelListener listener, String query){
+		this.sendSearchQuery(listener, query, 0, -1);
 	}
 	
 	/* Notify server we're going to play. */
@@ -616,17 +622,17 @@ public class Protocol {
 	}
 	
 	/* Request playlist details. The response comes as plain XML. */
-	public void sendPlaylistRequest(ChannelListener listener, byte[] playlistId, int unknown){
+	public void sendPlaylistRequest(ChannelListener listener, String id){
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Playlist-Channel", Channel.Type.TYPE_PLAYLIST, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 17 + 4 + 4 + 4 + 1);
 		
 		/* Append channel id, playlist id and some bytes... */
 		buffer.putShort((short)channel.getId());
-		buffer.put(playlistId); /* 17 bytes */
-		buffer.putInt(unknown);
-		buffer.putInt(0x00000000);
-		buffer.putInt(0xffffffff);
+		buffer.put(Hex.toBytes(id)); /* 17 bytes */
+		buffer.putInt(-1);
+		buffer.putInt(0);
+		buffer.putInt(-1);
 		buffer.put((byte)0x01);
 		buffer.flip();
 		
@@ -698,17 +704,4 @@ public class Protocol {
 		
 		return n;
 	}
-	
-	/*private void logPacket(byte[] bytes, String sr, String hp, int k){
-		String file = String.format("C:\\debug\\spotify.%s-%s.%d", sr, hp, k);
-		try{
-			FileOutputStream fos = new FileOutputStream(file);
-			
-			fos.write(bytes);
-			fos.close();
-		}
-		catch(IOException e){
-			e.printStackTrace();
-		}
-	}*/
 }

@@ -14,7 +14,6 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-
 public class ChannelAudioHandler implements ChannelListener {
 	private Cipher       cipher;
 	private Key          key;
