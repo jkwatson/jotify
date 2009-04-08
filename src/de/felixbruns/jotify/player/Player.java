@@ -31,9 +31,13 @@ public class Player {
 			this.close();
 		}
 		
-		/* Skip first 167 bytes (Spotify specific header). TODO: Decode using SpotifyOggHeader. */
+		/* Read and decode first 167 bytes (Spotify specific header). */
 		try{
-			stream.skip(167);
+			byte[] header = new byte[167];
+			
+			stream.read(header);
+			
+			SpotifyOggHeader spotifyOggHeader = new SpotifyOggHeader(header);
 		}
 		catch(IOException e){
 			return false;
