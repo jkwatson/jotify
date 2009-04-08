@@ -26,7 +26,7 @@ public class Protocol {
 	private Server server;
 	
 	/* Spotify session of this protocol instance. */
-	protected Session session;
+	private Session session;
 	
 	/* Protocol listeners. */
 	private List<CommandListener> listeners;
@@ -724,7 +724,7 @@ public class Protocol {
 	}
 	
 	/* Send bytes. */
-	protected void send(ByteBuffer buffer){
+	private void send(ByteBuffer buffer){
 		try{
 			this.channel.write(buffer);
 		}
@@ -734,7 +734,7 @@ public class Protocol {
 	}
 	
 	/* Receive a single byte. */
-	protected int receive(){
+	private int receive(){
 		ByteBuffer buffer = ByteBuffer.allocate(1);
 		
 		try{
@@ -752,12 +752,12 @@ public class Protocol {
 	}
 	
 	/* Receive bytes. */
-	protected int receive(byte[] buffer, int len){
+	private int receive(byte[] buffer, int len){
 		return this.receive(buffer, 0, len);
 	}
 	
 	/* Receive bytes. */
-	protected int receive(byte[] bytes, int off, int len){
+	private int receive(byte[] bytes, int off, int len){
 		ByteBuffer buffer = ByteBuffer.wrap(bytes, off, len);
 		int n = 0;
 		

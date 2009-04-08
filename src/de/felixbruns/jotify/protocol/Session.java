@@ -74,8 +74,8 @@ public class Session {
 	protected byte[] cacheHash;
 	
 	/* Needed for auth hmac. */
-	public byte[] initialClientPacket;
-	public byte[] initialServerPacket;
+	protected byte[] initialClientPacket;
+	protected byte[] initialServerPacket;
 	
 	/* Constructor for a new spotify session. */
 	public Session(){
