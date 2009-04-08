@@ -26,7 +26,7 @@ public class Protocol {
 	private Server server;
 	
 	/* Spotify session of this protocol instance. */
-	private Session session;
+	protected Session session;
 	
 	/* Protocol listeners. */
 	private List<CommandListener> listeners;
@@ -40,7 +40,7 @@ public class Protocol {
 	/* Connect to one of the spotify servers. */
 	public boolean connect(){
 		/* Lookup servers and try to connect, when connected to one of the servers, stop trying. */
-		for(Server server : ServerLookup.lookupServers("_spotify-client._tcp.spotify.com")){
+		for(Server server : ServerLookup.lookupServers("_spotify-client._tcp.spotify.com", ServerLookup.createServer("ap.spotify.com", 4070))){
 			try{
 				/* Connect to server. */
 				this.channel = SocketChannel.open(new InetSocketAddress(server.getHostname(), server.getPort()));
@@ -85,30 +85,37 @@ public class Protocol {
 	/* Send initial packet (key exchange). */
 	public void sendInitialPacket(){
 		ByteBuffer buffer = ByteBuffer.allocate(
-			2 + 2 + 1 + 4 + 4 + 16 + 96 + 128 + 1 + this.session.username.length + 2 + 1
+			2 + 2 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 16 + 96 + 128 + 1 + 1 + 2 + 0 + this.session.username.length + 1
 		);
 		
 		/* Append fields to buffer. */
-		buffer.putShort((short)2); /* Version: 2 */
+		buffer.putShort((short)3); /* Version: 3 */
 		buffer.putShort((short)0); /* Length (update later) */
-		buffer.put(this.session.clientOs);
-		buffer.put(this.session.clientId); /* 4 bytes */
+		buffer.putInt(0x00000000); /* Unknown */
+		buffer.putInt(0x00030C00); /* Unknown */
 		buffer.putInt(this.session.clientRevision);
+		buffer.putInt(0x00000000); /* Unknown */
+		buffer.putInt(0x01000000); /* Unknown */
+		buffer.put(this.session.clientId); /* 4 bytes */
+		buffer.putInt(0x00000000); /* Unknown */
 		buffer.put(this.session.clientRandom); /* 16 bytes */
 		buffer.put(this.session.dhClientKeyPair.getPublicKeyBytes()); /* 96 bytes */
 		buffer.put(this.session.rsaClientKeyPair.getPublicKeyBytes()); /* 128 bytes */
-		buffer.put((byte)this.session.username.length);
+		buffer.put((byte)0); /* Random length */
+		buffer.put((byte)this.session.username.length); /* Username length */
+		buffer.putShort((short)0x0100); /* Unknown */
+		//buffer.put(randomBytes); /* Zero random bytes. */
 		buffer.put(this.session.username);
-		buffer.putShort((short)0x0140);
-		
-		/*
-		 * Append zero or more random bytes.
-		 * The first byte should be 1 + length.
-		 */
-		buffer.put((byte)0x01); /* Zero random bytes. */
+		buffer.put((byte)0x40); /* Unknown */
 		
 		/* Update length byte. */
 		buffer.putShort(2, (short)buffer.position());
+		buffer.flip();
+		
+		/* Save initial client packet for auth hmac generation. */
+		this.session.initialClientPacket = new byte[buffer.remaining()];
+		
+		buffer.get(this.session.initialClientPacket);
 		buffer.flip();
 		
 		/* Send it. */
@@ -119,6 +126,9 @@ public class Protocol {
 	public boolean receiveInitialPacket(){
 		byte[] buffer = new byte[512];
 		int ret, paddingLength, usernameLength;
+		
+		/* Save initial server packet for auth hmac generation. 1024 bytes should be enough. */
+		ByteBuffer serverPacketBuffer = ByteBuffer.allocate(1024);
 		
 		/* Read server random (first 2 bytes). */
 		if((ret = this.receive(this.session.serverRandom, 0, 2)) == -1){
@@ -133,6 +143,8 @@ public class Protocol {
 			 * Substatuses:
 			 * 0x01    : Client upgrade required
 			 * 0x03    : Non-existant user
+			 * 0x04    : Account has been disabled
+			 * 0x06    : You need to complete your account details
 			 * 0x09    : Your current country doesn't match that set in your profile.
 			 * Default : Unknown error
 			 */
@@ -146,7 +158,7 @@ public class Protocol {
 			/* If substatus is 'Client upgrade required', read upgrade URL. */
 			if(this.session.serverRandom[1] == 0x01){
 				if((ret = this.receive(buffer, 0x11a)) > 0){
-					paddingLength = buffer[0x119];
+					paddingLength = buffer[0x119] & 0xFF;
 					
 					if((ret = this.receive(buffer, paddingLength)) > 0){
 						System.out.println("Upgrade URL: " + new String(Arrays.copyOfRange(buffer, 0, ret)));
@@ -164,28 +176,8 @@ public class Protocol {
 			return false;
 		}
 		
-		/* Read puzzle denominator. */
-		if((this.session.puzzleDenominator = this.receive()) == -1){
-			System.err.println("Failed to read puzzle denominator.");
-			
-			return false;
-		}
-		
-		/* Read username length. */
-		if((usernameLength = this.receive()) == -1){
-			System.err.println("Failed to read username length.");
-			
-			return false;
-		}
-		
-		/* Read username into buffer and copy it to 'session.username'. */
-		if((ret = this.receive(buffer, usernameLength)) != usernameLength){
-			System.err.println("Failed to read username.");
-			
-			return false;
-		}
-		
-		this.session.username = Arrays.copyOfRange(buffer, 0, usernameLength);
+		/* Save server random to packet buffer. */
+		serverPacketBuffer.put(this.session.serverRandom);
 		
 		/* Read server public key (Diffie Hellman key exchange). */
 		if((ret = this.receive(buffer, 96)) != 96){
@@ -193,6 +185,9 @@ public class Protocol {
 			
 			return false;
 		}
+		
+		/* Save DH public key to packet buffer. */
+		serverPacketBuffer.put(buffer, 0, 96);
 		
 		/* 
 		 * Convert key, which is in raw byte form to a DHPublicKey
@@ -211,12 +206,18 @@ public class Protocol {
 			return false;
 		}
 		
+		/* Save RSA signature to packet buffer. */
+		serverPacketBuffer.put(this.session.serverBlob);
+		
 		/* Read salt (10 bytes). */
 		if((ret = this.receive(this.session.salt, 0, 10)) != 10){
 			System.err.println("Failed to read salt.");
 			
 			return false;
 		}
+		
+		/* Save salt to packet buffer. */
+		serverPacketBuffer.put(this.session.salt);
 		
 		/* Read padding length (1 byte). */
 		if((paddingLength = this.receive()) == -1){
@@ -225,6 +226,9 @@ public class Protocol {
 			return false;
 		}
 		
+		/* Save padding length to packet buffer. */
+		serverPacketBuffer.put((byte)paddingLength);
+		
 		/* Check if padding length is valid. */
 		if(paddingLength <= 0){
 			System.err.println("Padding length is negative or zero.");
@@ -232,12 +236,77 @@ public class Protocol {
 			return false;
 		}
 		
-		/* Includes itself. */
-		paddingLength--;
+		/* Read username length. */
+		if((usernameLength = this.receive()) == -1){
+			System.err.println("Failed to read username length.");
+			
+			return false;
+		}
+		
+		/* Save username length to packet buffer. */
+		serverPacketBuffer.put((byte)usernameLength);
+		
+		/* Read lengths of puzzle challenge and unknown fields */
+		this.receive(buffer, 8);
+		
+		/* Save bytes to packet buffer. */
+		serverPacketBuffer.put(buffer, 0, 8);
+		
+		/* Get lengths of puzzle challenge and unknown fields.  */
+		ByteBuffer dataBuffer     = ByteBuffer.wrap(buffer, 0, 8);
+		int puzzleChallengeLength = dataBuffer.getShort();
+		int unknownLength1        = dataBuffer.getShort();
+		int unknownLength2        = dataBuffer.getShort();
+		int unknownLength3        = dataBuffer.getShort();
 		
 		/* Read padding. */
 		if((ret = this.receive(buffer, paddingLength)) != paddingLength){
 			System.err.println("Failed to read padding.");
+			
+			return false;
+		}
+		
+		/* Save padding (random bytes) to packet buffer. */
+		serverPacketBuffer.put(buffer, 0, paddingLength);
+		
+		/* Read username into buffer and copy it to 'session.username'. */
+		if((ret = this.receive(buffer, usernameLength)) != usernameLength){
+			System.err.println("Failed to read username.");
+			
+			return false;
+		}
+		
+		/* Save username to packet buffer. */
+		serverPacketBuffer.put(buffer, 0, usernameLength);
+		
+		/* Save username to session. */
+		this.session.username = Arrays.copyOfRange(buffer, 0, usernameLength);
+		
+		/* Receive puzzle challenge and unknown bytes. */
+		this.receive(buffer,                                                       0, puzzleChallengeLength);
+		this.receive(buffer,                                   puzzleChallengeLength, unknownLength1);
+		this.receive(buffer,                  puzzleChallengeLength + unknownLength1, unknownLength2);
+		this.receive(buffer, puzzleChallengeLength + unknownLength1 + unknownLength2, unknownLength3);
+		
+		/* Save to packet buffer. */
+		serverPacketBuffer.put(buffer, 0, puzzleChallengeLength + unknownLength1 + unknownLength2 + unknownLength3);
+		serverPacketBuffer.flip();
+		
+		/* Write data from packet buffer to byte array. */
+		this.session.initialServerPacket = new byte[serverPacketBuffer.remaining()];
+		
+		serverPacketBuffer.get(this.session.initialServerPacket);
+		
+		/* Wrap buffer in order to get values. */
+		dataBuffer = ByteBuffer.wrap(buffer, 0, puzzleChallengeLength + unknownLength1 + unknownLength2 + unknownLength3);
+		
+		/* Get puzzle denominator and magic. */
+		if(dataBuffer.get() == 0x01){			
+			this.session.puzzleDenominator = dataBuffer.get();
+			this.session.puzzleMagic       = dataBuffer.getInt();
+		}
+		else{
+			System.err.println("Unexpected puzzle challenge.");
 			
 			return false;
 		}
@@ -248,14 +317,16 @@ public class Protocol {
 	
 	/* Send authentication packet (puzzle solution, HMAC). */
 	public void sendAuthenticationPacket(){
-		ByteBuffer buffer = ByteBuffer.allocate(8 + 20 + 1 + 1);
+		ByteBuffer buffer = ByteBuffer.allocate(20 + 1 + 1 + 4 + 2 + 15 + 8);
 		
 		/* Append fields to buffer. */
-		buffer.put(this.session.puzzleSolution); /* 8 bytes */
 		buffer.put(this.session.authHmac); /* 20 bytes */
-		buffer.put((byte)0x00); /* Unknown. */
-		/* Payload length + junk byte. Payload can be anything and doesn't appear to be used. */
-		buffer.put((byte)0x01); /* Zero payload. */
+		buffer.put((byte)0); /* Random data length */
+		buffer.put((byte)0); /* Unknown. */
+		buffer.putShort((short)this.session.puzzleSolution.length);
+		buffer.putInt(0x0000000); /* Unknown. */
+		//buffer.put(randomBytes); /* Zero random bytes :-) */
+		buffer.put(this.session.puzzleSolution); /* 8 bytes */
 		buffer.flip();
 		
 		/* Send it. */
@@ -282,15 +353,12 @@ public class Protocol {
 		}
 		
 		/* Check payload length. AND with 0x00FF so we don't get a negative integer. */
-		if((payloadLength = 0x00FF & buffer[1]) <= 0){
+		if((payloadLength = buffer[1] & 0xFF) <= 0){
 			System.err.println("Payload length is negative or zero.");
 			
 			return false;
 		}
-		
-		/* Includes itself. */
-		payloadLength--;
-		
+				
 		/* Read payload. */
 		if(this.receive(buffer, payloadLength) != payloadLength){
 			System.err.println("Failed to read payload.");
@@ -300,7 +368,7 @@ public class Protocol {
 		
 		return true;
 	}
-	
+
 	/* Send command with payload (will be encrypted with stream cipher). */
 	public synchronized void sendPacket(int command, ByteBuffer payload){
 		ByteBuffer buffer = ByteBuffer.allocate(1 + 2 + payload.remaining());
@@ -579,7 +647,7 @@ public class Protocol {
 	public void sendBrowseRequest(ChannelListener listener, int type, Collection<String> ids){
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Browse-Channel", Channel.Type.TYPE_BROWSE, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(2 + 1 + ids.size() * 20 + ((type == 1 || type == 2)?4:0));
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 1 + ids.size() * 16 + ((type == 1 || type == 2)?4:0));
 		
 		/* Check arguments. */
 		if(type != 1 && type != 2 && type != 3){
@@ -593,9 +661,9 @@ public class Protocol {
 		buffer.putShort((short)channel.getId());
 		buffer.put((byte)type);
 		
-		/* Append id's. */
+		/* Append (16 byte) ids. */
 		for(String id : ids){
-			buffer.put(Hex.toBytes(id));
+			buffer.put(Arrays.copyOfRange(Hex.toBytes(id), 0, 16));
 		}
 		
 		/* Append zero. */
@@ -630,7 +698,7 @@ public class Protocol {
 		/* Append channel id, playlist id and some bytes... */
 		buffer.putShort((short)channel.getId());
 		buffer.put(Hex.toBytes(id)); /* 17 bytes */
-		buffer.putInt(-1);
+		buffer.putInt(-1); /* Playlist history. -1: current. 0: changes since version 0, 1: since version 1, etc. */
 		buffer.putInt(0);
 		buffer.putInt(-1);
 		buffer.put((byte)0x01);
@@ -656,7 +724,7 @@ public class Protocol {
 	}
 	
 	/* Send bytes. */
-	private void send(ByteBuffer buffer){
+	protected void send(ByteBuffer buffer){
 		try{
 			this.channel.write(buffer);
 		}
@@ -666,7 +734,7 @@ public class Protocol {
 	}
 	
 	/* Receive a single byte. */
-	private int receive(){
+	protected int receive(){
 		ByteBuffer buffer = ByteBuffer.allocate(1);
 		
 		try{
@@ -684,12 +752,12 @@ public class Protocol {
 	}
 	
 	/* Receive bytes. */
-	private int receive(byte[] buffer, int len){
+	protected int receive(byte[] buffer, int len){
 		return this.receive(buffer, 0, len);
 	}
 	
 	/* Receive bytes. */
-	private int receive(byte[] bytes, int off, int len){
+	protected int receive(byte[] bytes, int off, int len){
 		ByteBuffer buffer = ByteBuffer.wrap(bytes, off, len);
 		int n = 0;
 		

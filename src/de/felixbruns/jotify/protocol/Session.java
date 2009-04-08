@@ -20,7 +20,6 @@ public class Session {
 	private Protocol protocol;
 	
 	/* Client identification */
-	protected byte   clientOs;
 	protected byte[] clientId;
 	protected int    clientRevision;
 	
@@ -68,21 +67,25 @@ public class Session {
 	 * 2^deniminator becomes zero.
 	 */
 	protected int    puzzleDenominator;
+	protected int    puzzleMagic;
 	protected byte[] puzzleSolution;
 	
 	/* Cache hash. Automatically generated, but we're lazy. */
 	protected byte[] cacheHash;
+	
+	/* Needed for auth hmac. */
+	public byte[] initialClientPacket;
+	public byte[] initialServerPacket;
 	
 	/* Constructor for a new spotify session. */
 	public Session(){
 		/* Initialize protocol with this session. */
 		this.protocol = new Protocol(this);
 		
-		/* Set client identification (Spotify 0.3.11 / r43065 / Windows). */
-		this.clientOs       = 0x00; /* 0x00: Windows, 0x01: Mac OS X */
-		this.clientId       = new byte[]{0x01, 0x09, 0x10, 0x01};
-		//this.clientId       = new byte[]{0x01, 0x04, 0x03, 0x01}; /* (official) */
-		this.clientRevision = 43065;
+		/* Set client identification (Spotify 0.3.12 / r44764). */
+		//this.clientId       = new byte[]{0x01, 0x09, 0x10, 0x01};
+		this.clientId       = new byte[]{0x01, 0x04, 0x01, 0x01}; /* (official) */
+		this.clientRevision = 44764;
 		
 		/* Client and server generate 16 random bytes each. */
 		this.clientRandom = new byte[16];
@@ -123,6 +126,7 @@ public class Session {
 		
 		/* Allocate buffer for puzzle solution. */
 		this.puzzleDenominator = 0;
+		this.puzzleMagic       = 0;
 		this.puzzleSolution    = new byte[8];
 		
 		/* Found in Storage.dat (cache) at offset 16. Modify first byte of cache hash. */
@@ -134,6 +138,10 @@ public class Session {
 			(byte)0xef, (byte)0x20, (byte)0x51, (byte)0x95
 		};
 		this.cacheHash[0] = (byte)new Random().nextInt();
+		
+		/* Not initialized. */
+		this.initialClientPacket = null;
+		this.initialServerPacket = null;
 	}
 	
 	public RSAPublicKey getRSAPublicKey(){
@@ -245,25 +253,20 @@ public class Session {
 	}
 	
 	private void generateAuthHmac(){
-		byte[] dhClientPublicKeyBytes  = this.dhClientKeyPair.getPublicKeyBytes();
-		byte[] dhServerPublicKeyBytes  = DH.keyToBytes(this.dhServerPublicKey);
-		byte[] rsaClientPublicKeyBytes = this.rsaClientKeyPair.getPublicKeyBytes();
-		
 		ByteBuffer buffer = ByteBuffer.allocate(
-			this.clientRandom.length + this.serverRandom.length +
-			dhClientPublicKeyBytes.length + dhServerPublicKeyBytes.length +
-			rsaClientPublicKeyBytes.length + 1 + this.username.length + 1 + 1
+			this.initialClientPacket.length +
+			this.initialServerPacket.length +
+			1 + 1 + 2 + 4 + 0 + this.puzzleSolution.length
 		);
 		
-		buffer.put(this.clientRandom); /* 16 bytes */
-		buffer.put(this.serverRandom); /* 16 bytes */
-		buffer.put(dhClientPublicKeyBytes);
-		buffer.put(dhServerPublicKeyBytes);
-		buffer.put(rsaClientPublicKeyBytes);
-		buffer.put((byte)this.username.length);
-		buffer.put(this.username);
-		buffer.put((byte)0x01);
-		buffer.put((byte)0x40);
+		buffer.put(this.initialClientPacket);
+		buffer.put(this.initialServerPacket);
+		buffer.put((byte)0); /* Random data length */
+		buffer.put((byte)0); /* Unknown */
+		buffer.putShort((short)this.puzzleSolution.length);
+		buffer.putInt(0x0000000); /* Unknown */
+		//buffer.put(randomBytes); /* Zero random bytes :-) */
+		buffer.put(this.puzzleSolution); /* 8 bytes */
 		
 		this.authHmac = Hash.hmacSha1(buffer.array(), this.keyHmac);
 	}
@@ -304,7 +307,7 @@ public class Session {
 								((digest[19] & 0xFF));
 			
 			/* XOR with a fancy magic. */
-			nominatorFromHash ^= 0xb9671267;
+			nominatorFromHash ^= this.puzzleMagic;
 		} while((nominatorFromHash & denominator) != 0);
 	}
 }
