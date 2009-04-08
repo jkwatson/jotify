@@ -7,6 +7,7 @@ import de.felixbruns.jotify.util.XMLElement;
 
 public class Result {
 	private int          version;
+	private String       query;
 	private String       suggestion;
 	private int          totalArtists;
 	private int          totalAlbums;
@@ -17,6 +18,7 @@ public class Result {
 	
 	private Result(){
 		this.version      = 1;
+		this.query        = null;
 		this.suggestion   = null;
 		this.totalArtists = 0;
 		this.totalAlbums  = 0;
@@ -28,6 +30,10 @@ public class Result {
 	
 	public int getVersion(){
 		return this.version;
+	}
+	
+	public String getQuery(){
+		return this.query;
 	}
 	
 	public String getSuggestion(){
@@ -58,9 +64,12 @@ public class Result {
 		return this.tracks;
 	}
 	
-	public static Result fromXMLElement(XMLElement resultElement){
+	public static Result fromXMLElement(String query, XMLElement resultElement){
 		/* Create Result object. */
 		Result result = new Result();
+		
+		/* Set query. */
+		result.query = query;
 		
 		/* Set version. */
 		if(resultElement.hasChild("version")){
@@ -106,7 +115,15 @@ public class Result {
 		return result;
 	}
 	
-	public String toString(){
-		return String.format("[Result...]");
+	public boolean equals(Object o){
+		if(o instanceof Result){
+			return this.query.equals(((Result)o).query);			
+		}
+		
+		return false;
+	}
+	
+	public static Result fromXMLElement(XMLElement resultElement){
+		return fromXMLElement("", resultElement);
 	}
 }

@@ -60,10 +60,10 @@ public class Album {
 		}
 		
 		/* Set artist. */
-		if(albumElement.hasChild("artist-id") && albumElement.hasChild("artist")){
+		if(albumElement.hasChild("artist-id") && (albumElement.hasChild("artist") || albumElement.hasChild("artist-name"))){
 			album.artist = new Artist(
 				albumElement.getChildText("artist-id"),
-				albumElement.getChildText("artist")
+				albumElement.hasChild("artist")?albumElement.getChildText("artist"):albumElement.getChildText("artist-name")
 			);
 		}
 		

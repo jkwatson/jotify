@@ -3,39 +3,50 @@ package de.felixbruns.jotify;
 import java.awt.Image;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 
 import de.felixbruns.jotify.crypto.RSA;
 import de.felixbruns.jotify.media.Album;
 import de.felixbruns.jotify.media.Artist;
+import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
-import de.felixbruns.jotify.player.Player;
+import de.felixbruns.jotify.player.ChannelPlayer;
 import de.felixbruns.jotify.protocol.Command;
 import de.felixbruns.jotify.protocol.CommandListener;
 import de.felixbruns.jotify.protocol.Protocol;
 import de.felixbruns.jotify.protocol.Session;
 import de.felixbruns.jotify.protocol.channel.Channel;
-import de.felixbruns.jotify.protocol.channel.ChannelAudioHandler;
 import de.felixbruns.jotify.protocol.channel.ChannelCallback;
 import de.felixbruns.jotify.util.GZIP;
 import de.felixbruns.jotify.util.XML;
 import de.felixbruns.jotify.util.XMLElement;
 
-public class Spotify extends Thread implements CommandListener {
-	private Session  session;
-	private Protocol protocol;
-	private Player   player;
-	private boolean  close;
+public class Jotify extends Thread implements CommandListener {
+	private Session       session;
+	private Protocol      protocol;
+	private ChannelPlayer player;
+	private boolean       close;
 	
-	public Spotify(){
+	private static Jotify instance;
+	
+	public static Jotify getInstance(){
+		if(instance == null){
+			instance = new Jotify();
+		}
+		
+		return instance;
+	}
+	
+	public Jotify(){
 		this.session  = new Session();
 		this.protocol = null;
-		this.player   = new Player();
+		this.player   = null;
 		this.close    = false;
 	}
 	
@@ -59,8 +70,9 @@ public class Spotify extends Thread implements CommandListener {
 		this.close = true;
 		
 		/* This will make receivePacket return immediately. */
-		if(this.protocol != null)
+		if(this.protocol != null){
 			this.protocol.disconnect();
+		}
 	}
 	
 	/* This runs all packet IO stuff in a thread. */
@@ -74,8 +86,9 @@ public class Spotify extends Thread implements CommandListener {
 		while(!this.close && this.protocol.receivePacket());
 		
 		/* Don't call disconnect twice. */
-		if(!close)
+		if(!this.close){
 			this.protocol.disconnect();
+		}
 	}
 	
 	/* Search for something. */
@@ -93,10 +106,10 @@ public class Spotify extends Thread implements CommandListener {
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
 		/* Load XML. */
-		XMLElement resultElement = XML.load(data);
+		XMLElement resultElement = XML.load(data, Charset.forName("UTF-8"));
 		
 		/* Create result from XML. */
-		return Result.fromXMLElement(resultElement);
+		return Result.fromXMLElement(query, resultElement);
 	}
 	
 	/* Request an image. */
@@ -134,7 +147,7 @@ public class Spotify extends Thread implements CommandListener {
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
 		/* Load XML. */
-		return XML.load(data);
+		return XML.load(data, Charset.forName("UTF-8"));
 	}
 	
 	/* Browse an artist. */
@@ -164,7 +177,35 @@ public class Spotify extends Thread implements CommandListener {
 		return Result.fromXMLElement(resultElement);
 	}
 	
-	public XMLElement playlist(String id){
+	/* Browse tracks. */
+	public Result browse(List<Track> tracks){
+		/* Create channel callback */
+		ChannelCallback callback = new ChannelCallback();
+		
+		/* Create id list. */
+		List<String> ids = new ArrayList<String>();
+		
+		for(Track track : tracks){
+			ids.add(track.getId());
+		}
+		
+		/* Send browse request. */
+		this.protocol.sendBrowseRequest(callback, 3, ids);
+		
+		/* Get data and inflate it. */
+		byte[] data = GZIP.inflate(callback.getData());
+		
+		/* Cut off that last 0xFF byte... */
+		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		
+		/* Load XML. */
+		XMLElement resultElement = XML.load(data, Charset.forName("UTF-8"));
+		
+		/* Create result from XML. */
+		return Result.fromXMLElement(resultElement);
+	}
+	
+	public Playlist playlist(String id){
 		/* Create channel callback */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -175,18 +216,70 @@ public class Spotify extends Thread implements CommandListener {
 		byte[] data = callback.getData();
 		
 		/* Load XML. */
-		return XML.load(
+		XMLElement playlistElement = XML.load(
 			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
-			new String(data) +
+			new String(data, Charset.forName("UTF-8")) +
 			"</playlist>"
 		);
+		
+		return Playlist.fromXMLElement(playlistElement, id);
 	}
 	
-	public void playlists(){
-		this.playlist("0000000000000000000000000000000000");
+	public List<Playlist> playlists(){
+		/* Create channel callback */
+		ChannelCallback callback = new ChannelCallback();
+		
+		/* Send browse request. */
+		this.protocol.sendPlaylistRequest(callback, "0000000000000000000000000000000000");
+		
+		/* Get data and inflate it. */
+		byte[] data = callback.getData();
+		
+		/* Load XML. */
+		XMLElement playlistElement = XML.load(
+			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
+			new String(data, Charset.forName("UTF-8")) +
+			"</playlist>"
+		);
+		
+		return Playlist.listFromXMLElement(playlistElement);
 	}
 	
-	public void play(final Track track){
+	public void play(){
+		if(this.player != null){
+			this.player.play();
+		}
+	}
+	
+	public void pause(){
+		if(this.player != null){
+			this.player.stop();
+		}
+	}
+	
+	public void stopPlay(){
+		if(this.player != null){
+			this.player.close();
+		}
+	}
+	
+	public Track track(){
+		if(this.player != null){
+			return this.player.track();
+		}
+		
+		return null;
+	}
+	
+	public int position(){
+		if(this.player != null){
+			return this.player.position();
+		}
+		
+		return -1;
+	}
+	
+	public void play(Track track){
 		/* Create channel callback */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -196,44 +289,16 @@ public class Spotify extends Thread implements CommandListener {
 		/* Get AES key. */
 		byte[] key = callback.getData();
 		
-		/* Create piped streams (512 kilobyte buffer). */
-		PipedOutputStream output = new PipedOutputStream();
-		PipedInputStream  input  = new PipedInputStream(0x80000);
+		/* Create channel player. */
+		this.player = new ChannelPlayer(this.protocol, track, key);
 		
-		/* Connect piped streams. */
-		try{
-			output.connect(input);
-		}
-		catch(IOException e){
-			e.printStackTrace();
-		}
-		
-		int offset = 0;
-		int length = 160 * 1024 * 5 / 8; /* 160 kbit * 5 seconds. */
-		
-		ChannelAudioHandler handler = new ChannelAudioHandler(key, output);
-		
-		/* Send substream request. */
-		this.protocol.sendSubstreamRequest(handler, track, offset, length);
-		
-		/* Play */
-		if(this.player.open(input)){
-			this.player.play();
-		}
-		
-		/* FIXME: This is a really crappy playing method :-P */
-		while(true){
-			offset += length;
-			
-			this.protocol.sendSubstreamRequest(handler, track, offset, length);
-				
-			try{Thread.sleep(3500);}catch(InterruptedException e){}
-		}
+		/* Start playing. */
+		this.play();
 	}
 	
 	/* Handle incoming commands. */
 	public void commandReceived(int command, byte[] payload){
-		System.out.format("Command: 0x%02x Length: %d\n", command, payload.length);
+		//System.out.format("< Command: 0x%02x Length: %d\n", command, payload.length);
 		
 		switch(command){
 			case Command.COMMAND_SECRETBLK: {
@@ -286,7 +351,7 @@ public class Spotify extends Thread implements CommandListener {
 				break;
 			}
 			case Command.COMMAND_COUNTRYCODE: {
-				System.out.println("Country: " + new String(payload));
+				System.out.println("Country: " + new String(payload, Charset.forName("UTF-8")));
 				
 				break;
 			}
@@ -298,17 +363,19 @@ public class Spotify extends Thread implements CommandListener {
 				/* HTML-notification, shown in a yellow bar in the official client. */
 				/* Skip 11 byte header... */
 				System.out.println("Notification: " + new String(
-					Arrays.copyOfRange(payload, 11, payload.length)
+					Arrays.copyOfRange(payload, 11, payload.length), Charset.forName("UTF-8")
 				));
 				
 				break;
 			}
 			case Command.COMMAND_PRODINFO: {
 				/* Payload is uncompressed XML. */
-				if(!new String(payload).contains("<type>premium</type>")){
+				if(!new String(payload, Charset.forName("UTF-8")).contains("<type>premium</type>")){
 					System.err.println(
 						"Sorry, you need a premium account to use jotify (this is a restriction by Spotify)."
 					);
+					
+					System.exit(0);
 				}
 				
 				break;
@@ -329,7 +396,7 @@ public class Spotify extends Thread implements CommandListener {
 	
 	public static void main(String[] args) throws Exception {
 		/* Create a spotify object. */
-		Spotify spotify = new Spotify();
+		Jotify spotify = Jotify.getInstance();
 		
 		spotify.login("username", "password");
 		
@@ -337,13 +404,15 @@ public class Spotify extends Thread implements CommandListener {
 		spotify.start();
 		
 		/* Get a list of this users playlists. */
-		spotify.playlists();
+		//List<Playlist> playlists = spotify.playlists();
+		
+		//spotify.playlist(playlists.get(0).getId());
 		
 		/* Search for an artist / album / track. */
-		Result result = spotify.search("Coldplay");
+		//Result result = spotify.search("Coldplay");
 		
 		/* Play first track in result. */
-		spotify.play(result.getTracks().get(0));
+		//spotify.play(result.getTracks().get(0));
 		
 		/* Browse */
 		//Artist artist = spotify.browse(result.getArtists().get(0));

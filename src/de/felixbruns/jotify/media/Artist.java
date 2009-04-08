@@ -90,7 +90,9 @@ public class Artist {
 	
 	public static Artist fromURI(String uri) {
 		Artist artist = new Artist();
+		
 		artist.id = Hex.URIToId(uri);
+		
 		return artist;
 	}
 }
