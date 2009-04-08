@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.Reader;
 import java.io.StringReader;
+import java.nio.charset.Charset;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -39,7 +40,7 @@ public class XML {
 		return load(new StringReader(xml));
 	}
 	
-	public static XMLElement load(byte[] xml){
-		return load(new String(xml));
+	public static XMLElement load(byte[] xml, Charset charset){
+		return load(new String(xml, charset));
 	}
 }

@@ -17,8 +17,21 @@ public class ServerLookup {
 	}
 	
 	public static Collection<Server> lookupServers(String dnsName){
+		return lookupServers(dnsName, new ArrayList<Server>());
+	}
+	
+	public static Collection<Server> lookupServers(String dnsName, Server fallback){
+		Collection<Server> fallbackList = new ArrayList<Server>();
+		
+		fallbackList.add(fallback);
+		
+		return lookupServers(dnsName, fallbackList);
+	}
+	
+	public static Collection<Server> lookupServers(String dnsName, Collection<Server> fallbackList){
 		Collection<Server> servers = new ArrayList<Server>();
 		Lookup             lookup  = null;
+		Record[]           records = null;;
 		
 		try{
 			lookup = new Lookup(dnsName, Type.SRV);
@@ -27,11 +40,15 @@ public class ServerLookup {
 			System.err.println("Error parsing DNS name: " + e.getMessage());
 		}
 		
-		if(lookup == null){
-			return null;
+		if(lookup == null || (records = lookup.run()) == null){
+			if(fallbackList != null){
+				servers.addAll(fallbackList);
+			}
+			
+			return servers;
 		}
 		
-		for(Record record : lookup.run()){
+		for(Record record : records){
 			if(record instanceof SRVRecord){
 				SRVRecord srvRecord = (SRVRecord)record;
 				
@@ -42,6 +59,10 @@ public class ServerLookup {
 		}
 		
 		return servers;
+	}
+	
+	public static Server createServer(String hostname, int port){
+		return instance.new Server(hostname, port);
 	}
 	
 	public class Server{
