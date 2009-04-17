@@ -1,14 +1,22 @@
 package de.felixbruns.jotify.media;
 
-import de.felixbruns.jotify.util.Hex;
+import java.util.ArrayList;
+import java.util.List;
+
+import de.felixbruns.jotify.util.SpotifyURI;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class Album {
-	private String id;
-	private String name;
-	private Artist artist;
-	private String cover;
-	private float  popularity;
+	private String      id;
+	private String      name;
+	private Artist      artist;
+	private String      cover;
+	private float       popularity;
+	private List<Track> tracks;
+	
+	private Album(){
+		this(null, null, null);
+	}
 	
 	public Album(String id, String name, Artist artist){
 		this.id         = id;
@@ -16,14 +24,7 @@ public class Album {
 		this.artist     = artist;
 		this.cover      = null;
 		this.popularity = -1.0f;
-	}
-	
-	private Album(){
-		this.id         = null;
-		this.name       = null;
-		this.artist     = null;
-		this.cover      = null;
-		this.popularity = -1.0f;
+		this.tracks     = new ArrayList<Track>();
 	}
 	
 	public String getId(){
@@ -44,6 +45,10 @@ public class Album {
 	
 	public float getPopularity(){
 		return this.popularity;
+	}
+	
+	public List<Track> getTracks(){
+		return this.tracks;
 	}
 	
 	public static Album fromXMLElement(XMLElement albumElement){
@@ -77,6 +82,15 @@ public class Album {
 			album.popularity = Float.parseFloat(albumElement.getChildText("popularity"));
 		}
 		
+		/* Set tracks. */
+		if(albumElement.hasChild("discs")){
+			for(XMLElement discElement : albumElement.getChild("discs").getChildren("disc")){
+				for(XMLElement trackElement : discElement.getChildren("track")){
+					album.tracks.add(Track.fromXMLElement(trackElement));
+				}
+			}
+		}		
+		
 		/* TODO: album-type, copyright, discs, ... */
 		
 		return album;
@@ -86,9 +100,11 @@ public class Album {
 		return String.format("[Album: %s by %s]", this.name, this.artist);
 	}
 
-	public static Album fromURI(String uri) {
+	public static Album fromURI(String uri){
 		Album album = new Album();
-		album.id = Hex.URIToId(uri);
+		
+		album.id = SpotifyURI.toHex(uri);
+		
 		return album;
 	}
 }

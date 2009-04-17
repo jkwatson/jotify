@@ -3,7 +3,7 @@ package de.felixbruns.jotify.media;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.felixbruns.jotify.util.Hex;
+import de.felixbruns.jotify.util.SpotifyURI;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class Artist {
@@ -91,7 +91,7 @@ public class Artist {
 	public static Artist fromURI(String uri) {
 		Artist artist = new Artist();
 		
-		artist.id = Hex.URIToId(uri);
+		artist.id = SpotifyURI.toHex(uri);
 		
 		return artist;
 	}

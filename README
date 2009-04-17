@@ -2,7 +2,6 @@ This is ongoing work and probably needs some restructuring and
 theres no documentation :)
 
 Dependancies:
-	- dnsjava             (http://www.dnsjava.org)
 	- JOrbis              (http://www.jcraft.com/jorbis/)
 	- tritonus_share.jar  (http://www.tritonus.org/plugins.html)
 	- tritonus_jorbis.jar (http://www.tritonus.org/plugins.html)

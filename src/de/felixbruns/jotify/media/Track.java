@@ -3,7 +3,7 @@ package de.felixbruns.jotify.media;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.felixbruns.jotify.util.Hex;
+import de.felixbruns.jotify.util.SpotifyURI;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class Track {
@@ -46,6 +46,14 @@ public class Track {
 	
 	public String getId(){
 		return this.id;
+	}
+	
+	public String getURI(){
+		return "spotify:track:" + SpotifyURI.toURI(this.id);
+	}
+	
+	public String getLink(){
+		return "http://open.spotify.com/track/" + SpotifyURI.toURI(this.id);
 	}
 	
 	public String getTitle(){
@@ -156,7 +164,9 @@ public class Track {
 
 	public static Track fromURI(String uri) {
 		Track track = new Track();
-		track.id = Hex.URIToId(uri);
+		
+		track.id = SpotifyURI.toHex(uri);
+		
 		return track;
 	}
 }

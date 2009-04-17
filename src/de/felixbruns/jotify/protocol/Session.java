@@ -14,6 +14,9 @@ import de.felixbruns.jotify.crypto.RandomBytes;
 import de.felixbruns.jotify.crypto.Shannon;
 import de.felixbruns.jotify.crypto.DH.*;
 import de.felixbruns.jotify.crypto.RSA.RSAKeyPair;
+import de.felixbruns.jotify.exceptions.AuthenticationException;
+import de.felixbruns.jotify.exceptions.ConnectionException;
+import de.felixbruns.jotify.exceptions.ProtocolException;
 
 public class Session {
 	/* Spotify protocol to send and receive data. */
@@ -77,15 +80,20 @@ public class Session {
 	protected byte[] initialClientPacket;
 	protected byte[] initialServerPacket;
 	
-	/* Constructor for a new spotify session. */
+	public static final int CLIENT_REVISION = 45126;
+	
 	public Session(){
+		this(-1);
+	}
+	
+	/* Constructor for a new spotify session. */
+	public Session(int revision){
 		/* Initialize protocol with this session. */
 		this.protocol = new Protocol(this);
 		
-		/* Set client identification (Spotify 0.3.12 / r44764). */
-		//this.clientId       = new byte[]{0x01, 0x09, 0x10, 0x01};
-		this.clientId       = new byte[]{0x01, 0x04, 0x01, 0x01}; /* (official) */
-		this.clientRevision = 44764;
+		/* Set client identification (Spotify 0.3.12 / r45126). */
+		this.clientId       = new byte[]{0x01, 0x04, 0x01, 0x01};
+		this.clientRevision = (revision < 0)?CLIENT_REVISION:revision;
 		
 		/* Client and server generate 16 random bytes each. */
 		this.clientRandom = new byte[16];
@@ -144,26 +152,29 @@ public class Session {
 		this.initialServerPacket = null;
 	}
 	
+	public String getUsername(){
+		return new String(this.username);
+	}
+	
 	public RSAPublicKey getRSAPublicKey(){
 		return this.rsaClientKeyPair.getPublicKey();
 	}
 	
-	public Protocol authenticate(String username, String password){
+	public Protocol authenticate(String username, String password) throws ConnectionException, AuthenticationException {
 		/* Set username and password. */
 		this.username = username.getBytes();
 		this.password = password.getBytes();
 		
 		/* Connect to a spotify server. */
-		if(!this.protocol.connect()){
-			return null;
-		}
+		this.protocol.connect();
 		
 		/* Send and receive inital packets. */
-		this.protocol.sendInitialPacket();
-		if(!this.protocol.receiveInitialPacket()){
-			System.err.println("Error receiving initial server packet!");
-			
-			return null;
+		try{
+			this.protocol.sendInitialPacket();
+			this.protocol.receiveInitialPacket();
+		}
+		catch(ProtocolException e){
+			throw new AuthenticationException(e.getMessage());
 		}
 		
 		/* Generate auth hash. */
@@ -232,11 +243,12 @@ public class Session {
 		this.generateAuthHmac();
 		
 		/* Send authentication. */
-		this.protocol.sendAuthenticationPacket();
-		if(!this.protocol.receiveAuthenticationPacket()){
-			System.err.println("Error reading auth response!");
-			
-			return null;
+		try{
+			this.protocol.sendAuthenticationPacket();
+			this.protocol.receiveAuthenticationPacket();
+		}
+		catch(ProtocolException e){
+			throw new AuthenticationException(e.getMessage());
 		}
 		
 		return this.protocol;

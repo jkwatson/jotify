@@ -10,20 +10,22 @@ import java.util.Collection;
 import java.util.List;
 
 import de.felixbruns.jotify.crypto.DH;
+import de.felixbruns.jotify.exceptions.ConnectionException;
+import de.felixbruns.jotify.exceptions.ProtocolException;
+import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.Track;
 import de.felixbruns.jotify.protocol.channel.Channel;
 import de.felixbruns.jotify.protocol.channel.ChannelListener;
+import de.felixbruns.jotify.util.DNS;
 import de.felixbruns.jotify.util.Hex;
 import de.felixbruns.jotify.util.IntegerUtilities;
-import de.felixbruns.jotify.util.ServerLookup;
-import de.felixbruns.jotify.util.ServerLookup.Server;
 
 public class Protocol {
 	/* Socket connection to Spotify server. */
 	private SocketChannel channel;
 	
 	/* Current server and port */
-	private Server server;
+	private InetSocketAddress server;
 	
 	/* Spotify session of this protocol instance. */
 	private Session session;
@@ -38,12 +40,18 @@ public class Protocol {
 	}
 	
 	/* Connect to one of the spotify servers. */
-	public boolean connect(){
-		/* Lookup servers and try to connect, when connected to one of the servers, stop trying. */
-		for(Server server : ServerLookup.lookupServers("_spotify-client._tcp.spotify.com", ServerLookup.createServer("ap.spotify.com", 4070))){
+	public void connect() throws ConnectionException {
+		/* Lookup servers via DNS SRV query. */
+		List<InetSocketAddress> servers = DNS.lookupSRV("_spotify-client._tcp.spotify.com");
+		
+		/* Add a fallback server if others don't work. */
+		servers.add(new InetSocketAddress("ap.spotify.com", 4070));
+		
+		/* Try to connect to each server, stop trying when connected. */
+		for(InetSocketAddress server : servers){
 			try{
 				/* Connect to server. */
-				this.channel = SocketChannel.open(new InetSocketAddress(server.getHostname(), server.getPort()));
+				this.channel = SocketChannel.open(server);
 				
 				/* Save server for later use. */
 				this.server = server;
@@ -51,22 +59,20 @@ public class Protocol {
 				break;
 			}
 			catch(IOException e){
-				System.err.format("Error connecting to '%s': %s\n",server, e.getMessage());
+				throw new ConnectionException("Error connecting to '" + server + "': " + e.getMessage());
 			}
 		}
 		
 		/* If connection was not established, return false. */
 		if(this.channel == null){
-			return false;
+			throw new ConnectionException("Failed to connect!");
 		}
 		
 		System.out.format("Connected to '%s'\n", this.server);
-		
-		return true;
 	}
 	
 	/* Disconnect from server */
-	public void disconnect(){
+	public void disconnect() throws ConnectionException {
 		try{
 			/* Close connection to server. */
 			this.channel.close();
@@ -74,7 +80,7 @@ public class Protocol {
 			System.out.format("Disconnected from '%s'\n", this.server);
 		}
 		catch(IOException e){
-			System.err.format("Error disconnecting from '%s': %s\n", this.server, e.getMessage());
+			throw new ConnectionException("Error disconnecting from '" + this.server + "': " + e.getMessage());
 		}
 	}
 	
@@ -83,7 +89,7 @@ public class Protocol {
 	}
 	
 	/* Send initial packet (key exchange). */
-	public void sendInitialPacket(){
+	public void sendInitialPacket() throws ProtocolException {
 		ByteBuffer buffer = ByteBuffer.allocate(
 			2 + 2 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 16 + 96 + 128 + 1 + 1 + 2 + 0 + this.session.username.length + 1
 		);
@@ -123,7 +129,7 @@ public class Protocol {
 	}
 	
 	/* Receive initial packet (key exchange). */
-	public boolean receiveInitialPacket(){
+	public void receiveInitialPacket() throws ProtocolException {
 		byte[] buffer = new byte[512];
 		int ret, paddingLength, usernameLength;
 		
@@ -132,28 +138,28 @@ public class Protocol {
 		
 		/* Read server random (first 2 bytes). */
 		if((ret = this.receive(this.session.serverRandom, 0, 2)) == -1){
-			System.err.println("Failed to read server random.");
-			
-			return false;
+			throw new ProtocolException("Failed to read server random.");
 		}
 		
 		/* Check if we got a status message. */
 		if(this.session.serverRandom[0] != 0x00 || ret != 2){
 			/*
 			 * Substatuses:
-			 * 0x01    : Client upgrade required
-			 * 0x03    : Non-existant user
-			 * 0x04    : Account has been disabled
-			 * 0x06    : You need to complete your account details
+			 * 0x01    : Client upgrade required.
+			 * 0x03    : Non-existant user.
+			 * 0x04    : Account has been disabled.
+			 * 0x06    : You need to complete your account details.
 			 * 0x09    : Your current country doesn't match that set in your profile.
 			 * Default : Unknown error
 			 */
-			System.out.format("Status: %d, Substatus: %d => %s.\n",
-				this.session.serverRandom[0], this.session.serverRandom[1],
-				this.session.serverRandom[1] == 0x01 ?
-						"Client upgrade required" : this.session.serverRandom[1] == 0x03 ?
-								"Non-existant user" : "Unknown error"
-			);
+			String message =
+				this.session.serverRandom[1] == 0x01 ? "Client upgrade required: " :
+				this.session.serverRandom[1] == 0x03 ? "Non-existant user." :
+				this.session.serverRandom[1] == 0x04 ? "Account has been disabled." :
+				this.session.serverRandom[1] == 0x06 ? "You need to complete your account details." :
+				this.session.serverRandom[1] == 0x06 ? "Your current country doesn't match that set in your profile." :
+				"Unknown error."
+			;
 			
 			/* If substatus is 'Client upgrade required', read upgrade URL. */
 			if(this.session.serverRandom[1] == 0x01){
@@ -161,19 +167,17 @@ public class Protocol {
 					paddingLength = buffer[0x119] & 0xFF;
 					
 					if((ret = this.receive(buffer, paddingLength)) > 0){
-						System.out.println("Upgrade URL: " + new String(Arrays.copyOfRange(buffer, 0, ret)));
+						message += new String(Arrays.copyOfRange(buffer, 0, ret));
 					}
 				}
 			}
 			
-			return false;
+			throw new ProtocolException(message);
 		}
 		
 		/* Read server random (next 14 bytes). */
 		if((ret = this.receive(this.session.serverRandom, 2, 14)) != 14){
-			System.err.println("Failed to read server random.");
-			
-			return false;
+			throw new ProtocolException("Failed to read server random.");
 		}
 		
 		/* Save server random to packet buffer. */
@@ -181,9 +185,7 @@ public class Protocol {
 		
 		/* Read server public key (Diffie Hellman key exchange). */
 		if((ret = this.receive(buffer, 96)) != 96){
-			System.err.println("Failed to read server public key.");
-			
-			return false;
+			throw new ProtocolException("Failed to read server public key.");
 		}
 		
 		/* Save DH public key to packet buffer. */
@@ -201,9 +203,7 @@ public class Protocol {
 		
 		/* Read server blob (256 bytes). */
 		if((ret = this.receive(this.session.serverBlob, 0, 256)) != 256){
-			System.err.println("Failed to read server blob.");
-			
-			return false;
+			throw new ProtocolException("Failed to read server blob.");
 		}
 		
 		/* Save RSA signature to packet buffer. */
@@ -211,9 +211,7 @@ public class Protocol {
 		
 		/* Read salt (10 bytes). */
 		if((ret = this.receive(this.session.salt, 0, 10)) != 10){
-			System.err.println("Failed to read salt.");
-			
-			return false;
+			throw new ProtocolException("Failed to read salt.");
 		}
 		
 		/* Save salt to packet buffer. */
@@ -221,9 +219,7 @@ public class Protocol {
 		
 		/* Read padding length (1 byte). */
 		if((paddingLength = this.receive()) == -1){
-			System.err.println("Failed to read paddling length.");
-			
-			return false;
+			throw new ProtocolException("Failed to read paddling length.");
 		}
 		
 		/* Save padding length to packet buffer. */
@@ -231,16 +227,12 @@ public class Protocol {
 		
 		/* Check if padding length is valid. */
 		if(paddingLength <= 0){
-			System.err.println("Padding length is negative or zero.");
-			
-			return false;
+			throw new ProtocolException("Padding length is negative or zero.");
 		}
 		
 		/* Read username length. */
 		if((usernameLength = this.receive()) == -1){
-			System.err.println("Failed to read username length.");
-			
-			return false;
+			throw new ProtocolException("Failed to read username length.");
 		}
 		
 		/* Save username length to packet buffer. */
@@ -261,9 +253,7 @@ public class Protocol {
 		
 		/* Read padding. */
 		if((ret = this.receive(buffer, paddingLength)) != paddingLength){
-			System.err.println("Failed to read padding.");
-			
-			return false;
+			throw new ProtocolException("Failed to read padding.");
 		}
 		
 		/* Save padding (random bytes) to packet buffer. */
@@ -271,9 +261,7 @@ public class Protocol {
 		
 		/* Read username into buffer and copy it to 'session.username'. */
 		if((ret = this.receive(buffer, usernameLength)) != usernameLength){
-			System.err.println("Failed to read username.");
-			
-			return false;
+			throw new ProtocolException("Failed to read username.");
 		}
 		
 		/* Save username to packet buffer. */
@@ -306,17 +294,12 @@ public class Protocol {
 			this.session.puzzleMagic       = dataBuffer.getInt();
 		}
 		else{
-			System.err.println("Unexpected puzzle challenge.");
-			
-			return false;
+			throw new ProtocolException("Unexpected puzzle challenge.");
 		}
-		
-		/* Successfully read everything. */
-		return true;
 	}
 	
 	/* Send authentication packet (puzzle solution, HMAC). */
-	public void sendAuthenticationPacket(){
+	public void sendAuthenticationPacket() throws ProtocolException {
 		ByteBuffer buffer = ByteBuffer.allocate(20 + 1 + 1 + 4 + 2 + 15 + 8);
 		
 		/* Append fields to buffer. */
@@ -334,43 +317,33 @@ public class Protocol {
 	}
 	
 	/* Receive authentication packet (status). */
-	public boolean receiveAuthenticationPacket(){
+	public void receiveAuthenticationPacket() throws ProtocolException {
 		byte[] buffer = new byte[512];
 		int payloadLength;
 		
 		/* Read status and length. */
 		if(this.receive(buffer, 2) != 2){
-			System.err.println("Failed to read status and length bytes.");
-			
-			return false;
+			throw new ProtocolException("Failed to read status and length bytes.");
 		}
 		
 		/* Check status. */
 		if(buffer[0] != 0x00){
-			System.err.format("Authentication failed with error 0x%02x, bad password?\n", buffer[1]);
-			
-			return false;
+			throw new ProtocolException("Authentication failed! (Error " + buffer[1] + ")");
 		}
 		
 		/* Check payload length. AND with 0x00FF so we don't get a negative integer. */
 		if((payloadLength = buffer[1] & 0xFF) <= 0){
-			System.err.println("Payload length is negative or zero.");
-			
-			return false;
+			throw new ProtocolException("Payload length is negative or zero.");
 		}
 				
 		/* Read payload. */
 		if(this.receive(buffer, payloadLength) != payloadLength){
-			System.err.println("Failed to read payload.");
-			
-			return false;
+			throw new ProtocolException("Failed to read payload.");
 		}
-		
-		return true;
 	}
 
 	/* Send command with payload (will be encrypted with stream cipher). */
-	public synchronized void sendPacket(int command, ByteBuffer payload){
+	public synchronized void sendPacket(int command, ByteBuffer payload) throws ProtocolException {
 		ByteBuffer buffer = ByteBuffer.allocate(1 + 2 + payload.remaining());
 		
 		/* Set IV. */
@@ -401,20 +374,18 @@ public class Protocol {
 	}
 	
 	/* Send a command without payload. */
-	public void sendPacket(int command){
+	public void sendPacket(int command) throws ProtocolException {
 		this.sendPacket(command, ByteBuffer.allocate(0));
 	}
 	
 	/* Receive a packet (will be decrypted with stream cipher). */
-	public boolean receivePacket(){
+	public void receivePacket() throws ProtocolException {
 		byte[] header = new byte[3];
 		int command, payloadLength, headerLength = 3, macLength = 4;
 		
 		/* Read header. */
 		if(this.receive(header, headerLength) != headerLength){
-			System.err.println("Failed to read header.");
-			
-			return false;
+			throw new ProtocolException("Failed to read header.");
 		}
 		
 		/* Set IV. */
@@ -440,7 +411,7 @@ public class Protocol {
 			for(int n = payloadLength, r; n > 0 && (r = this.channel.read(buffer)) > 0; n -= r);
 		}
 		catch(IOException e){
-			System.err.format("Failed to read payload. (%s)\n", e.getMessage());
+			throw new ProtocolException("Failed to read payload: " + e.getMessage());
 		}
 		
 		/* Extend it again to payload and mac length. */
@@ -450,7 +421,7 @@ public class Protocol {
 			for(int n = macLength, r; n > 0 && (r = this.channel.read(buffer)) > 0; n -= r);
 		}
 		catch(IOException e){
-			System.err.format("Failed to read MAC. (%s)\n", e.getMessage());
+			throw new ProtocolException("Failed to read MAC: " + e.getMessage());
 		}
 		
 		/* Decrypt payload. */
@@ -469,12 +440,10 @@ public class Protocol {
 		for(CommandListener listener : this.listeners){
 			listener.commandReceived(command, payload);
 		}
-		
-		return true;
 	}
 	
 	/* Send cache hash. */
-	public void sendCacheHash(){
+	public void sendCacheHash() throws ProtocolException {
 		ByteBuffer buffer = ByteBuffer.allocate(20);
 		
 		buffer.put(this.session.cacheHash);
@@ -484,7 +453,7 @@ public class Protocol {
 	}
 	
 	/* Request ads. The response is GZIP compressed XML. */
-	public void sendAdRequest(ChannelListener listener, int type){
+	public void sendAdRequest(ChannelListener listener, int type) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Ad-Channel", Channel.Type.TYPE_AD, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 1);
@@ -502,7 +471,7 @@ public class Protocol {
 	}
 	
 	/* Request image using a 20 byte id. The response is a JPG. */
-	public void sendImageRequest(ChannelListener listener, String id){
+	public void sendImageRequest(ChannelListener listener, String id) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Image-Channel", Channel.Type.TYPE_IMAGE, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 20);
@@ -520,7 +489,7 @@ public class Protocol {
 	}
 	
 	/* Search music. The response comes as GZIP compressed XML. */
-	public void sendSearchQuery(ChannelListener listener, String query, int offset, int limit){
+	public void sendSearchQuery(ChannelListener listener, String query, int offset, int limit) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Search-Channel", Channel.Type.TYPE_SEARCH, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 4 + 4 + 2 + 1 + query.getBytes().length);
@@ -550,17 +519,17 @@ public class Protocol {
 	}
 	
 	/* Search music. The response comes as GZIP compressed XML. */
-	public void sendSearchQuery(ChannelListener listener, String query){
+	public void sendSearchQuery(ChannelListener listener, String query) throws ProtocolException {
 		this.sendSearchQuery(listener, query, 0, -1);
 	}
 	
 	/* Notify server we're going to play. */
-	public void sendTokenNotify(){
+	public void sendTokenNotify() throws ProtocolException {
 		this.sendPacket(Command.COMMAND_TOKENNOTIFY);
 	}
 	
 	/* Request AES key for a track. */
-	public void sendAesKeyRequest(ChannelListener listener, Track track){
+	public void sendAesKeyRequest(ChannelListener listener, Track track) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("AES-Key-Channel", Channel.Type.TYPE_AESKEY, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(20 + 16 + 2 + 2);
@@ -580,7 +549,7 @@ public class Protocol {
 	}
 	
 	/* A demo wrapper for playing a track. */
-	public void sendPlayRequest(ChannelListener listener, Track track){
+	public void sendPlayRequest(ChannelListener listener, Track track) throws ProtocolException {
 		/* 
 		 * Notify the server about our intention to play music, there by allowing
 		 * it to request other players on the same account to pause.
@@ -600,7 +569,7 @@ public class Protocol {
 	 * with AES key provided and a static IV, incremented for
 	 * each 16 byte data processed.
 	 */
-	public void sendSubstreamRequest(ChannelListener listener, Track track, int offset, int length){
+	public void sendSubstreamRequest(ChannelListener listener, Track track, int offset, int length) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Substream-Channel", Channel.Type.TYPE_SUBSTREAM, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 2 + 2 + 2 + 2 + 2 + 4 + 20 + 4 + 4);
@@ -644,7 +613,7 @@ public class Protocol {
 	 * Get metadata for an artist (type = 1), album (type = 2) or a
 	 * list of tracks (type = 3). The response comes as compressed XML.
 	 */
-	public void sendBrowseRequest(ChannelListener listener, int type, Collection<String> ids){
+	public void sendBrowseRequest(ChannelListener listener, int type, Collection<String> ids) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Browse-Channel", Channel.Type.TYPE_BROWSE, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 1 + ids.size() * 16 + ((type == 1 || type == 2)?4:0));
@@ -681,7 +650,7 @@ public class Protocol {
 	}
 	
 	/* Browse with only one id. */
-	public void sendBrowseRequest(ChannelListener listener, int type, String id){
+	public void sendBrowseRequest(ChannelListener listener, int type, String id) throws ProtocolException {
 		ArrayList<String> list = new ArrayList<String>();
 		
 		list.add(id);
@@ -690,7 +659,7 @@ public class Protocol {
 	}
 	
 	/* Request playlist details. The response comes as plain XML. */
-	public void sendPlaylistRequest(ChannelListener listener, String id){
+	public void sendPlaylistRequest(ChannelListener listener, String id) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Playlist-Channel", Channel.Type.TYPE_PLAYLIST, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 17 + 4 + 4 + 4 + 1);
@@ -708,11 +677,35 @@ public class Protocol {
 		Channel.register(channel);
 		
 		/* Send packet. */
-		this.sendPacket(Command.COMMAND_PLAYLIST, buffer);
+		this.sendPacket(Command.COMMAND_GETPLAYLIST, buffer);
+	}
+	
+	/* Change playlist. The response comes as plain XML. */
+	public void sendChangePlaylist(ChannelListener listener, Playlist playlist, String xml) throws ProtocolException {
+		/* Create channel and buffer. */
+		Channel    channel = new Channel("Change-Playlist-Channel", Channel.Type.TYPE_PLAYLIST, listener);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 17 + 4 + 4 + 4 + 1 + 1 + xml.getBytes().length);
+		
+		/* Append channel id, playlist id and some bytes... */
+		buffer.putShort((short)channel.getId());
+		buffer.put(Hex.toBytes(playlist.getId())); /* 17 bytes */
+		buffer.putInt((int)playlist.getRevision());
+		buffer.putInt(playlist.getTracks().size());
+		buffer.putInt((int)playlist.getChecksum()); /* -1: Create playlist. */
+		buffer.put((byte)(playlist.isCollaborative()?0x01:0x00));
+		buffer.put((byte)0x03); /* Unknown */
+		buffer.put(xml.getBytes());
+		buffer.flip();
+		
+		/* Register channel. */
+		Channel.register(channel);
+		
+		/* Send packet. */
+		this.sendPacket(Command.COMMAND_CHANGEPLAYLIST, buffer);
 	}
 	
 	/* Ping reply (pong). */
-	public void sendPong(){
+	public void sendPong() throws ProtocolException {
 		ByteBuffer buffer = ByteBuffer.allocate(4);
 		
 		/* TODO: Append timestamp? */
@@ -724,17 +717,17 @@ public class Protocol {
 	}
 	
 	/* Send bytes. */
-	private void send(ByteBuffer buffer){
+	private void send(ByteBuffer buffer) throws ProtocolException {
 		try{
 			this.channel.write(buffer);
 		}
 		catch (IOException e){
-			System.out.format("Error writing data to socket (%s).", e.getMessage());
+			throw new ProtocolException("Error writing data to socket: " + e.getMessage());
 		}
 	}
 	
 	/* Receive a single byte. */
-	private int receive(){
+	private int receive() throws ProtocolException {
 		ByteBuffer buffer = ByteBuffer.allocate(1);
 		
 		try{
@@ -745,19 +738,17 @@ public class Protocol {
 			return buffer.get() & 0xff;
 		}
 		catch(IOException e){
-			System.out.format("Error reading data from socket (%s).", e.getMessage());
+			throw new ProtocolException("Error reading data from socket: " + e.getMessage());
 		}
-		
-		return -1;
 	}
 	
 	/* Receive bytes. */
-	private int receive(byte[] buffer, int len){
+	private int receive(byte[] buffer, int len) throws ProtocolException {
 		return this.receive(buffer, 0, len);
 	}
 	
 	/* Receive bytes. */
-	private int receive(byte[] bytes, int off, int len){
+	private int receive(byte[] bytes, int off, int len) throws ProtocolException {
 		ByteBuffer buffer = ByteBuffer.wrap(bytes, off, len);
 		int n = 0;
 		
@@ -765,9 +756,7 @@ public class Protocol {
 			for(int r; n < len && (r = this.channel.read(buffer)) > 0; n += r);
 		}
 		catch(IOException e){
-			System.out.format("Error reading data from socket (%s).\n", e.getMessage());
-			
-			return -1;
+			throw new ProtocolException("Error reading data from socket: " + e.getMessage());
 		}
 		
 		return n;
