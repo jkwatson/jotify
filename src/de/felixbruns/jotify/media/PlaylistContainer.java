@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import de.felixbruns.jotify.util.SpotifyChecksum;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class PlaylistContainer implements Iterable<Playlist> {
@@ -44,6 +45,14 @@ public class PlaylistContainer implements Iterable<Playlist> {
 	}
 	
 	public long getChecksum(){
+		SpotifyChecksum checksum = new SpotifyChecksum(); 
+		
+		for(Playlist playlist : this.playlists){
+			checksum.update(playlist);
+		}
+		
+		this.checksum = checksum.getValue();
+		
 		return this.checksum;
 	}
 	
@@ -69,7 +78,7 @@ public class PlaylistContainer implements Iterable<Playlist> {
 			String items = changeElement.getChild("ops").getChild("add").getChildText("items");
 			
 			for(String id : items.split(",")){
-				playlists.playlists.add(new Playlist(id.trim(), "", playlists.author, false));
+				playlists.playlists.add(new Playlist(id.trim().substring(0, 32), "", playlists.author, false));
 			}
 		}
 		

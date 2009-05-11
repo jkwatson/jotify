@@ -32,6 +32,7 @@ import de.felixbruns.jotify.protocol.Protocol;
 import de.felixbruns.jotify.protocol.channel.Channel;
 import de.felixbruns.jotify.protocol.channel.ChannelListener;
 import de.felixbruns.jotify.util.MathUtilities;
+import de.felixbruns.jotify.util.SpotifyOggHeader;
 
 public class ChannelPlayer implements Runnable, ChannelListener {
 	/* 
@@ -82,7 +83,7 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 	 * @param track    A {@link Track} object identifying the track to be
 	 *                 streamed.
 	 * @param key      The corresponding AES key for decrypting the stream.
-	 * @param listener A {@linkPlaybackListener} or null.
+	 * @param listener A {@link PlaybackListener} or null.
 	 * 
 	 * @see Protocol
 	 * @see Track
@@ -113,26 +114,17 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 			/* Initialize cipher with key and IV in encrypt mode. */
 			this.cipher.init(Cipher.ENCRYPT_MODE, this.key, new IvParameterSpec(this.iv));
 		}
-		/* TODO: Handle exceptions. */
 		catch(NoSuchAlgorithmException e){
-			System.err.println("AES not available! Aargh!");
-			
-			return;
+			throw new RuntimeException("AES/CTR is not available!", e);
 		}
 		catch(NoSuchPaddingException e){
-			System.err.println("No padding not available... haha!");
-			
-			return;
+			throw new RuntimeException("'NoPadding' is not available! mmh. yeah.", e);
 		}
 		catch (InvalidKeyException e){
-			System.err.println("Invalid key!");
-			
-			return;
+			throw new RuntimeException("Invalid key!", e);
 		}
 		catch (InvalidAlgorithmParameterException e){
-			System.err.println("Invalid IV!");
-			
-			return;
+			throw new RuntimeException("Invalid IV!", e);
 		}
 		
 		/* Create piped streams and connect them (10 seconds, 160 kbit ogg buffer). */
@@ -175,9 +167,8 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 				
 				this.protocol.sendSubstreamRequest(this, this.track, this.streamOffset, this.streamLength);
 			}
-			/* TODO: Handle exception. */
 			catch(ProtocolException e){
-				e.printStackTrace();
+				System.err.println("Error sending substream request!");
 				
 				return;
 			}
@@ -186,8 +177,6 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 		/* Open input stream for playing. */
 		if(!this.open(this.input)){
 			System.err.println("Can't open input stream for playing!");
-			
-			return;
 		}
 	}
 	
@@ -248,7 +237,7 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 		this.active = true;
 		
 		/* Start thread which writes data to the line. */
-		new Thread(this).start();
+		new Thread(this, "ChannelPlayer-Thread").start();
 		
 		/* Success. */
 		return true;
@@ -304,8 +293,9 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 							this, this.track, this.streamOffset, this.streamLength
 						);
 					}
-					/* TODO: Handle exception. */
 					catch(ProtocolException e){
+						System.err.println("Error sending substream request!");
+						
 						return;
 					}
 				}
@@ -370,7 +360,7 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 	/**
 	 * Stop playback of audio until "play" is called again.
 	 */
-	public void stop(){
+	public void pause(){
 		/* Stop audio line. */
 		this.audioLine.stop();
 		
@@ -478,15 +468,15 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 	 * Close audio line and stream which will stop playing. Playing can't
 	 * be resumed after that, use the "stop" method for that functionality.
 	 */
-	public void close(){
+	public void stop(){
 		this.active = false;
 		
 		try{
 			this.audioStream.close();
 			this.audioLine.close();
 		}
-		catch(IOException e){
-			/* Don't care. */
+		catch(Exception e){
+			/* Don't care. Catch IOException and NullPointerException. */
 		}
 		
 		/* Fire playback stopped event. */
@@ -597,7 +587,7 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 		
 		/* Save to cache. */
 		if(this.cache != null && !this.cache.contains("substream", hash)){
-			this.cache.store("substream", hash, this.cacheData);
+			this.cache.store("substream", hash, this.cacheData, this.receivedLength);
 		}
 		
 		Channel.unregister(channel.getId());

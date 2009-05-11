@@ -3,7 +3,6 @@ package de.felixbruns.jotify.media;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.felixbruns.jotify.util.SpotifyURI;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class Album {
@@ -23,7 +22,7 @@ public class Album {
 		this.name       = name;
 		this.artist     = artist;
 		this.cover      = null;
-		this.popularity = -1.0f;
+		this.popularity = Float.NaN;
 		this.tracks     = new ArrayList<Track>();
 	}
 	
@@ -74,7 +73,11 @@ public class Album {
 		
 		/* Set cover. */
 		if(albumElement.hasChild("cover")){
-			album.cover = albumElement.getChildText("cover");
+			String value = albumElement.getChildText("cover");
+			
+			if(!value.isEmpty()){
+				album.cover = value;
+			}
 		}
 		
 		/* Set popularity. */
@@ -96,15 +99,17 @@ public class Album {
 		return album;
 	}
 	
-	public String toString(){
-		return String.format("[Album: %s by %s]", this.name, this.artist);
+	public boolean equals(Object o){
+		if(o instanceof Album){
+			Album a = (Album)o;
+			
+			return this.id.equals(a.id);
+		}
+		
+		return false;
 	}
-
-	public static Album fromURI(String uri){
-		Album album = new Album();
-		
-		album.id = SpotifyURI.toHex(uri);
-		
-		return album;
+	
+	public int hashCode(){
+		return (this.id != null) ? this.id.hashCode() : 0;
 	}
 }

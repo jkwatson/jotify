@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class ChannelCallback implements ChannelListener {
 	private Semaphore        done;
@@ -40,10 +42,7 @@ public class ChannelCallback implements ChannelListener {
 		/* Ignore */
 	}
 	
-	public byte[] getData(){
-		/* Wait for data to become available. */
-		this.done.acquireUninterruptibly();
-		
+	private byte[] getData(){
 		/* Data buffer. */
 		ByteBuffer data = ByteBuffer.allocate(this.bytes);
 		
@@ -51,7 +50,37 @@ public class ChannelCallback implements ChannelListener {
 			data.put(b);
 		}
 		
-		/* Return data bytes. */
+		/* Return data array. */
 		return data.array();
+	}
+	
+	public byte[] get(){
+		/* Wait for data to become available. */
+		this.done.acquireUninterruptibly();
+		
+		/* Return data array. */
+		return this.getData();
+	}
+	
+	public byte[] get(long timeout, TimeUnit unit){
+		/* Wait for data to become available. */
+		try{
+			if(!this.done.tryAcquire(timeout, unit)){
+				throw new TimeoutException("Timeout while waiting for data.");
+			}
+		}
+		catch(InterruptedException e){
+			throw new RuntimeException(e);
+		}
+		catch(TimeoutException e){
+			throw new RuntimeException(e);
+		}
+		
+		/* Return data array. */
+		return this.getData();
+	}
+	
+	public boolean isDone(){
+		return this.done.availablePermits() > 0;
 	}
 }

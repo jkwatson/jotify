@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import de.felixbruns.jotify.util.SpotifyChecksum;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class Playlist implements Iterable<Track> {
@@ -74,11 +75,15 @@ public class Playlist implements Iterable<Track> {
 	}
 	
 	public long getChecksum(){
+		SpotifyChecksum checksum = new SpotifyChecksum(); 
+		
+		for(Track track : this.tracks){
+			checksum.update(track);
+		}
+		
+		this.checksum = checksum.getValue();
+		
 		return this.checksum;
-	}
-	
-	public void setChecksum(long checksum){
-		this.checksum = checksum;
 	}
 	
 	public boolean isCollaborative(){
@@ -91,16 +96,6 @@ public class Playlist implements Iterable<Track> {
 	
 	public Iterator<Track> iterator(){
 		return this.tracks.iterator();
-	}
-	
-	public boolean equals(Object o){
-		if(o instanceof Playlist){
-			Playlist p = (Playlist)o;
-			
-			return this.id.equals(p.id);
-		}
-		
-		return false;
 	}
 	
 	public static Playlist fromXMLElement(XMLElement playlistElement, String id){
@@ -123,7 +118,7 @@ public class Playlist implements Iterable<Track> {
 		
 		/* Add track items. */
 		for(String trackId : items.split(",")){
-			playlist.tracks.add(new Track(trackId.trim(), "", null, null));
+			playlist.tracks.add(new Track(trackId.trim().substring(0, 32), "", null, null));
 		}
 		
 		/* Get "version" element. */
@@ -151,5 +146,19 @@ public class Playlist implements Iterable<Track> {
 		}
 		
 		return playlist;
+	}
+	
+	public boolean equals(Object o){
+		if(o instanceof Playlist){
+			Playlist p = (Playlist)o;
+			
+			return this.id.equals(p.id);
+		}
+		
+		return false;
+	}
+	
+	public int hashCode(){
+		return (this.id != null) ? this.id.hashCode() : 0;
 	}
 }

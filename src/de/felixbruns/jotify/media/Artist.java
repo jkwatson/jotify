@@ -3,7 +3,6 @@ package de.felixbruns.jotify.media;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.felixbruns.jotify.util.SpotifyURI;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class Artist {
@@ -13,19 +12,15 @@ public class Artist {
 	private float        popularity;
 	private List<Artist> similarArtists;
 	
+	private Artist(){
+		this(null, null);
+	}
+	
 	public Artist(String id, String name){
 		this.id             = id;
 		this.name           = name;
 		this.portrait       = null;
-		this.popularity     = -1.0f;
-		this.similarArtists = new ArrayList<Artist>();
-	}
-	
-	private Artist(){
-		this.id             = null;
-		this.name           = null;
-		this.portrait       = null;
-		this.popularity     = -1.0f;
+		this.popularity     = Float.NaN;
 		this.similarArtists = new ArrayList<Artist>();
 	}
 	
@@ -84,15 +79,17 @@ public class Artist {
 		return artist;
 	}
 	
-	public String toString(){
-		return String.format("[%s]", this.name);
+	public boolean equals(Object o){
+		if(o instanceof Artist){
+			Artist a = (Artist)o;
+			
+			return this.id.equals(a.id);
+		}
+		
+		return false;
 	}
 	
-	public static Artist fromURI(String uri) {
-		Artist artist = new Artist();
-		
-		artist.id = SpotifyURI.toHex(uri);
-		
-		return artist;
+	public int hashCode(){
+		return (this.id != null) ? this.id.hashCode() : 0;
 	}
 }

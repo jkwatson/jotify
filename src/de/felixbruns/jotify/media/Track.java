@@ -18,6 +18,10 @@ public class Track {
 	private String       cover;
 	private float        popularity;
 	
+	private Track(){
+		this(null, null, null, null);
+	}
+	
 	public Track(String id, String title, Artist artist, Album album){
 		this.id          = id;
 		this.title       = title;
@@ -28,20 +32,7 @@ public class Track {
 		this.length      = -1;
 		this.files       = new ArrayList<String>();
 		this.cover       = null;
-		this.popularity  = -1.0f;
-	}
-	
-	private Track(){
-		this.id          = null;
-		this.title       = null;
-		this.artist      = null;
-		this.album       = null;
-		this.year        = -1;
-		this.trackNumber = -1;
-		this.length      = -1;
-		this.files       = new ArrayList<String>();
-		this.cover       = null;
-		this.popularity  = -1.0f;
+		this.popularity  = Float.NaN;
 	}
 	
 	public String getId(){
@@ -82,6 +73,10 @@ public class Track {
 	
 	public List<String> getFiles(){
 		return this.files;
+	}
+	
+	public void addFile(String id){
+		this.files.add(id);
 	}
 	
 	public String getCover(){
@@ -151,7 +146,11 @@ public class Track {
 		
 		/* Set cover. */
 		if(trackElement.hasChild("cover")){
-			track.cover = trackElement.getChildText("cover");
+			String value = trackElement.getChildText("cover");
+			
+			if(!value.isEmpty()){
+				track.cover = value;
+			}
 		}
 		
 		/* Set popularity. */
@@ -161,12 +160,18 @@ public class Track {
 		
 		return track;
 	}
-
-	public static Track fromURI(String uri) {
-		Track track = new Track();
+	
+	public boolean equals(Object o){
+		if(o instanceof Track){
+			Track t = (Track)o;
+			
+			return this.id.equals(t.id);
+		}
 		
-		track.id = SpotifyURI.toHex(uri);
-		
-		return track;
+		return false;
+	}
+	
+	public int hashCode(){
+		return (this.id != null) ? this.id.hashCode() : 0;
 	}
 }

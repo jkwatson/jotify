@@ -13,6 +13,7 @@ import de.felixbruns.jotify.crypto.DH;
 import de.felixbruns.jotify.exceptions.ConnectionException;
 import de.felixbruns.jotify.exceptions.ProtocolException;
 import de.felixbruns.jotify.media.Playlist;
+import de.felixbruns.jotify.media.PlaylistContainer;
 import de.felixbruns.jotify.media.Track;
 import de.felixbruns.jotify.protocol.channel.Channel;
 import de.felixbruns.jotify.protocol.channel.ChannelListener;
@@ -59,13 +60,15 @@ public class Protocol {
 				break;
 			}
 			catch(IOException e){
-				throw new ConnectionException("Error connecting to '" + server + "': " + e.getMessage());
+				System.err.println("Error connecting to '" + server + "': " + e.getMessage());
+				
+				continue;
 			}
 		}
 		
 		/* If connection was not established, return false. */
 		if(this.channel == null){
-			throw new ConnectionException("Failed to connect!");
+			throw new ConnectionException("Error connectiong to any server!");
 		}
 		
 		System.out.format("Connected to '%s'\n", this.server);
@@ -152,27 +155,42 @@ public class Protocol {
 			 * 0x09    : Your current country doesn't match that set in your profile.
 			 * Default : Unknown error
 			 */
-			String message =
-				this.session.serverRandom[1] == 0x01 ? "Client upgrade required: " :
-				this.session.serverRandom[1] == 0x03 ? "Non-existant user." :
-				this.session.serverRandom[1] == 0x04 ? "Account has been disabled." :
-				this.session.serverRandom[1] == 0x06 ? "You need to complete your account details." :
-				this.session.serverRandom[1] == 0x06 ? "Your current country doesn't match that set in your profile." :
-				"Unknown error."
-			;
+			StringBuilder message = new StringBuilder(255);
 			
-			/* If substatus is 'Client upgrade required', read upgrade URL. */
+			/* Check substatus and set message. */
+			switch(this.session.serverRandom[1]){
+				case 0x01:
+					message.append("Client upgrade required: ");
+					break;
+				case 0x03:
+					message.append("Non-existant user.");
+					break;
+				case 0x04:
+					message.append("Account has been disabled.");
+					break;
+				case 0x06:
+					message.append("You need to complete your account details.");
+					break;
+				case 0x09:
+					message.append("Your current country doesn't match that set in your profile.");
+					break;
+				default:
+					message.append("Unknown error.");
+					break;
+			}
+			
+			/* If substatus is 'Client upgrade required', read and append upgrade URL. */
 			if(this.session.serverRandom[1] == 0x01){
 				if((ret = this.receive(buffer, 0x11a)) > 0){
 					paddingLength = buffer[0x119] & 0xFF;
 					
 					if((ret = this.receive(buffer, paddingLength)) > 0){
-						message += new String(Arrays.copyOfRange(buffer, 0, ret));
+						message.append(new String(Arrays.copyOfRange(buffer, 0, ret)));
 					}
 				}
 			}
 			
-			throw new ProtocolException(message);
+			throw new ProtocolException(message.toString());
 		}
 		
 		/* Read server random (next 14 bytes). */
@@ -289,7 +307,7 @@ public class Protocol {
 		dataBuffer = ByteBuffer.wrap(buffer, 0, puzzleChallengeLength + unknownLength1 + unknownLength2 + unknownLength3);
 		
 		/* Get puzzle denominator and magic. */
-		if(dataBuffer.get() == 0x01){			
+		if(dataBuffer.get() == 0x01){
 			this.session.puzzleDenominator = dataBuffer.get();
 			this.session.puzzleMagic       = dataBuffer.getInt();
 		}
@@ -335,7 +353,7 @@ public class Protocol {
 		if((payloadLength = buffer[1] & 0xFF) <= 0){
 			throw new ProtocolException("Payload length is negative or zero.");
 		}
-				
+		
 		/* Read payload. */
 		if(this.receive(buffer, payloadLength) != payloadLength){
 			throw new ProtocolException("Failed to read payload.");
@@ -591,7 +609,7 @@ public class Protocol {
 		buffer.put(Hex.toBytes(track.getFiles().get(0)));
 		
 		if(offset % 4096 != 0 || length % 4096 != 0){
-			throw new IllegalArgumentException("Offset and length need to be a multiple of 4096.");	
+			throw new IllegalArgumentException("Offset and length need to be a multiple of 4096.");
 		}
 		
 		offset >>= 2;
@@ -630,9 +648,14 @@ public class Protocol {
 		buffer.putShort((short)channel.getId());
 		buffer.put((byte)type);
 		
-		/* Append (16 byte) ids. */
+		/* Append (16 byte binary, 32 byte hex string) ids. */
 		for(String id : ids){
-			buffer.put(Arrays.copyOfRange(Hex.toBytes(id), 0, 16));
+			/* Check length of id. */
+			if(id.length() != 32){
+				throw new IllegalArgumentException("Id needs to have a length of 32.");
+			}
+			
+			buffer.put(Hex.toBytes(id));
 		}
 		
 		/* Append zero. */
@@ -658,15 +681,69 @@ public class Protocol {
 		this.sendBrowseRequest(listener, type, list);
 	}
 	
+	/* Request user playlists. The response comes as plain XML. */
+	public void sendUserPlaylistsRequest(ChannelListener listener) throws ProtocolException {
+		/* Create channel and buffer. */
+		Channel    channel = new Channel("Playlists-Channel", Channel.Type.TYPE_PLAYLIST, listener);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 16 + 1 + 4 + 4 + 4 + 1);
+		
+		/* Append channel id, playlist id and some bytes... */
+		buffer.putShort((short)channel.getId());
+		buffer.put(Hex.toBytes("00000000000000000000000000000000")); /* 16 bytes */
+		buffer.put((byte)0x00); /* Playlists identifier. */
+		buffer.putInt(-1); /* Playlist history. -1: current. 0: changes since version 0, 1: since version 1, etc. */
+		buffer.putInt(0);
+		buffer.putInt(-1);
+		buffer.put((byte)0x01);
+		buffer.flip();
+		
+		/* Register channel. */
+		Channel.register(channel);
+		
+		/* Send packet. */
+		this.sendPacket(Command.COMMAND_GETPLAYLIST, buffer);
+	}
+	
+	/* Change playlists. The response comes as plain XML. */
+	public void sendChangeUserPlaylists(ChannelListener listener, PlaylistContainer playlists, String xml) throws ProtocolException {
+		/* Create channel and buffer. */
+		Channel    channel = new Channel("Change-Playlists-Channel", Channel.Type.TYPE_PLAYLIST, listener);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 16 + 1 + 4 + 4 + 4 + 1 + 1 + xml.getBytes().length);
+		
+		/* Append channel id, playlist id and some bytes... */
+		buffer.putShort((short)channel.getId());
+		buffer.put(Hex.toBytes("00000000000000000000000000000000")); /* 16 bytes */
+		buffer.put((byte)0x00); /* Playlists identifier. */
+		buffer.putInt((int)playlists.getRevision());
+		buffer.putInt(playlists.getPlaylists().size());
+		buffer.putInt((int)playlists.getChecksum());
+		buffer.put((byte)0x00); /* Collaborative */
+		buffer.put((byte)0x03); /* Unknown */
+		buffer.put(xml.getBytes());
+		buffer.flip();
+		
+		/* Register channel. */
+		Channel.register(channel);
+		
+		/* Send packet. */
+		this.sendPacket(Command.COMMAND_CHANGEPLAYLIST, buffer);
+	}
+	
 	/* Request playlist details. The response comes as plain XML. */
 	public void sendPlaylistRequest(ChannelListener listener, String id) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Playlist-Channel", Channel.Type.TYPE_PLAYLIST, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(2 + 17 + 4 + 4 + 4 + 1);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 16 + 1 + 4 + 4 + 4 + 1);
+		
+		/* Check length of id. */
+		if(id.length() != 32){
+			throw new IllegalArgumentException("Playlist id needs to have a length of 32.");
+		}
 		
 		/* Append channel id, playlist id and some bytes... */
 		buffer.putShort((short)channel.getId());
-		buffer.put(Hex.toBytes(id)); /* 17 bytes */
+		buffer.put(Hex.toBytes(id)); /* 16 bytes */
+		buffer.put((byte)0x02); /* Playlist identifier. */
 		buffer.putInt(-1); /* Playlist history. -1: current. 0: changes since version 0, 1: since version 1, etc. */
 		buffer.putInt(0);
 		buffer.putInt(-1);
@@ -684,14 +761,40 @@ public class Protocol {
 	public void sendChangePlaylist(ChannelListener listener, Playlist playlist, String xml) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Change-Playlist-Channel", Channel.Type.TYPE_PLAYLIST, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(2 + 17 + 4 + 4 + 4 + 1 + 1 + xml.getBytes().length);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 16 + 1 + 4 + 4 + 4 + 1 + 1 + xml.getBytes().length);
 		
 		/* Append channel id, playlist id and some bytes... */
 		buffer.putShort((short)channel.getId());
-		buffer.put(Hex.toBytes(playlist.getId())); /* 17 bytes */
+		buffer.put(Hex.toBytes(playlist.getId())); /* 16 bytes */
+		buffer.put((byte)0x02); /* Playlist identifier. */
 		buffer.putInt((int)playlist.getRevision());
 		buffer.putInt(playlist.getTracks().size());
-		buffer.putInt((int)playlist.getChecksum()); /* -1: Create playlist. */
+		buffer.putInt((int)playlist.getChecksum());
+		buffer.put((byte)(playlist.isCollaborative()?0x01:0x00));
+		buffer.put((byte)0x03); /* Unknown */
+		buffer.put(xml.getBytes());
+		buffer.flip();
+		
+		/* Register channel. */
+		Channel.register(channel);
+		
+		/* Send packet. */
+		this.sendPacket(Command.COMMAND_CHANGEPLAYLIST, buffer);
+	}
+	
+	/* Create playlist. The response comes as plain XML. */
+	public void sendCreatePlaylist(ChannelListener listener, Playlist playlist, String xml) throws ProtocolException {
+		/* Create channel and buffer. */
+		Channel    channel = new Channel("Change-Playlist-Channel", Channel.Type.TYPE_PLAYLIST, listener);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 16 + 1 + 4 + 4 + 4 + 1 + 1 + xml.getBytes().length);
+		
+		/* Append channel id, playlist id and some bytes... */
+		buffer.putShort((short)channel.getId());
+		buffer.put(Hex.toBytes(playlist.getId())); /* 16 bytes */
+		buffer.put((byte)0x02); /* Playlist identifier. */
+		buffer.putInt(0);
+		buffer.putInt(0);
+		buffer.putInt(-1); /* -1: Create playlist. */
 		buffer.put((byte)(playlist.isCollaborative()?0x01:0x00));
 		buffer.put((byte)0x03); /* Unknown */
 		buffer.put(xml.getBytes());

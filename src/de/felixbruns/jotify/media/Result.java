@@ -64,6 +64,10 @@ public class Result {
 		return this.tracks;
 	}
 	
+	public static Result fromXMLElement(XMLElement resultElement){
+		return fromXMLElement("", resultElement);
+	}
+	
 	public static Result fromXMLElement(String query, XMLElement resultElement){
 		/* Create Result object. */
 		Result result = new Result();
@@ -123,7 +127,7 @@ public class Result {
 		return false;
 	}
 	
-	public static Result fromXMLElement(XMLElement resultElement){
-		return fromXMLElement("", resultElement);
+	public int hashCode(){
+		return (this.query != null) ? this.query.hashCode() : 0;
 	}
 }

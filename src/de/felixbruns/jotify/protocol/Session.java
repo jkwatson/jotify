@@ -80,7 +80,8 @@ public class Session {
 	protected byte[] initialClientPacket;
 	protected byte[] initialServerPacket;
 	
-	public static final int CLIENT_REVISION = 45126;
+	/* Always up to date! ;-P */
+	public static final int CLIENT_REVISION = 99999;
 	
 	public Session(){
 		this(-1);

@@ -1,5 +1,6 @@
 package de.felixbruns.jotify.cache;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +36,10 @@ public class MemoryCache implements Cache {
 	}
 	
 	public void store(String category, String hash, byte[] data){
-		this.data.put(category + "-" + hash, data);
+		this.store(category, hash, data, data.length);
+	}
+	
+	public void store(String category, String hash, byte[] data, int size){
+		this.data.put(category + "-" + hash, Arrays.copyOf(data, size));
 	}
 }

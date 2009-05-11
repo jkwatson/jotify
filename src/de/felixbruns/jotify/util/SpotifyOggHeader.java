@@ -1,4 +1,4 @@
-package de.felixbruns.jotify.player;
+package de.felixbruns.jotify.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;

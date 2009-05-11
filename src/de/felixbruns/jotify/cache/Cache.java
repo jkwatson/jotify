@@ -7,4 +7,5 @@ public interface Cache {
 	public byte[] load(String category, String hash);
 	public void remove(String category, String hash);
 	public void store(String category, String hash, byte[] data);
+	public void store(String category, String hash, byte[] data, int size);
 }

@@ -22,4 +22,16 @@ public class RandomBytes {
 		
 		secureRandom.nextBytes(buffer);
 	}
+	
+	public static byte[] randomBytes(int length){
+		byte[] buffer = new byte[length];
+		
+		if(secureRandom == null){
+			return null;
+		}
+		
+		secureRandom.nextBytes(buffer);
+		
+		return buffer;
+	}
 }

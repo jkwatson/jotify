@@ -58,6 +58,10 @@ public class FileCache implements Cache {
 	}
 	
 	public void store(String category, String hash, byte[] data){
+		this.store(category, hash, data, data.length);
+	}
+	
+	public void store(String category, String hash, byte[] data, int size){
 		try{
 			File file = new File(this.directory, category + "/" + hash);
 			
@@ -67,7 +71,7 @@ public class FileCache implements Cache {
 			
 			FileOutputStream output = new FileOutputStream(file);
 			
-			output.write(data);
+			output.write(data, 0, size);
 			output.close();
 		} 
 		catch(IOException e){
