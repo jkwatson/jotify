@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+		<title>jotify</title>
+		<style type="text/css" media="screen">
+			@import url('style.css');
+		</style>
+		<script type="text/javascript" src="jquery.js"></script>
+		<script type="text/javascript">
+			//<![CDATA[
+				var session  = '';
+				var hostname = window.location.hostname;
+				
+				$(document).ready(function(){
+					$('#login').click(function(){
+						$.get('http://' + hostname + ':8080/auth', {
+							username : $('#username').val(),
+							password : $('#password').val()
+						}, function(data, textStatus){
+							if(data.indexOf('session') == 0){
+								session = data.substr(8);
+								
+								$('#message').text('Successfully logged in!');
+								$('#message').css('border', '2px solid #00DD00');
+								
+								$('#login-panel').hide();
+								$('#search-panel').show();
+							}
+							else if(data.indexOf('error') == 0){
+								$('#message').text(data.substr(6));
+								$('#message').css('border', '2px solid #EE0000');
+							}
+						}, "text");
+						
+					});
+					
+					$('#search').click(function(){
+						$.get('http://' + hostname + ':8080/search', {
+							session : session,
+							query   : $('#query').val()
+						}, function(data, textStatus){
+							var portrait = $('artists > artist > portrait > id', data).text();
+							
+							$('#portrait').attr('src',
+								'http://' + hostname + ':8080/image?session=' + session + '&id=' + portrait
+							);
+							
+							$('#tracks').empty();
+							
+							$('tracks > track', data).each(function(index){
+								var id     = $(this).find('id').text();
+								var file   = $(this).find('file').attr('id');
+								var artist = $(this).find('artist').text();
+								var title  = $(this).find('title').text();
+								
+								$('#tracks').append(
+									'<li><a id="track-' + index + '" href="http://' + hostname + ':8080/stream?session=' + session +
+									'&id=' + id + '&file=' + file + '" title="' + artist + ' - ' + title + '">' +
+									artist + ' - ' + title + '</a></li>'
+								);
+							});
+							
+							$('a[ id ^= "track" ]').click(function(event){
+								$('#audio').html(
+									'<audio controls="true" autoplay="true" src="' + $(this).attr('href') + '">' +
+									'	Your browser doesn\'t support HTML 5 audio!' +
+									'</audio>'
+								);
+								
+								$('#playing').show();
+								$('#playing').text($(this).attr('title'));
+								
+								event.preventDefault();
+							});
+							
+							$('#message').text('Search results for \'' + $('#query').val() + '\'.');
+							$('#message').css('border', '2px solid #BBBBBB');
+						});
+					});
+				});
+			//]]>
+		</script>
+	</head>
+	<body>
+		<div id="container">
+			<div id="header">
+				<div class="left">
+					<img src="icon.png" alt="icon" />
+					<img src="logo.png" alt="logo" />
+					<br />
+					<br />
+					<h4>A Java Spotify client library</h4>
+				</div>
+				<br class="clear" />
+			</div>
+			<div id="content">
+				<div id="message" class="box">
+					Please login using a premium account!
+				</div>
+				<br />
+				<div id="login-panel">
+					<input type="text" id="username" />
+					<input type="password" id="password" />
+					<input type="submit" id="login" value="Login" />
+				</div>
+				<div id="search-panel" style="display: none;">
+					<div class="left">
+						<input type="text" id="query" />
+						<input type="submit" id="search" value="Search" />
+					</div>
+					
+					<div id="audio" class="right">
+						<!-- Empty -->
+					</div>
+					
+					<span id="playing" class="right box" style="margin-right: 10px; display: none;">
+						<!-- Empty -->
+					</span>
+					
+					<br />
+					<br class="clear" />
+					<br />
+					
+					<img id="portrait" class="right" />
+					
+					<ul id="tracks" class="left">
+						<!-- Empty -->
+					</ul>
+					
+					<br class="clear" />
+				</div>
+				<!--<audio src="">
+					No audio!
+				</audio>-->
+			</div>
+			<div id="footer">
+				Copyright &copy 2009, Felix Bruns
+			</div>
+		</div>
+	</body>
+</html>

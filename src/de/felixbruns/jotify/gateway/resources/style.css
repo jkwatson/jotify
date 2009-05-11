@@ -1,0 +1,136 @@
+@charset "utf-8";
+
+/* Remove default browser margin and border. */
+
+* {
+	margin : 0;
+/*	border : 0;*/
+}
+
+/* Floating and clearing. */
+
+.left {
+	float : left;
+}
+
+.right {
+	float : right;
+} 
+
+.clear {
+	clear : both;
+}
+
+/* HTML and body elements. */
+
+html {
+	background-color : #E4E4E4;
+	font-size        : 62.5%; /* 10px */
+	font-family      : Tahoma, sans-serif;
+	color            : #003E88;
+	line-height      : 1.2;
+	height           : 100%;
+}
+
+body {
+	text-align : center;
+	font-size  : 1.1em; /* 11px */
+	height     : 100%;
+}
+
+/* Text: headlines, paragraph, small text. */
+
+h1 {
+	font-size : 2.2em;
+}
+
+h2 {
+	font-size : 2.0em;
+}
+
+h3 {
+	font-size : 1.8em;
+}
+
+h4 {
+	font-size : 1.6em;
+}
+
+h5 {
+	font-size : 1.4em;
+}
+
+h6 {
+	font-size : 1.2em;
+}
+
+p {
+	font-weight : normal;
+	text-align  : justify;
+	margin      : 10px 0px 10px 0px;
+}
+
+/* Images. */
+
+img {
+	margin-bottom : -3px;
+}
+
+/* Links */
+
+a:link, a:visited {
+	font-weight     : bold;
+	color           : #003E88;
+	text-decoration : none;
+}
+
+a:hover, a:focus {
+	color           : #003E88;
+	text-decoration : underline;
+}
+
+/* Form elements. */
+
+input {
+	font-family : Tahoma, sans-serif;
+	font-size   : 1em;
+	max-width   : 200px;
+	padding     : 2px;
+}
+
+/* Site. */
+
+#container {
+	background-color : #E4E4E4;
+	margin-left      : auto;
+	margin-right     : auto;
+	width            : 800px;
+}
+
+#header {
+	padding    : 15px;
+	width      : 770px;
+}
+
+#content {
+	padding          : 15px;
+	background-color : #FFFFFF;
+	border           : 2px solid #BBBBBB;
+	width            : 766px;
+	text-align       : left;
+}
+
+#footer {
+	color      : #888888;
+	padding    : 15px;
+	width      : 770px;
+	text-align : right;
+
+}
+
+.box {
+	padding          : 5px;
+	background-color : #FFFFFF;
+	border           : 2px solid #BBBBBB;
+	text-align       : left;
+}
