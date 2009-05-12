@@ -24,7 +24,9 @@ import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.event.HyperlinkEvent.EventType;
 
+import de.felixbruns.jotify.JotifyPool;
 import de.felixbruns.jotify.gui.JotifyPlaybackQueue;
+import de.felixbruns.jotify.gui.listeners.BrowseListener;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
 import de.felixbruns.jotify.gui.listeners.PlaylistListener;
 import de.felixbruns.jotify.gui.listeners.QueueListener;
@@ -39,7 +41,7 @@ import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
 
 @SuppressWarnings("serial")
-public class JotifyContentPanel extends JPanel implements HyperlinkListener, PlaylistListener, QueueListener, SearchListener {
+public class JotifyContentPanel extends JPanel implements HyperlinkListener, PlaylistListener, QueueListener, SearchListener, BrowseListener {
 	private JotifyBroadcast         broadcast;
 	private JEditorPane             infoPane;
 	private JScrollPane             scrollPane;
@@ -73,11 +75,11 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.table = new JotifyTable(this.tableModel);
 		this.table.addMouseListener(new MouseAdapter(){
 			public void mouseClicked(MouseEvent e){
-				if(e.getClickCount() == 2){					
+				if(e.getClickCount() == 2){
 					List<Track> tracks = tableModel.getSubList(
 						table.getSelectedRow(), table.getRowCount()
 					);
-					
+						
 					broadcast.fireControlSelect(tracks);
 					broadcast.fireControlPlay();
 				}
@@ -96,6 +98,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 					JPopupMenu contextMenu = new JPopupMenu();
 					JMenuItem  playItem    = new JMenuItem("Play");
 					JMenuItem  queueItem   = new JMenuItem("Queue");
+					JMenuItem  browseItem  = new JMenuItem("Browse Album");
 					JMenuItem  uriItem     = new JMenuItem("Copy Spotify URI");
 					JMenuItem  linkItem    = new JMenuItem("Copy HTTP Link");
 					
@@ -123,6 +126,16 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 						}
 					});
 					
+					browseItem.addActionListener(new ActionListener(){
+						public void actionPerformed(ActionEvent e){
+							Track track = tableModel.get(table.getSelectedRow());
+							Album album = JotifyPool.getInstance().browse(track.getAlbum());
+
+							broadcast.fireClearSelection();
+							broadcast.fireBrowsedAlbum(album);
+						}
+					});
+					
 					uriItem.addActionListener(new ActionListener(){
 						public void actionPerformed(ActionEvent e){
 							Track track = tableModel.get(table.getSelectedRow());
@@ -147,6 +160,8 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 					contextMenu.addSeparator();
 					contextMenu.add(queueItem);
 					contextMenu.addSeparator();
+					contextMenu.add(browseItem);
+					contextMenu.addSeparator();
 					contextMenu.add(uriItem);
 					contextMenu.add(linkItem);
 					
@@ -163,6 +178,27 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.add(this.scrollPane, BorderLayout.CENTER);
 	}
 	
+	public void showAlbum(Album album){
+		this.infoPane.setText(
+			"<html>" +
+			"	<table style=\"font: bold 12pt Dialog;\">" +
+			"		<tr>" +
+			"			<td valign=\"top\" style=\"width: 50%;\">" +
+			"				<span style=\"color: #ffffff;\">" +
+								album.getArtist().getName() + 
+								" - " +
+								album.getName() +
+								" (" + album.getYear() + ")" +
+							"</span>" +
+			"			</td>" +
+			"		</tr>" +
+			"	</table>" +
+			"</html>"
+		);
+		
+		this.showTracks(album.getTracks());
+	}
+	
 	public void showResult(Result result){
 		Iterator<Artist> artists = result.getArtists().iterator();
 		Iterator<Album>  albums  = result.getAlbums().iterator();
@@ -174,7 +210,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			Artist artist = artists.next();
 			
 			artistsHtml +=
-				"<a style=\"text-decoration: none;\" href=\"" + artist.getName() + "\">" + artist.getName() + "</a>" +
+				"<a style=\"text-decoration: none;\" href=\"artist:" + artist.getName() + "\">" + artist.getName() + "</a>" +
 				(artists.hasNext()?" &bull; ":"");
 		}
 		
@@ -183,9 +219,9 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			Artist artist = album.getArtist();
 			
 			albumsHtml +=
-				"<a style=\"text-decoration: none;\" href=\"" + album.getName() + "\">" + album.getName() + "</a>" +
+				"<a style=\"text-decoration: none;\" href=\"album:" + album.getId() + "\">" + album.getName() + "</a>" +
 				" <span style=\"color: #545454;\">by " +
-				"<a style=\"text-decoration: none;\" href=\"" + artist.getName() + "\">" + artist.getName() + "</a>" +
+				"<a style=\"text-decoration: none;\" href=\"artist:" + artist.getName() + "\">" + artist.getName() + "</a>" +
 				"</span>" +
 				(albums.hasNext()?" &bull; ":"");
 		}
@@ -258,8 +294,19 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 	/* TODO: Do a browse query here, not a search. */
 	public void hyperlinkUpdate(final HyperlinkEvent e){
 		if(e.getEventType() == EventType.ACTIVATED){
-			//FIXME: JotifyApplication.getJotifyFrame().searchPanel.setSearchQuery(e.getDescription());
-			//FIXME: JotifyApplication.getJotifyFrame().searchPanel.getSearchButton().doClick();
+			String[] parts = e.getDescription().split(":", 2);
+			
+			if(parts[0].equals("artist")){
+				Result result = JotifyPool.getInstance().search(parts[1]);
+				
+				broadcast.fireSearchResultReceived(result);
+			}
+			else if(parts[0].equals("album")){
+				Album album = JotifyPool.getInstance().browseAlbum(parts[1]);
+				
+				broadcast.fireClearSelection();
+				broadcast.fireBrowsedAlbum(album);
+			}
 		}
 	}
 	
@@ -287,9 +334,22 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 	}
 	
 	public void searchResultReceived(Result result){
+		this.showResult(result);
 	}
 	
 	public void searchResultSelected(Result result){
+		this.showResult(result);
+	}
+	
+	public void browsedArtist(Artist artist){
+		/* TODO */
+	}
+	
+	public void browsedAlbum(Album album){
+		this.showAlbum(album);
+	}
+	
+	public void browsedTracks(Result result){
 		this.showResult(result);
 	}
 }

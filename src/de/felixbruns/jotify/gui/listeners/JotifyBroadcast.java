@@ -5,6 +5,8 @@ import java.util.List;
 
 import de.felixbruns.jotify.gui.JotifyPlaybackQueue;
 import de.felixbruns.jotify.gui.listeners.PlayerListener.Status;
+import de.felixbruns.jotify.media.Album;
+import de.felixbruns.jotify.media.Artist;
 import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
@@ -13,8 +15,11 @@ public class JotifyBroadcast {
 	private List<PlaylistListener> playlistListeners;
 	private List<QueueListener>    queueListeners;
 	private List<SearchListener>   searchListeners;
+	private List<BrowseListener>   browseListeners;
 	private List<ControlListener>  controlListeners;
 	private List<PlayerListener>   playerListeners;
+	
+	private List<ClearSelectionListener> clearSelectionListener;
 	
 	private static JotifyBroadcast instance;
 	
@@ -30,8 +35,11 @@ public class JotifyBroadcast {
 		this.playlistListeners = new ArrayList<PlaylistListener>();
 		this.queueListeners    = new ArrayList<QueueListener>();
 		this.searchListeners   = new ArrayList<SearchListener>();
+		this.browseListeners   = new ArrayList<BrowseListener>();
 		this.controlListeners  = new ArrayList<ControlListener>();
 		this.playerListeners   = new ArrayList<PlayerListener>();
+
+		this.clearSelectionListener = new ArrayList<ClearSelectionListener>();
 	}
 	
 	public void addPlaylistListener(PlaylistListener listener){
@@ -46,12 +54,20 @@ public class JotifyBroadcast {
 		this.searchListeners.add(listener);
 	}
 	
+	public void addBrowseListener(BrowseListener listener){
+		this.browseListeners.add(listener);
+	}
+	
 	public void addControlListener(ControlListener listener){
 		this.controlListeners.add(listener);
 	}
 	
 	public void addPlayerListener(PlayerListener listener){
 		this.playerListeners.add(listener);
+	}
+	
+	public void addClearSelectionListener(ClearSelectionListener listener){
+		this.clearSelectionListener.add(listener);
 	}
 	
 	public void firePlaylistAdded(Playlist playlist) {
@@ -99,6 +115,24 @@ public class JotifyBroadcast {
 	public void fireSearchResultSelected(Result result){
 		for(SearchListener listener : this.searchListeners){
 			listener.searchResultSelected(result);
+		}
+	}
+	
+	public void fireBrowsedArtist(Artist artist){
+		for(BrowseListener listener : this.browseListeners){
+			listener.browsedArtist(artist);
+		}
+	}
+	
+	public void fireBrowsedAlbum(Album album){
+		for(BrowseListener listener : this.browseListeners){
+			listener.browsedAlbum(album);
+		}
+	}
+	
+	public void fireBrowsedTracks(Result result){
+		for(BrowseListener listener : this.browseListeners){
+			listener.browsedTracks(result);
 		}
 	}
 	
@@ -165,6 +199,12 @@ public class JotifyBroadcast {
 	public void firePlayerPositionChanged(int position){
 		for(PlayerListener listener : this.playerListeners){
 			listener.playerPositionChanged(position);
+		}
+	}
+	
+	public void fireClearSelection(){
+		for(ClearSelectionListener listener : this.clearSelectionListener){
+			listener.clearSelection();
 		}
 	}
 }

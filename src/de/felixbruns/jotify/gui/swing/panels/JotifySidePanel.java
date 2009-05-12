@@ -10,6 +10,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import de.felixbruns.jotify.gui.JotifyPlaybackQueue;
+import de.felixbruns.jotify.gui.listeners.ClearSelectionListener;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
 import de.felixbruns.jotify.gui.listeners.PlayerListener;
 import de.felixbruns.jotify.gui.listeners.PlaylistListener;
@@ -23,7 +24,7 @@ import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
 
 @SuppressWarnings("serial")
-public class JotifySidePanel extends JPanel implements PlaylistListener, QueueListener, SearchListener, PlayerListener {
+public class JotifySidePanel extends JPanel implements PlaylistListener, QueueListener, SearchListener, PlayerListener, ClearSelectionListener {
 	private JotifyBroadcast             broadcast;
 	private JotifyList                  menu;
 	private JotifyList                  list;
@@ -155,5 +156,10 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 	
 	public void playerPositionChanged(int position){
 		/* Do nothing. */
+	}
+	
+	public void clearSelection(){
+		this.menu.clearSelection();
+		this.list.clearSelection();
 	}
 }

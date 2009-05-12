@@ -80,7 +80,9 @@ public class JotifyFrame extends JFrame {
 		this.broadcast.addSearchListener(this.sidePanel);
 		this.broadcast.addSearchListener(this.contentPanel);
 		this.broadcast.addSearchListener(this.searchPanel);
+		this.broadcast.addBrowseListener(this.contentPanel);
 		this.broadcast.addPlayerListener(this.sidePanel);
 		this.broadcast.addPlayerListener(this.controlPanel);
+		this.broadcast.addClearSelectionListener(this.sidePanel);
 	}
 }
