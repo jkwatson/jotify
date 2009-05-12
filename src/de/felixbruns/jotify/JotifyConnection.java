@@ -588,7 +588,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 			/* Create channel callback */
 			ChannelCallback callback = new ChannelCallback();
 			
-			/* Send browse request. */
+			/* Send playlist request. */
 			try{
 				this.protocol.sendPlaylistRequest(callback, id);
 			}

@@ -39,6 +39,10 @@ public class Track {
 		return this.id;
 	}
 	
+	public void setId(String id){
+		this.id = id;
+	}
+	
 	public String getURI(){
 		return "spotify:track:" + SpotifyURI.toURI(this.id);
 	}
@@ -51,28 +55,56 @@ public class Track {
 		return this.title;
 	}
 	
+	public void setTitle(String title){
+		this.title = title;
+	}
+	
 	public Artist getArtist(){
 		return this.artist;
+	}
+	
+	public void setArtist(Artist artist){
+		this.artist = artist;
 	}
 	
 	public Album getAlbum(){
 		return this.album;
 	}
 	
+	public void setAlbum(Album album){
+		this.album = album;
+	}
+	
 	public int getYear(){
 		return this.year;
+	}
+	
+	public void setYear(int year){
+		this.year = year;
 	}
 	
 	public int getTrackNumber(){
 		return this.trackNumber;
 	}
 	
+	public void setTrackNumber(int trackNumber){
+		this.trackNumber = trackNumber;
+	}
+	
 	public int getLength(){
 		return this.length;
 	}
 	
+	public void setLength(int length){
+		this.length = length;
+	}
+	
 	public List<String> getFiles(){
 		return this.files;
+	}
+	
+	public void setFiles(List<String> files){
+		this.files = files;
 	}
 	
 	public void addFile(String id){
@@ -83,8 +115,16 @@ public class Track {
 		return this.cover;
 	}
 	
+	public void setCover(String cover){
+		this.cover = cover;
+	}
+	
 	public float getPopularity(){
 		return this.popularity;
+	}
+	
+	public void setPopularity(float popularity){
+		this.popularity = popularity;
 	}
 	
 	public static Track fromXMLElement(XMLElement trackElement){

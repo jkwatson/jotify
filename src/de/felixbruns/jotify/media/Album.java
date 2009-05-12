@@ -10,6 +10,7 @@ public class Album {
 	private String      name;
 	private Artist      artist;
 	private String      cover;
+	private int         year;
 	private float       popularity;
 	private List<Track> tracks;
 	
@@ -22,6 +23,7 @@ public class Album {
 		this.name       = name;
 		this.artist     = artist;
 		this.cover      = null;
+		this.year       = -1;
 		this.popularity = Float.NaN;
 		this.tracks     = new ArrayList<Track>();
 	}
@@ -30,24 +32,60 @@ public class Album {
 		return this.id;
 	}
 	
+	public void setId(String id){
+		this.id = id;
+	}
+	
 	public String getName(){
 		return this.name;
+	}
+	
+	public void setName(String name){
+		this.name = name;
 	}
 	
 	public Artist getArtist(){
 		return this.artist;
 	}
 	
+	public void setArtist(Artist artist){
+		this.artist = artist;
+	}
+	
 	public String getCover(){
 		return this.cover;
+	}
+	
+	public void setCover(String cover){
+		this.cover = cover;
+	}
+	
+	public int getYear(){
+		return this.year;
+	}
+	
+	public void setYear(int year){
+		this.year = year;
 	}
 	
 	public float getPopularity(){
 		return this.popularity;
 	}
 	
+	public void setPopularity(float popularity){
+		this.popularity = popularity;
+	}
+	
 	public List<Track> getTracks(){
 		return this.tracks;
+	}
+	
+	public void setTracks(List<Track> tracks){
+		this.tracks = tracks;
+	}
+	
+	public void addTrack(Track track){
+		this.tracks.add(track);
 	}
 	
 	public static Album fromXMLElement(XMLElement albumElement){
@@ -80,6 +118,11 @@ public class Album {
 			}
 		}
 		
+		/* Set year. */
+		if(albumElement.hasChild("year")){
+			album.year = Integer.parseInt(albumElement.getChildText("year"));
+		}
+		
 		/* Set popularity. */
 		if(albumElement.hasChild("popularity")){
 			album.popularity = Float.parseFloat(albumElement.getChildText("popularity"));
@@ -89,7 +132,11 @@ public class Album {
 		if(albumElement.hasChild("discs")){
 			for(XMLElement discElement : albumElement.getChild("discs").getChildren("disc")){
 				for(XMLElement trackElement : discElement.getChildren("track")){
-					album.tracks.add(Track.fromXMLElement(trackElement));
+					Track track = Track.fromXMLElement(trackElement);
+					
+					track.setAlbum(album);
+					
+					album.tracks.add(track);
 				}
 			}
 		}		

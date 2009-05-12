@@ -28,20 +28,40 @@ public class Artist {
 		return this.id;
 	}
 	
+	public void setId(String id){
+		this.id = id;
+	}
+	
 	public String getName(){
 		return this.name;
+	}
+	
+	public void setName(String name){
+		this.name = name;
 	}
 	
 	public String getPortrait(){
 		return this.portrait;
 	}
 	
+	public void setPortrait(String portrait){
+		this.portrait = portrait;
+	}
+	
 	public float getPopularity(){
 		return this.popularity;
 	}
 	
+	public void setPopularity(float popularity){
+		this.popularity = popularity;
+	}
+	
 	public List<Artist> getSimilarArtists(){
 		return this.similarArtists;
+	}
+	
+	public void setSimilarArtists(List<Artist> similarArtists){
+		this.similarArtists = similarArtists;
 	}
 	
 	public static Artist fromXMLElement(XMLElement artistElement){
