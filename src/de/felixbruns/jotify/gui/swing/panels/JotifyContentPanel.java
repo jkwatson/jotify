@@ -130,7 +130,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 						public void actionPerformed(ActionEvent e){
 							Track track = tableModel.get(table.getSelectedRow());
 							Album album = JotifyPool.getInstance().browse(track.getAlbum());
-
+							
 							broadcast.fireClearSelection();
 							broadcast.fireBrowsedAlbum(album);
 						}

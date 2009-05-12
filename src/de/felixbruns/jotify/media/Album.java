@@ -134,7 +134,9 @@ public class Album {
 				for(XMLElement trackElement : discElement.getChildren("track")){
 					Track track = Track.fromXMLElement(trackElement);
 					
+					track.setArtist(album.artist);
 					track.setAlbum(album);
+					track.setCover(album.cover);
 					
 					album.tracks.add(track);
 				}
