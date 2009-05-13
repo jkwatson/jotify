@@ -466,29 +466,31 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* Send browse request. */
 		try{
 			this.protocol.sendUserPlaylistsRequest(callback);
-		}
-		catch(ProtocolException e){
-			return null;
-		}
-		
-		/* Get data and inflate it. */
-		byte[] data = callback.get(10, TimeUnit.SECONDS);
-		
-		if(data.length == 0){
-			System.err.println("No data...!");
-			
-			return null;
+		} catch(ProtocolException e){
+			return PlaylistContainer.EMPTY;
 		}
 		
-		/* Load XML. */
-		XMLElement playlistElement = XML.load(
-			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
-			new String(data, Charset.forName("UTF-8")) +
-			"</playlist>"
-		);
-		
-		/* Create an return list. */
-		return PlaylistContainer.fromXMLElement(playlistElement);
+		// Get data and inflate it.
+        try {
+          byte[] data = callback.get(10, TimeUnit.SECONDS);
+    
+          if (data.length == 0) {
+            System.err.println("No data...!");
+            return PlaylistContainer.EMPTY;
+          }
+    
+          /* Load XML. */
+          XMLElement playlistElement =
+              XML.load("<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>"
+                  + new String(data, Charset.forName("UTF-8")) + "</playlist>");
+    
+          /* Create an return list. */
+          return PlaylistContainer.fromXMLElement(playlistElement);
+        } catch (Exception e) {
+          return PlaylistContainer.EMPTY; 
+          // TODO(liesen): change Callbac...get() to be more honest about the
+          // exceptions that might happen there
+        }
 	}
 	
 	/**
