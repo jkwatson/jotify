@@ -3,6 +3,7 @@ package de.felixbruns.jotify.gui;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.JotifyPool;
 import de.felixbruns.jotify.exceptions.AuthenticationException;
 import de.felixbruns.jotify.exceptions.ConnectionException;
@@ -17,14 +18,16 @@ import de.felixbruns.jotify.media.Result;
 
 public class JotifyApplication {
 	/* Jotify API, frame and broadcast. */
-	private JotifyPool        jotify;
 	private JotifyFrame       frame;
 	private JotifyBroadcast   broadcast;
 	private JotifyPreferences settings;
 	private JotifyPlayer      player;
 	
-	public JotifyApplication(){
-		this.jotify    = JotifyPool.getInstance();
+	private final Jotify jotify;
+	
+	public JotifyApplication(final Jotify jotify) {
+	  this.jotify = jotify;
+	  
 		this.broadcast = JotifyBroadcast.getInstance();
 		this.frame     = null; /* Created in initialize method. */
 		this.settings  = null; /* Created in initialize method. */
@@ -57,14 +60,10 @@ public class JotifyApplication {
 			
 			try{
 				/* Try to login by getting the default Jotify instance. */
-				this.jotify.login(
-					this.settings.getRevision(),
-					credentials.getUsername(), 
-					credentials.getPassword()
-				);
+				jotify.login(credentials.getUsername(), credentials.getPassword());
 				
 				/* Create player. */
-				this.player = new JotifyPlayer();
+				this.player = new JotifyPlayer(jotify);
 				this.broadcast.addControlListener(this.player);
 				
 				/* Create scrobbler if enabled. */
@@ -81,13 +80,13 @@ public class JotifyApplication {
 				this.settings.save();
 				
 				/* Create and show main application frame. Center it on screen. */
-				this.frame = new JotifyFrame();
+				this.frame = new JotifyFrame(jotify);
 				this.frame.setVisible(true);
 				this.frame.setLocationRelativeTo(null);
 				
 				/* Load playlists in a separate thread. */
 				new Thread("Playlist-Loading-Thread"){
-					public void run(){
+					public void run() {
 						/* Get information about account playlists. */
 						PlaylistContainer playlists = jotify.playlists();
 						//boolean           useCache  = true;
@@ -167,7 +166,7 @@ public class JotifyApplication {
 	
 	/* Main entry point of program. Create application and initialize it. */
 	public static void main(String[] args) throws Exception {
-		JotifyApplication application = new JotifyApplication();
+		JotifyApplication application = new JotifyApplication(new JotifyPool(4));
 		
 		application.initialize();
 	}

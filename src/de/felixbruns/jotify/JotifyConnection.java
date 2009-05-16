@@ -459,39 +459,29 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Playlist
 	 */
-	public PlaylistContainer playlists(){
-		/* Create channel callback */
-		ChannelCallback callback = new ChannelCallback();
-		
-		/* Send browse request. */
-		try{
-			this.protocol.sendUserPlaylistsRequest(callback);
-		} catch(ProtocolException e){
-			return PlaylistContainer.EMPTY;
-		}
-		
-		// Get data and inflate it.
-        try {
-          byte[] data = callback.get(10, TimeUnit.SECONDS);
+  	public PlaylistContainer playlists() {
+      ChannelCallback callback = new ChannelCallback();
+  
+      try {
+        protocol.sendUserPlaylistsRequest(callback);
+      } catch (ProtocolException e) {
+        return PlaylistContainer.EMPTY;
+      }
+  
+      // Get data and inflate it.
+      try {
+        byte[] data = callback.get(10, TimeUnit.SECONDS);
+        
+        XMLElement playlistElement =
+            XML.load("<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>"
+                + new String(data, Charset.forName("UTF-8")) + "</playlist>");
     
-          if (data.length == 0) {
-            System.err.println("No data...!");
-            return PlaylistContainer.EMPTY;
-          }
-    
-          /* Load XML. */
-          XMLElement playlistElement =
-              XML.load("<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>"
-                  + new String(data, Charset.forName("UTF-8")) + "</playlist>");
-    
-          /* Create an return list. */
-          return PlaylistContainer.fromXMLElement(playlistElement);
-        } catch (Exception e) {
-          return PlaylistContainer.EMPTY; 
-          // TODO(liesen): change Callbac...get() to be more honest about the
-          // exceptions that might happen there
-        }
-	}
+        /* Create an return list. */
+        return PlaylistContainer.fromXMLElement(playlistElement);
+      } catch (Exception e) {
+        return PlaylistContainer.EMPTY;
+      }
+    }
 	
 	/**
 	 * Add a playlist to the list of stored playlists.

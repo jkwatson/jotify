@@ -24,6 +24,7 @@ import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.event.HyperlinkEvent.EventType;
 
+import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.JotifyPool;
 import de.felixbruns.jotify.gui.JotifyPlaybackQueue;
 import de.felixbruns.jotify.gui.listeners.BrowseListener;
@@ -33,7 +34,6 @@ import de.felixbruns.jotify.gui.listeners.QueueListener;
 import de.felixbruns.jotify.gui.listeners.SearchListener;
 import de.felixbruns.jotify.gui.swing.components.JotifyTable;
 import de.felixbruns.jotify.gui.swing.components.JotifyTableModel;
-
 import de.felixbruns.jotify.media.Album;
 import de.felixbruns.jotify.media.Artist;
 import de.felixbruns.jotify.media.Playlist;
@@ -49,8 +49,12 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 	private JotifyTableModel<Track> tableModel;
 	
 	private boolean isShowingQueue;
+  
+	private final Jotify jotify;
 	
-	public JotifyContentPanel(){
+	public JotifyContentPanel(final Jotify jotify){
+	  this.jotify = jotify;
+	  
 		this.broadcast = JotifyBroadcast.getInstance();
 		
 		this.isShowingQueue = false;
@@ -129,7 +133,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 					browseItem.addActionListener(new ActionListener(){
 						public void actionPerformed(ActionEvent e){
 							Track track = tableModel.get(table.getSelectedRow());
-							Album album = JotifyPool.getInstance().browse(track.getAlbum());
+							Album album = jotify.browse(track.getAlbum());
 							
 							broadcast.fireClearSelection();
 							broadcast.fireBrowsedAlbum(album);
@@ -297,12 +301,12 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			String[] parts = e.getDescription().split(":", 2);
 			
 			if(parts[0].equals("artist")){
-				Result result = JotifyPool.getInstance().search(parts[1]);
+				Result result = jotify.search(parts[1]);
 				
 				broadcast.fireSearchResultReceived(result);
 			}
 			else if(parts[0].equals("album")){
-				Album album = JotifyPool.getInstance().browseAlbum(parts[1]);
+				Album album = jotify.browseAlbum(parts[1]);
 				
 				broadcast.fireClearSelection();
 				broadcast.fireBrowsedAlbum(album);

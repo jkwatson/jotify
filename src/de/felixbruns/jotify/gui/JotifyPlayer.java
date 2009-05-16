@@ -20,13 +20,15 @@ import de.felixbruns.jotify.player.PlaybackListener;
  */
 public class JotifyPlayer implements ControlListener, PlaybackListener {
 	private JotifyBroadcast        broadcast;
-	private Jotify                 jotify;
 	private JotifyPlaybackQueue    queue;
 	private List<PlaybackListener> listeners;
+
+    private final Jotify jotify;
 	
-	public JotifyPlayer() throws ConnectionException, AuthenticationException {
+	public JotifyPlayer(final Jotify jotify) throws ConnectionException, AuthenticationException {
+	  this.jotify = jotify;
+	  
 		this.broadcast = JotifyBroadcast.getInstance();
-		this.jotify    = JotifyPool.getInstance();
 		this.queue     = new JotifyPlaybackQueue();
 		this.listeners = new ArrayList<PlaybackListener>();
 	}

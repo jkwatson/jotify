@@ -9,6 +9,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.gui.JotifyPlaybackQueue;
 import de.felixbruns.jotify.gui.listeners.ClearSelectionListener;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
@@ -31,7 +32,7 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 	private JotifyCurrentlyPlayingPanel info;
 	private JotifyPlaybackQueue         queue;
 	
-	public JotifySidePanel(){
+	public JotifySidePanel(final Jotify jotify) {
 		/* Set broadcast object. */
 		this.broadcast = JotifyBroadcast.getInstance();
 		
@@ -102,7 +103,7 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 		});
 		this.add(this.list, BorderLayout.CENTER);
 		
-		this.info = new JotifyCurrentlyPlayingPanel();
+		this.info = new JotifyCurrentlyPlayingPanel(jotify);
 		this.add(this.info, BorderLayout.SOUTH);
 	}
 	
