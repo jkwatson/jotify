@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.UnresolvedAddressException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,19 +51,15 @@ public class Protocol {
 		
 		/* Try to connect to each server, stop trying when connected. */
 		for(InetSocketAddress server : servers){
-			try{
+			try {
 				/* Connect to server. */
 				this.channel = SocketChannel.open(server);
 				
 				/* Save server for later use. */
-				this.server = server;
-				
+				this.server = server;				
 				break;
-			}
-			catch(IOException e){
+			} catch (Exception e) {
 				System.err.println("Error connecting to '" + server + "': " + e.getMessage());
-				
-				continue;
 			}
 		}
 		
