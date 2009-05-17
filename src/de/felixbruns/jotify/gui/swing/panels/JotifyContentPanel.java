@@ -5,20 +5,25 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
+import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.TransferHandler;
+import javax.swing.TransferHandler.TransferSupport;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
@@ -33,6 +38,7 @@ import de.felixbruns.jotify.gui.listeners.QueueListener;
 import de.felixbruns.jotify.gui.listeners.SearchListener;
 import de.felixbruns.jotify.gui.swing.components.JotifyTable;
 import de.felixbruns.jotify.gui.swing.components.JotifyTableModel;
+import de.felixbruns.jotify.gui.swing.dnd.TrackTransferable;
 import de.felixbruns.jotify.media.Album;
 import de.felixbruns.jotify.media.Artist;
 import de.felixbruns.jotify.media.Playlist;
@@ -181,6 +187,33 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.add(this.scrollPane, BorderLayout.CENTER);
 		
 		table.setDragEnabled(true);
+		table.setTransferHandler(new TransferHandler() {
+          @Override
+          public boolean canImport(TransferHandler.TransferSupport support) {
+            return false;
+          }
+    
+          @Override
+          protected Transferable createTransferable(JComponent c) {
+            if (table.getSelectedRowCount() == 0) {
+              return null;
+            }
+            
+            final JotifyTableModel<Track> model = tableModel;
+            final List<Track> selectedTracks = new LinkedList<Track>();
+            
+            for (int selectedRow : table.getSelectedRows()) {
+              selectedTracks.add(model.get(selectedRow));
+            }
+            
+            return new TrackTransferable(selectedTracks.get(0));
+          }
+    
+          @Override
+          public int getSourceActions(JComponent c) {
+            return TransferHandler.COPY;
+          }
+		});
 	}
 	
 	public void showAlbum(Album album){
