@@ -7,17 +7,16 @@ import java.awt.Image;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.TransferHandler;
 
 import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.gui.JotifyApplication;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
-import de.felixbruns.jotify.gui.swing.dnd.TrackTransferHandler;
 import de.felixbruns.jotify.gui.swing.panels.JotifyContentPanel;
 import de.felixbruns.jotify.gui.swing.panels.JotifyControlPanel;
 import de.felixbruns.jotify.gui.swing.panels.JotifySearchPanel;
@@ -71,6 +70,7 @@ public class JotifyFrame extends JFrame {
             JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         sidePane.setOpaque(false);
         sidePane.getViewport().setOpaque(false);
+        sidePane.setBorder(BorderFactory.createEmptyBorder());
         
 		this.panel.add(sidePane, BorderLayout.WEST);
 
@@ -95,10 +95,5 @@ public class JotifyFrame extends JFrame {
 		this.broadcast.addPlayerListener(this.sidePanel);
 		this.broadcast.addPlayerListener(this.controlPanel);
 		this.broadcast.addClearSelectionListener(this.sidePanel);
-		
-		// Drag and drop
-		TransferHandler trackTransferHandler = new TrackTransferHandler();
-		contentPanel.setTransferHandler(trackTransferHandler);
-		sidePanel.setTransferHandler(trackTransferHandler);
 	}
 }

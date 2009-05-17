@@ -23,7 +23,6 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.TransferHandler;
-import javax.swing.TransferHandler.TransferSupport;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
@@ -359,6 +358,9 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 	}
 	
 	public void playlistUpdated(Playlist playlist){
+	  if (!isShowingQueue) { // TODO: compare with current playlist
+	    showTracks(playlist.getTracks());
+	  }
 	}
 	
 	public void queueSelected(JotifyPlaybackQueue queue){

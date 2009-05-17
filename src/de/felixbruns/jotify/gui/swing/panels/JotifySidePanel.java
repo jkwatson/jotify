@@ -132,15 +132,10 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
             final JList.DropLocation dropLocation = (JList.DropLocation) info.getDropLocation();
             final Playlist playlist = (Playlist) list.getModel().getElementAt(dropLocation.getIndex());
             
-            System.err.printf("Playlist under drop: %s (%d)%n", playlist, playlist.getTracks().size());
-            
             try {
-              System.err.printf("Transferable: %s%n", info.getTransferable());
               final Track track = (Track) info.getTransferable().getTransferData(TrackTransferable.TRACK_FLAVOR);
-              // playlist.getTracks().add(track);
-              
-              playlistUpdated(playlist);
-              System.err.printf("Adding %s (%d)%n", track, playlist.getTracks().size());
+              playlist.getTracks().add(track);
+              broadcast.firePlaylistUpdated(playlist); // playlistUpdated(playlist);
               return true;
             } catch (UnsupportedFlavorException e) {
             } catch (IOException e) {
@@ -170,8 +165,8 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 	}
 	
 	public void playlistUpdated(Playlist playlist){
-		this.list.updateElement(playlist);
-		revalidate();
+		list.updateElement(playlist);
+		repaint();
 	}
 	
 	public void playlistSelected(Playlist playlist){
