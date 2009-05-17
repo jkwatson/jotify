@@ -12,10 +12,12 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.TransferHandler;
 
 import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.gui.JotifyApplication;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
+import de.felixbruns.jotify.gui.swing.dnd.TrackTransferHandler;
 import de.felixbruns.jotify.gui.swing.panels.JotifyContentPanel;
 import de.felixbruns.jotify.gui.swing.panels.JotifyControlPanel;
 import de.felixbruns.jotify.gui.swing.panels.JotifySearchPanel;
@@ -93,5 +95,10 @@ public class JotifyFrame extends JFrame {
 		this.broadcast.addPlayerListener(this.sidePanel);
 		this.broadcast.addPlayerListener(this.controlPanel);
 		this.broadcast.addClearSelectionListener(this.sidePanel);
+		
+		// Drag and drop
+		TransferHandler trackTransferHandler = new TrackTransferHandler();
+		contentPanel.setTransferHandler(trackTransferHandler);
+		sidePanel.setTransferHandler(trackTransferHandler);
 	}
 }

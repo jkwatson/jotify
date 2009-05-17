@@ -105,6 +105,8 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 		
 		this.info = new JotifyCurrentlyPlayingPanel(jotify);
 		this.add(this.info, BorderLayout.SOUTH);
+		
+		list.setDragEnabled(true);
 	}
 	
 	/* Sets currently playing track. */

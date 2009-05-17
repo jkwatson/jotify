@@ -25,7 +25,6 @@ import javax.swing.event.HyperlinkListener;
 import javax.swing.event.HyperlinkEvent.EventType;
 
 import de.felixbruns.jotify.Jotify;
-import de.felixbruns.jotify.JotifyPool;
 import de.felixbruns.jotify.gui.JotifyPlaybackQueue;
 import de.felixbruns.jotify.gui.listeners.BrowseListener;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
@@ -180,6 +179,8 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.scrollPane.getViewport().setOpaque(false);
 		this.scrollPane.setBorder(new EmptyBorder(0, 0, 0, 0));
 		this.add(this.scrollPane, BorderLayout.CENTER);
+		
+		table.setDragEnabled(true);
 	}
 	
 	public void showAlbum(Album album){
