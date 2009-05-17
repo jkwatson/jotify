@@ -11,6 +11,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 
 import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.gui.JotifyApplication;
@@ -62,7 +63,14 @@ public class JotifyFrame extends JFrame {
 		/* Create and add side panel. */
 		this.sidePanel = new JotifySidePanel(jotify);
 		this.sidePanel.setPreferredSize(new Dimension(180, 600));
-		this.panel.add(this.sidePanel, BorderLayout.WEST);
+
+        JScrollPane sidePane = new JScrollPane(sidePanel, 
+            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+            JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        sidePane.setOpaque(false);
+        sidePane.getViewport().setOpaque(false);
+        
+		this.panel.add(sidePane, BorderLayout.WEST);
 
 		/* Create and add content panel. */
 		this.contentPanel = new JotifyContentPanel(jotify);
