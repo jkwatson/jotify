@@ -21,11 +21,11 @@ public class TrackTransferable implements Transferable {
 	
 	public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
 		if(flavor.equals(DataFlavor.stringFlavor)){
-			return track.getId();
+			return this.track.getId();
 		}
 		
 		if(flavor.equals(TRACK_FLAVOR)){
-			return track;
+			return this.track;
 		}
 		
 		throw new UnsupportedFlavorException(flavor);

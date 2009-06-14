@@ -2,6 +2,7 @@ package de.felixbruns.jotify.gui.swing.panels;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.util.List;
 
 import javax.swing.DropMode;
 import javax.swing.ImageIcon;
@@ -23,7 +24,7 @@ import de.felixbruns.jotify.gui.listeners.SearchListener;
 import de.felixbruns.jotify.gui.swing.JotifyPreferencesDialog;
 import de.felixbruns.jotify.gui.swing.components.JotifyList;
 import de.felixbruns.jotify.gui.swing.components.JotifyList.JotifyListElement;
-import de.felixbruns.jotify.gui.swing.dnd.TrackTransferable;
+import de.felixbruns.jotify.gui.swing.dnd.TrackListTransferable;
 import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
@@ -109,7 +110,7 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 		this.list.setDropMode(DropMode.ON);
 		this.list.setTransferHandler(new TransferHandler(){
 			public boolean canImport(TransferHandler.TransferSupport info){
-				if(!info.isDataFlavorSupported(TrackTransferable.TRACK_FLAVOR)){
+				if(!info.isDataFlavorSupported(TrackListTransferable.TRACKLIST_FLAVOR)){
 					return false;
 				}
 				
@@ -129,9 +130,11 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 				
 				/* TODO: Actually send the playlist change to the server. */
 				try{
-					final Track track = (Track)info.getTransferable().getTransferData(TrackTransferable.TRACK_FLAVOR);
+					final List<?> trackList = (List<?>)info.getTransferable().getTransferData(TrackListTransferable.TRACKLIST_FLAVOR);
 					
-					playlist.getTracks().add(track);
+					for(Object o : trackList){
+						playlist.getTracks().add((Track)o);
+					}
 					
 					broadcast.firePlaylistUpdated(playlist);
 					

@@ -37,7 +37,7 @@ import de.felixbruns.jotify.gui.listeners.QueueListener;
 import de.felixbruns.jotify.gui.listeners.SearchListener;
 import de.felixbruns.jotify.gui.swing.components.JotifyTable;
 import de.felixbruns.jotify.gui.swing.components.JotifyTableModel;
-import de.felixbruns.jotify.gui.swing.dnd.TrackTransferable;
+import de.felixbruns.jotify.gui.swing.dnd.TrackListTransferable;
 import de.felixbruns.jotify.media.Album;
 import de.felixbruns.jotify.media.Artist;
 import de.felixbruns.jotify.media.Playlist;
@@ -194,7 +194,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 					selectedTracks.add(model.get(selectedRow));
 				}
 				
-				return new TrackTransferable(selectedTracks.get(0));
+				return new TrackListTransferable(selectedTracks);
 			}
 			
 			public int getSourceActions(JComponent c){
