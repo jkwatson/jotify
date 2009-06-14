@@ -38,6 +38,19 @@ public interface Jotify extends Runnable, Player {
 	public User user();
 	
 	/**
+	 * Fetch a toplist.
+	 * 
+	 * @param type     A toplist type. e.g. "artist", "album" or "track".
+	 * @param region   A region code or null. e.g. "SE" or "DE".
+	 * @param username A username or null.
+	 * 
+	 * @return A {@link Result} object.
+	 * 
+	 * @see Result
+	 */
+	public Result toplist(String type, String region, String username);
+	
+	/**
 	 * Search for an artist, album or track.
 	 * 
 	 * @param query Your search query.
@@ -173,6 +186,18 @@ public interface Jotify extends Runnable, Player {
 	public PlaylistContainer playlists();
 	
 	/**
+	 * Add a playlist to the end of the list of stored playlists.
+	 * 
+	 * @param playlists A {@link PlaylistContainer} to add the playlist to.
+	 * @param playlist  The {@link Playlist} to be added.
+	 * 
+	 * @return true on success and false on failure.
+	 * 
+	 * @see PlaylistContainer
+	 */
+	public boolean playlistsAddPlaylist(PlaylistContainer playlists, Playlist playlist);
+	
+	/**
 	 * Add a playlist to the list of stored playlists.
 	 * 
 	 * @param playlists A {@link PlaylistContainer} to add the playlist to.
@@ -218,6 +243,17 @@ public interface Jotify extends Runnable, Player {
 	 * @return true on success and false on failure.
 	 */
 	public boolean playlistAddTrack(Playlist playlist, Track track, int position);
+	
+	/**
+	 * Add multiple tracks to a playlist.
+	 * 
+	 * @param playlist The playlist.
+	 * @param tracks   A {@link List} of tracks to be added.
+	 * @param position The target position of the added track.
+	 * 
+	 * @return true on success and false on failure.
+	 */
+	public boolean playlistAddTracks(Playlist playlist, List<Track> tracks, int position);
 	
 	/**
 	 * Remove a track from a playlist.

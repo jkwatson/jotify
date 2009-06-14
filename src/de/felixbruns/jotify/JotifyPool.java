@@ -141,6 +141,16 @@ public class JotifyPool implements Jotify, Player {
 		return user;
 	}
 	
+	public Result toplist(String type, String region, String username) {
+		Jotify connection = this.getConnection();
+		
+		Result result = connection.toplist(type, region, username);
+		
+		this.releaseConnection(connection);
+		
+		return result;
+	}
+	
 	public Result search(String query){
 		Jotify connection = this.getConnection();
 		
@@ -252,6 +262,16 @@ public class JotifyPool implements Jotify, Player {
 		return playlists;
 	}
 	
+	public boolean playlistsAddPlaylist(PlaylistContainer playlists, Playlist playlist){
+		Jotify connection = this.getConnection();
+		
+		boolean success = connection.playlistsAddPlaylist(playlists, playlist);
+		
+		this.releaseConnection(connection);
+		
+		return success;
+	}
+	
 	public boolean playlistsAddPlaylist(PlaylistContainer playlists, Playlist playlist, int position){
 		Jotify connection = this.getConnection();
 		
@@ -286,6 +306,16 @@ public class JotifyPool implements Jotify, Player {
 		Jotify connection = this.getConnection();
 		
 		boolean success = connection.playlistAddTrack(playlist, track, position);
+		
+		this.releaseConnection(connection);
+		
+		return success;
+	}
+	
+	public boolean playlistAddTracks(Playlist playlist, List<Track> tracks, int position){
+		Jotify connection = this.getConnection();
+		
+		boolean success = connection.playlistAddTracks(playlist, tracks, position);
 		
 		this.releaseConnection(connection);
 		

@@ -552,6 +552,20 @@ public class JotifyConnection implements Jotify, CommandListener {
 	}
 	
 	/**
+	 * Add a playlist to the end of the list of stored playlists.
+	 * 
+	 * @param playlists A {@link PlaylistContainer} to add the playlist to.
+	 * @param playlist  The {@link Playlist} to be added.
+	 * 
+	 * @return true on success and false on failure.
+	 * 
+	 * @see PlaylistContainer
+	 */
+	public boolean playlistsAddPlaylist(PlaylistContainer playlists, Playlist playlist){
+		return this.playlistsAddPlaylist(playlists, playlist, playlists.getPlaylists().size());
+	}
+	
+	/**
 	 * Add a playlist to the list of stored playlists.
 	 * 
 	 * @param playlists A {@link PlaylistContainer} to add the playlist to.
@@ -564,8 +578,6 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 */
 	public boolean playlistsAddPlaylist(PlaylistContainer playlists, Playlist playlist, int position){
 		String user = this.session.getUsername();
-		
-		position = playlists.getPlaylists().size() - 1;
 		
 		/* First add the playlist to calculate the new checksum. */
 		playlists.getPlaylists().add(position, playlist);
@@ -759,67 +771,11 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @return true on success and false on failure.
 	 */
 	public boolean playlistAddTrack(Playlist playlist, Track track, int position){
-		String user = this.session.getUsername();
+		List<Track> tracks = new ArrayList<Track>();
 		
-		if(!playlist.isCollaborative() && !playlist.getAuthor().equals(user)){
-			return false;
-		}
+		tracks.add(track);
 		
-		/* First add the track to calculate the new checksum. */
-		playlist.getTracks().add(position, track);
-		
-		String xml = String.format(
-			"<change><ops><add><i>%d</i><items>%s01</items></add></ops>" +
-			"<time>%d</time><user>%s</user></change>" +
-			"<version>%010d,%010d,%010d,%d</version>",
-			position, track.getId(), new Date().getTime() / 1000, user,
-			playlist.getRevision() + 1, playlist.getTracks().size(),
-			playlist.getChecksum(), playlist.isCollaborative()?1:0
-		);
-		
-		/* Remove the track again, because we need the old checksum for sending. */
-		playlist.getTracks().remove(position);
-		
-		/* Create channel callback */
-		ChannelCallback callback = new ChannelCallback();
-		
-		/* Send change playlist request. */
-		try{
-			this.protocol.sendChangePlaylist(callback, playlist, xml);
-		}
-		catch(ProtocolException e){
-			return false;
-		}
-		
-		/* Get response. */
-		byte[] data = callback.get();
-		
-		XMLElement playlistElement = XML.load(
-			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
-			new String(data, Charset.forName("UTF-8")) +
-			"</playlist>"
-		);		
-		
-		/* Check for success. */
-		if(playlistElement.hasChild("confirm")){
-			/* Split version string into parts. */
-			String[] parts = playlistElement.getChild("confirm").getChildText("version").split(",", 4);
-			
-			/* Set values. */
-			playlist.setRevision(Long.parseLong(parts[0]));
-			playlist.setCollaborative(Integer.parseInt(parts[3]) == 1);
-			
-			/* Add the track, since operation was successful. */
-			playlist.getTracks().add(position, track);
-			
-			if(playlist.getChecksum() != Long.parseLong(parts[2])){
-				System.out.println("Checksum error!");
-			}
-			
-			return true;
-		}
-		
-		return false;
+		return this.playlistAddTracks(playlist, tracks, position);
 	}
 	
 	/**
@@ -841,15 +797,15 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* First add the tracks to calculate the new checksum. */
 		playlist.getTracks().addAll(position, tracks);
 		
-		/* Build a comma separated list of tracks. */
+		/* Build a comma separated list of tracks and append '01' to every id!. */
 		String trackList = "";
 		
 		for(int i = 0; i < tracks.size(); i++){
-			trackList += ((i > 0)?",":"") + tracks.get(i).getId();
+			trackList += ((i > 0)?",":"") + tracks.get(i).getId() + "01";
 		}
 		
 		String xml = String.format(
-			"<change><ops><add><i>%d</i><items>%s01</items></add></ops>" +
+			"<change><ops><add><i>%d</i><items>%s</items></add></ops>" +
 			"<time>%d</time><user>%s</user></change>" +
 			"<version>%010d,%010d,%010d,%d</version>",
 			position, trackList, new Date().getTime() / 1000, user,
@@ -937,8 +893,10 @@ public class JotifyConnection implements Jotify, CommandListener {
 			playlist.getTracks().subList(position, position + count)
 		);
 		
-		/* First remove the track(s) to calculate the new checksum. FIXME: remove them in single steps. */
-		playlist.getTracks().removeAll(tracks);
+		/* First remove the track(s) to calculate the new checksum. This needs to be done in single steps! */
+		for(int i = 0; i < tracks.size(); i++){
+			playlist.getTracks().remove(position);
+		}
 		
 		String xml = String.format(
 			"<change><ops><del><i>%d</i><k>%d</k></del></ops>" +
@@ -982,7 +940,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 			playlist.setCollaborative(Integer.parseInt(parts[3]) == 1);
 			
 			/* Remove the track(s), since operation was successful. */
-			playlist.getTracks().removeAll(tracks);
+			for(int i = 0; i < tracks.size(); i++){
+				playlist.getTracks().remove(position);
+			}
 			
 			if(playlist.getChecksum() != Long.parseLong(parts[2])){
 				System.out.println("Checksum error!");
