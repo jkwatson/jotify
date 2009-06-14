@@ -121,11 +121,13 @@ public class Playlist implements Iterable<Track> {
 		playlist.name = changeElement.getChild("ops").getChildText("name");
 		
 		/* Get items (comma separated list). */
-		String items = changeElement.getChild("ops").getChild("add").getChildText("items");
-		
-		/* Add track items. */
-		for(String trackId : items.split(",")){
-			playlist.tracks.add(new Track(trackId.trim().substring(0, 32), "", null, null));
+		if(changeElement.getChild("ops").hasChild("add")){
+			String items = changeElement.getChild("ops").getChild("add").getChildText("items");
+			
+			/* Add track items. */
+			for(String trackId : items.split(",")){
+				playlist.tracks.add(new Track(trackId.trim().substring(0, 32), "", null, null));
+			}
 		}
 		
 		/* Get "version" element. */
