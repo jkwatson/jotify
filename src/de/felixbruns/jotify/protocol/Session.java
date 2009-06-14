@@ -175,7 +175,7 @@ public class Session {
 			this.protocol.receiveInitialPacket();
 		}
 		catch(ProtocolException e){
-			throw new AuthenticationException(e.getMessage());
+			throw new AuthenticationException(e);
 		}
 		
 		/* Generate auth hash. */
@@ -249,7 +249,7 @@ public class Session {
 			this.protocol.receiveAuthenticationPacket();
 		}
 		catch(ProtocolException e){
-			throw new AuthenticationException(e.getMessage());
+			throw new AuthenticationException(e);
 		}
 		
 		return this.protocol;

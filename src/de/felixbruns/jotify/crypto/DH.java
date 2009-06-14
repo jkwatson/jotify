@@ -20,15 +20,43 @@ import javax.crypto.spec.DHParameterSpec;
 import javax.crypto.spec.DHPrivateKeySpec;
 import javax.crypto.spec.DHPublicKeySpec;
 
+/**
+ * Class providing convenience methods for generating Diffie-Hellman
+ * key pairs and computing shared keys.
+ * 
+ * @author Felix Bruns <felixbruns@web.de>
+ */
 public class DH {
+	/**
+	 * {@link KeyPairGenerator} object for creating new key pairs.
+	 */
 	private static KeyPairGenerator keyPairGenerator;
-	private static KeyAgreement     keyAgreement;
-	private static KeyFactory       keyFactory;
-	private static DH               instance;
 	
+	/**
+	 * {@link KeyAgreement} object for computing shared keys.
+	 */
+	private static KeyAgreement keyAgreement;
+	
+	/**
+	 * {@link KeyFactory} object for creating keys from bytes.
+	 */
+	private static KeyFactory keyFactory;
+	
+	/**
+	 * {@link DH} instance for creating new {@link DHKeyPair} objects.
+	 */
+	private static DH instance;
+	
+	/**
+	 * Generator to use for key generation.
+	 */
 	private static BigInteger generator = new BigInteger("2");
-	private static BigInteger prime     = bytesToBigInteger(new byte[]{
-		/* Well-known Group 1, 768-bit prime */
+	
+	/**
+	 * Prime number to use for key generation.
+	 * Well-known Group 1, 768-bit prime.
+	 */
+	private static BigInteger prime = bytesToBigInteger(new byte[]{
 		(byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff,
 		(byte)0xc9, (byte)0x0f, (byte)0xda, (byte)0xa2, (byte)0x21, (byte)0x68, (byte)0xc2, (byte)0x34,
 		(byte)0xc4, (byte)0xc6, (byte)0x62, (byte)0x8b, (byte)0x80, (byte)0xdc, (byte)0x1c, (byte)0xd1,
@@ -43,6 +71,9 @@ public class DH {
 		(byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff
 	});
 	
+	/**
+	 * Statically instantiate needed objects and create a class instance.
+	 */
 	static{
 		try{
 			keyPairGenerator = KeyPairGenerator.getInstance("DH");
@@ -50,54 +81,78 @@ public class DH {
 			keyFactory       = KeyFactory.getInstance("DH");
 		}
 		catch(NoSuchAlgorithmException e){
-			System.err.println("Algorithm not available: " + e.getMessage());
+			throw new RuntimeException(e);
 		}
 		
+		/* Create DH instance for creating new DHKeyPair objects. */
 		instance = new DH();
 	}
 	
+	/**
+	 * Generate a key pair with the specified key size.
+	 * 
+	 * @param keysize The key size in bits.
+	 * 
+	 * @return A {@link DHKeyPair} holding Diffie-Hellman private and public keys.
+	 */
 	public static DHKeyPair generateKeyPair(int keysize){
+		/* Check if key pair generator is instantiated. */
 		if(keyPairGenerator == null){
-			return null;
+			throw new RuntimeException("KeyPairGenerator not instantiated!");
 		}
 		
-		/* Initialize key pair generator with prime, generator and keysize */
+		/* Initialize key pair generator with prime, generator and keysize in bits. */
 		try{
 			keyPairGenerator.initialize(
 				new DHParameterSpec(prime, generator, keysize)
 			);
 		}
 		catch(InvalidAlgorithmParameterException e){
-			System.err.println("Invalid parameter spec: " + e.getMessage());
-			
-			return null;
+			throw new RuntimeException(e);
 		}
 		
-		/* Generate key pair */
+		/* Generate key pair. */
 		KeyPair keyPair = keyPairGenerator.generateKeyPair();
 		
-		/* Return key pair */
+		/* Return key pair. */
 		return instance.new DHKeyPair(keyPair);
 	}
 	
+	/**
+	 * Compute a shared key using a private and a public key.
+	 * 
+	 * @param privateKey A {@link DHPrivateKey} object.
+	 * @param publicKey  A {@link DHPublicKey} object.
+	 * 
+	 * @return The shared key as a byte array.
+	 */
 	public static byte[] computeSharedKey(DHPrivateKey privateKey, DHPublicKey publicKey){
+		/* Check if key agreement is instantiated. */
 		if(keyAgreement == null){
-			return null;
+			throw new RuntimeException("KeyAgreement not instantiated!");
 		}
 		
+		/* Initialize key agreement with private key and execute next phase with public key. */
 		try{
 			keyAgreement.init(privateKey);
 			keyAgreement.doPhase(publicKey, true);
 		}
 		catch(InvalidKeyException e){
-			System.err.println("Invalid key: " + e.getMessage());
-			
-			return null;
+			throw new RuntimeException(e);
 		}
 		
+		/* Return shared key. */
 		return keyAgreement.generateSecret();
 	}
 	
+	/**
+	 * Convert a byte array to a {@link BigInteger}.
+	 * Adds a leading zero-byte to ensure a positive {@link BigInteger}.
+	 * 
+	 * @param bytes The byte array to convert.
+	 * 
+	 * @return A {@link BigInteger} object.
+	 */
 	public static BigInteger bytesToBigInteger(byte[] bytes){
 		/* Pad with 0x00 so we don't get a negative BigInteger!!! */
 		ByteBuffer key = ByteBuffer.allocate(bytes.length + 1);
@@ -108,9 +163,19 @@ public class DH {
 		return new BigInteger(key.array());
 	}
 	
+	/**
+	 * Convert a {@link DHKey} to a byte array. Uses X or Y values
+	 * of a key depending on key type (private or public). Cuts-off
+	 * a leading zero-byte if key length is not divisible by 8.
+	 * 
+	 * @param key The {@link DHKey} to convert.
+	 * 
+	 * @return A byte array representation of the key or {@code null}.
+	 */
 	public static byte[] keyToBytes(DHKey key){
 		byte[] bytes = null;
 		
+		/* Check key type and use appropriate value. */
 		if(key instanceof DHPublicKey){
 			bytes = ((DHPublicKey)key).getY().toByteArray();
 		}
@@ -118,10 +183,12 @@ public class DH {
 			bytes = ((DHPrivateKey)key).getX().toByteArray();
 		}
 		
+		/* Return null on failure. */
 		if(bytes == null){
 			return null;
 		}
 		
+		/* Cut-off leading zero-byte if key length is not divisible by 8. */
 		if(bytes.length % 8 != 0 && bytes[0] == 0x00){
 			bytes = Arrays.copyOfRange(bytes, 1, bytes.length);
 		}
@@ -129,6 +196,14 @@ public class DH {
 		return bytes;
 	}
 	
+	/**
+	 * Create a {@link DHPublicKey} from a byte array.
+	 * 
+	 * @param parameterSpec The {@link DHParameterSpec} to use.
+	 * @param bytes         The key bytes.
+	 * 
+	 * @return A {@link DHPublicKey} object.
+	 */
 	public static DHPublicKey bytesToPublicKey(DHParameterSpec parameterSpec, byte[] bytes){
 		/* Set Y (public key), P and G values. */
 		KeySpec keySpec = new DHPublicKeySpec(
@@ -142,12 +217,18 @@ public class DH {
 			return (DHPublicKey)keyFactory.generatePublic(keySpec);
 		}
 		catch(InvalidKeySpecException e){
-			System.err.println("Invalid key spec: " + e.getMessage());
+			throw new RuntimeException(e);
 		}
-		
-		return null;
 	}
 	
+	/**
+	 * Create a {@link DHPrivateKey} from a byte array.
+	 * 
+	 * @param parameterSpec The {@link DHParameterSpec} to use.
+	 * @param bytes         The key bytes.
+	 * 
+	 * @return A {@link DHPrivateKey} object.
+	 */
 	public static DHPrivateKey bytesToPrivateKey(DHParameterSpec parameterSpec, byte[] bytes){
 		/* Set X (private key), P and G values. */
 		KeySpec keySpec = new DHPrivateKeySpec(
@@ -161,39 +242,82 @@ public class DH {
 			return (DHPrivateKey)keyFactory.generatePrivate(keySpec);
 		}
 		catch(InvalidKeySpecException e){
-			System.err.println("Invalid key spec: " + e.getMessage());
+			throw new RuntimeException(e);
 		}
-		
-		return null;
 	}
 	
+	/**
+	 * A class holding Diffie-Hellman private and public keys.
+	 * 
+	 * @author Felix
+	 *
+	 * @category Crypto
+	 */
 	public class DHKeyPair {
-		private DHPublicKey  publicKey;
+		/**
+		 * A {@link DHPrivateKey}.
+		 */
 		private DHPrivateKey privateKey;
+
+		/**
+		 * A {@link DHPublicKey}.
+		 */
+		private DHPublicKey publicKey;
 		
-		public DHKeyPair(DHPublicKey publicKey, DHPrivateKey privateKey){
-			this.publicKey  = publicKey;
+		/**
+		 * Create a new {@link DHKeyPair} using a private and public key.
+		 * 
+		 * @param privateKey The private key.
+		 * @param publicKey  The public key.
+		 */
+		public DHKeyPair(DHPrivateKey privateKey, DHPublicKey publicKey){
 			this.privateKey = privateKey;
+			this.publicKey  = publicKey;
 		}
 		
+		/**
+		 * Create a new {@link DHKeyPair} using a {@link KeyPair}.
+		 * 
+		 * @param keyPair The {@link KeyPair} object.
+		 */
 		public DHKeyPair(KeyPair keyPair){			
-			this((DHPublicKey)keyPair.getPublic(), (DHPrivateKey)keyPair.getPrivate());
-		}
-
-		public DHPublicKey getPublicKey(){
-			return this.publicKey;
+			this((DHPrivateKey)keyPair.getPrivate(), (DHPublicKey)keyPair.getPublic());
 		}
 		
-		public byte[] getPublicKeyBytes(){
-			return keyToBytes(this.publicKey);
-		}
-
+		/**
+		 * Get the private key.
+		 * 
+		 * @return A {@link DHPrivateKey} object.
+		 */
 		public DHPrivateKey getPrivateKey(){
 			return this.privateKey;
 		}
 		
+		/**
+		 * Get the private key as a byte array.
+		 * 
+		 * @return A byte array representation of the private key.
+		 */
 		public byte[] getPrivateKeyBytes(){
 			return keyToBytes(this.privateKey);
+		}
+		
+		/**
+		 * Get the public key.
+		 * 
+		 * @return A {@link DHPublicKey} object.
+		 */
+		public DHPublicKey getPublicKey(){
+			return this.publicKey;
+		}
+		
+		/**
+		 * Get the public key as a byte array.
+		 * 
+		 * @return A byte array representation of the public key.
+		 */
+		public byte[] getPublicKeyBytes(){
+			return keyToBytes(this.publicKey);
 		}
 	}
 }

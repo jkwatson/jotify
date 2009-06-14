@@ -1,5 +1,10 @@
 package de.felixbruns.jotify.crypto;
 
+/**
+ * Implementation of the Shannon stream-cipher.
+ * 
+ * @author Felix Bruns <felixbruns@web.de>
+ */
 public class Shannon {
 	/*
 	 * Fold is how many register cycles need to be performed after combining the
@@ -21,6 +26,9 @@ public class Shannon {
 	private int   mbuf;  /* Partial word MAC buffer. */
 	private int   nbuf;  /* Number of part-word stream bits buffered. */
 	
+	/**
+	 * Create a new instance of the Shannon stream-cipher.
+	 */
 	public Shannon(){
 		/* Registers with length N. */
 		this.R     = new int[N];

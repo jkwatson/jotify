@@ -83,7 +83,7 @@ public class Protocol {
 			System.out.format("Disconnected from '%s'\n", this.server);
 		}
 		catch(IOException e){
-			throw new ConnectionException("Error disconnecting from '" + this.server + "': " + e.getMessage());
+			throw new ConnectionException("Error disconnecting from '" + this.server + "'!", e);
 		}
 	}
 	
@@ -429,7 +429,7 @@ public class Protocol {
 			for(int n = payloadLength, r; n > 0 && (r = this.channel.read(buffer)) > 0; n -= r);
 		}
 		catch(IOException e){
-			throw new ProtocolException("Failed to read payload: " + e.getMessage());
+			throw new ProtocolException("Failed to read payload!", e);
 		}
 		
 		/* Extend it again to payload and mac length. */
@@ -439,7 +439,7 @@ public class Protocol {
 			for(int n = macLength, r; n > 0 && (r = this.channel.read(buffer)) > 0; n -= r);
 		}
 		catch(IOException e){
-			throw new ProtocolException("Failed to read MAC: " + e.getMessage());
+			throw new ProtocolException("Failed to read MAC!", e);
 		}
 		
 		/* Decrypt payload. */
@@ -825,7 +825,7 @@ public class Protocol {
 			this.channel.write(buffer);
 		}
 		catch (IOException e){
-			throw new ProtocolException("Error writing data to socket: " + e.getMessage());
+			throw new ProtocolException("Error writing data to socket!", e);
 		}
 	}
 	
@@ -841,7 +841,7 @@ public class Protocol {
 			return buffer.get() & 0xff;
 		}
 		catch(IOException e){
-			throw new ProtocolException("Error reading data from socket: " + e.getMessage());
+			throw new ProtocolException("Error reading data from socket!", e);
 		}
 	}
 	
@@ -859,7 +859,7 @@ public class Protocol {
 			for(int r; n < len && (r = this.channel.read(buffer)) > 0; n += r);
 		}
 		catch(IOException e){
-			throw new ProtocolException("Error reading data from socket: " + e.getMessage());
+			throw new ProtocolException("Error reading data from socket!", e);
 		}
 		
 		return n;

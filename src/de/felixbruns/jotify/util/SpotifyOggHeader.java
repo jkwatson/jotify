@@ -4,6 +4,11 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
+/**
+ * Decodes the Spotify specific OGG header and provides that information.
+ * 
+ * @author Felix Bruns <felixbruns@web.de>
+ */
 public class SpotifyOggHeader {
 	private int   samples;
 	private int   length;
@@ -49,7 +54,7 @@ public class SpotifyOggHeader {
 	public SpotifyOggHeader(byte[] header){
 		/* Try to parse header. If it fails, just set default values. */
 		try{
-			this.parse(header);
+			this.decode(header);
 		}
 		catch(IOException e){
 			this.samples   = 0;
@@ -98,8 +103,8 @@ public class SpotifyOggHeader {
 				((value & 0xff000000) << 24);
 	}
 	
-	/* Parse Spotify header. */
-	private void parse(byte[] header) throws IOException {
+	/* Decode Spotify OGG header. */
+	private void decode(byte[] header) throws IOException {
 		/* Get input steam of bytes. */
 		DataInputStream input = new DataInputStream(new ByteArrayInputStream(header));
 		

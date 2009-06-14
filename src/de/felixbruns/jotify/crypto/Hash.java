@@ -8,11 +8,19 @@ import javax.crypto.Mac;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
 
+/**
+ * Class providing convenience methods for hashing data.
+ * 
+ * @author Felix Bruns <felixbruns@web.de>
+ */
 public class Hash {
 	private static MessageDigest digestSha1;
 	private static MessageDigest digestMd5;
 	private static Mac           hmacSha1;
 	
+	/**
+	 * Statically instantiate needed objects.
+	 */
 	static{
 		try{
 			digestSha1 = MessageDigest.getInstance("SHA-1");
@@ -20,26 +28,48 @@ public class Hash {
 			hmacSha1   = Mac.getInstance("HmacSHA1");
 		}
 		catch(NoSuchAlgorithmException e){
-			System.err.println("Algorithm not available: " + e.getMessage());
+			throw new RuntimeException(e);
 		}
 	}
 	
+	/**
+	 * Compute the SHA-1 hash of a buffer.
+	 * 
+	 * @param buffer The buffer of bytes.
+	 * 
+	 * @return The 20-byte SHA-1 hash of that buffer.
+	 */
 	public static byte[] sha1(byte[] buffer){
 		if(digestSha1 == null){
-			return null;
+			throw new RuntimeException("MessageDigest not instantiated!");
 		}
 		
 		return digestSha1.digest(buffer);
 	}
 	
+	/**
+	 * Compute the MD5 hash of a buffer.
+	 * 
+	 * @param buffer The buffer of bytes.
+	 * 
+	 * @return The 16-byte MD5 hash of that buffer.
+	 */
 	public static byte[] md5(byte[] buffer){
 		if(digestMd5 == null){
-			return null;
+			throw new RuntimeException("MessageDigest not instantiated!");
 		}
 		
 		return digestMd5.digest(buffer);
 	}
 	
+	/**
+	 * Compute the SHA-1 HMAC of a buffer.
+	 * 
+	 * @param buffer The buffer of bytes.
+	 * @param key    The key to use for keying.
+	 * 
+	 * @return The 20-byte SHA-1 HMAC of that buffer.
+	 */
 	public static byte[] hmacSha1(byte[] buffer, byte[] key){
 		byte[] output = new byte[20];
 		
@@ -48,32 +78,42 @@ public class Hash {
 		return output;
 	}
 	
+	/**
+	 * Compute the SHA-1 HMAC of a buffer.
+	 * 
+	 * @param buffer The buffer of bytes.
+	 * @param key    The key to use for keying.
+	 * @param output The destination buffer.
+	 * @param offset The offset in the destination buffer.
+	 */
 	public static void hmacSha1(byte[] buffer, byte[] key, byte[] output, int offset){
 		if(hmacSha1 == null){
-			return;
+			throw new RuntimeException("Mac not instantiated!");
 		}
 		
+		/* Create secret key from bytes. */
 		SecretKeySpec secretKey = new SecretKeySpec(key, "HmacSHA1");
 		
+		/* Initialize Mac with secret key. */
 		try{
 			hmacSha1.init(secretKey);
 		}
 		catch(InvalidKeyException e){
-			System.err.println("Invalid key: " + e.getMessage());
-			
-			return;
+			throw new RuntimeException(e);
 		}
 		
+		/* Update Mac with buffer. */
 		hmacSha1.update(buffer);
 		
+		/* Write output into buffer at specified offset. */
 		try{
 			hmacSha1.doFinal(output, offset);
 		}
 		catch(ShortBufferException e){
-			System.err.println("Output buffer is too short: " + e.getMessage());
+			throw new RuntimeException(e);
 		}
 		catch(IllegalStateException e){
-			System.err.println("Illegal state: " + e.getMessage());
+			throw new RuntimeException(e);
 		}
 	}
 }

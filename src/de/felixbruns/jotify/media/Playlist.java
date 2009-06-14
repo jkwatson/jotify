@@ -7,6 +7,13 @@ import java.util.List;
 import de.felixbruns.jotify.util.SpotifyChecksum;
 import de.felixbruns.jotify.util.XMLElement;
 
+/**
+ * Holds information about a playlist.
+ * 
+ * @author Felix Bruns <felixbruns@web.de>
+ * 
+ * @category Media
+ */
 public class Playlist implements Iterable<Track> {
 	private String      id;
 	private String      name;

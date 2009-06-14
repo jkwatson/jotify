@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
@@ -1224,10 +1225,88 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* Create a spotify object. */
 		JotifyConnection jotify = new JotifyConnection();
 		
-		jotify.login("username", "password");
+		/* Create a scanner. */
+		Scanner scanner = new Scanner(System.in);
+		
+		/* Current playlist. */
+		Playlist playlist = new Playlist();
+		
+		/* Login. */
+		while(true){
+			System.out.print("Username: ");
+			String username = scanner.nextLine();
+			
+			System.out.print("Password: ");
+			String password = scanner.nextLine();
+			
+			try{
+				jotify.login(username, password);
+				
+				System.out.println("Logged in! Type 'help' to see available commands.");
+				
+				break;
+			}
+			catch(AuthenticationException e){
+				System.out.println("Invalid username and/or password! Try again.");
+			}
+		}
 		
 		/* Start packet IO in the background. */
 		new Thread(jotify, "JotifyConnection-Thread").start();
+		
+		/* Wait for commands. */
+		while(true){
+			String   line     = scanner.nextLine();
+			String[] parts    = line.split(" ", 2);
+			String   command  = parts[0];
+			String   argument = (parts.length > 1)?parts[1]:null;
+			
+			if(command.equals("search")){
+				Result result = jotify.search(argument);
+				
+				playlist = Playlist.fromResult(result.getQuery(), "jotify", result);
+				
+				int i = 0;
+				
+				for(Track track : result.getTracks()){
+					System.out.format(
+						"%2d | %20s - %45s | %32s\n",
+						i++,
+						track.getArtist().getName(),
+						track.getTitle(),
+						track.getId()
+					);
+					
+					if(i == 15){
+						break;
+					}
+				}
+			}
+			else if(command.equals("play")){
+				int position = Integer.parseInt(argument);
+				
+				if(position >= 0 && position < playlist.getTracks().size()){
+					Result result = jotify.browse(playlist.getTracks().get(position));
+					Track  track  = result.getTracks().get(0);				
+					
+					System.out.format("Playing: %s - %s\n", track.getArtist().getName(), track.getTitle());
+					
+					jotify.stop();
+					jotify.play(track, null);
+				}
+				else{
+					System.out.format("Position %d not available!\n", position);
+				}
+			}
+			else if(command.equals("help")){
+				System.out.println("Available commands:");
+				System.out.println("	search <query>");
+				System.out.println("	play   <id>");
+			}
+			else{
+				System.out.println("Unrecognized command!");
+			}
+		}
 		
 		/* Get a list of this users playlists. */
 		//PlaylistContainer playlists = jotify.playlists();
@@ -1253,10 +1332,10 @@ public class JotifyConnection implements Jotify, CommandListener {
 		//jotify.browse(playlist.getTracks());
 		
 		/* Search for an artist / album / track. */
-		Result result = jotify.search("Maximo Park");
+		//Result result = jotify.search("Maximo Park");
 		
 		/* Play first track in result (in the background). */
-		jotify.play(result.getTracks().get(0), null);
+		//jotify.play(result.getTracks().get(0), null);
 		
 		/* Browse the artist. */
 		//Artist artist = jotify.browse(result.getArtists().get(0));
@@ -1265,6 +1344,6 @@ public class JotifyConnection implements Jotify, CommandListener {
 		//jotify.image(artist.getPortrait());
 		
 		/* Close connection. */
-		jotify.close();
+		//jotify.close();
 	}
 }

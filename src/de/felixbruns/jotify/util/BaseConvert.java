@@ -2,31 +2,41 @@ package de.felixbruns.jotify.util;
 
 import java.math.BigInteger;
 
+/**
+ * Class providing methods for converting between different radices.
+ * 
+ * @author Felix Bruns <felixbruns@web.de>
+ */
 public class BaseConvert {
 	/**
-	 * The minimum radix available for conversion to and from strings. The constant
-	 * value of this field is the smallest value permitted for the radix argument in
-	 * radix-conversion methods such as the digit method and the forDigit method.
+	 * The minimum radix available for conversion to and from strings. The
+	 * constant value of this field is the smallest value permitted for the
+	 * radix argument in radix-conversion methods such as the digit method
+	 * and the {@code forDigit} method.
 	 */
 	public static final int MIN_RADIX = 2;
 	
 	/**
-	 * The maximum radix available for conversion to and from strings. The constant
-	 * value of this field is the largest value permitted for the radix argument in
-	 * radix-conversion methods such as the digit method and the forDigit method.  
+	 * The maximum radix available for conversion to and from strings. The
+	 * constant value of this field is the largest value permitted for the
+	 * radix argument in radix-conversion methods such as the digit method
+	 * and the {@code forDigit} method.  
 	 */
 	public static final int MAX_RADIX = 62;
 	
 	/**
-	 * A string holding the available characters for conversion to and from strings.
+	 * A string holding the available characters for conversion to and from
+	 * strings.
 	 */
-	private static final String CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	private static final String CHARACTERS =
+		"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	
 	/**
-	 * Returns the numeric value of the character ''c'' in the specified radix
-	 * 
-	 * If the radix is not in the range MIN_RADIX <= radix <= MAX_RADIX or if
-	 * the value of ch is not a valid digit in the specified radix, -1 is returned.
+	 * Returns the numeric value of the character ''c'' in the specified radix.
+	 * <br><br>
+	 * If the radix is not in the range {@code MIN_RADIX <= radix <= MAX_RADIX}
+	 * or if the value of {@code ch} is not a valid digit in the specified
+	 * radix, -1 is returned.
 	 * 
 	 * @param ch    the character to be converted.
 	 * @param radix the radix.
@@ -49,12 +59,14 @@ public class BaseConvert {
 	}
 	
 	/**
-	 * Determines the character representation for a specific digit in the specified
-	 * radix. If the value of radix is not a valid radix, or the value of digit is not
-	 * a valid digit in the specified radix, the null character ('\u0000') is returned.
-	 * 
-	 * The radix argument is valid if it is greater than or equal to MIN_RADIX and less
-	 * than or equal to MAX_RADIX. The digit argument is valid if 0 <= digit < radix.
+	 * Determines the character representation for a specific digit in the
+	 * specified radix. If the value of radix is not a valid radix, or the
+	 * value of digit is not a valid digit in the specified radix, the null
+	 * character ('\u0000') is returned.
+	 * <br><br>
+	 * The radix argument is valid if it is greater than or equal to MIN_RADIX
+	 * and less than or equal to MAX_RADIX. The digit argument is valid if
+	 * {@code 0 <= digit < radix}.
 	 * 
 	 * @param digit the number to convert to a character.
 	 * @param radix the radix.

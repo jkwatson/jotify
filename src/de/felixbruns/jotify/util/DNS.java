@@ -10,7 +10,20 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 
+/**
+ * Class providing convenience methods for looking up DNS entries.
+ * Currently only supports the DNS SRV entry.
+ * 
+ * @author Felix Bruns <felixbruns@web.de>
+ */
 public class DNS {
+	/**
+	 * Perform a DNS SRV lookup for the specified name.
+	 * 
+	 * @param name The name to lookup.
+	 * 
+	 * @return A {@link List} of {@link InetSocketAddress} objects.
+	 */
 	public static List<InetSocketAddress> lookupSRV(String name){
 		/* Create list to return later. */
 		List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>();
