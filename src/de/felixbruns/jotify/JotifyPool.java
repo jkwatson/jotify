@@ -52,16 +52,21 @@ public class JotifyPool implements Jotify, Player {
 	}
 	
 	private synchronized Jotify createConnection() throws ConnectionException, AuthenticationException {
-		if(username == null || password == null){
-			throw new ConnectionException("Not logged in!");
+		/* Check if username and password are set. */
+		if(this.username == null || this.password == null){
+			throw new IllegalStateException("Not logged in!");
 		}
 		
+		/* Create a new connection. */
 		Jotify connection = new JotifyConnection();
-				
+		
+		/* Try to login with given username and password. */
 		connection.login(this.username, this.password);
 		
+		/* Start the connections I/O thread. */
 		new Thread(connection, "JotifyConnection-Thread").start();
 		
+		/* Add connection to pool. */
 		this.connectionList.add(connection);
 		
 		return connection;
@@ -74,7 +79,9 @@ public class JotifyPool implements Jotify, Player {
 	private Jotify getConnection(){
 		Jotify connection;
 		
+		/* Check if pool size is reached. */
 		if(this.connectionList.size() >= this.poolSize){
+			/* Try to get a connection from the queue. */
 			try{
 				connection = this.connectionQueue.poll(10, TimeUnit.SECONDS);
 				
@@ -90,6 +97,7 @@ public class JotifyPool implements Jotify, Player {
 			}
 		}
 		else{
+			/* Create a new connection. */
 			try{
 				connection = this.createConnection();
 			}
@@ -105,6 +113,7 @@ public class JotifyPool implements Jotify, Player {
 	}
 	
 	public void login(String username, String password) throws ConnectionException, AuthenticationException {
+		/* Check if connections are available. */
 		if(!this.connectionList.isEmpty()){
 			throw new AuthenticationException("Already logged in!");
 		}
@@ -112,6 +121,7 @@ public class JotifyPool implements Jotify, Player {
 		this.username = username;
 		this.password = password;
 		
+		/* Create a new connection and immediately add it to the queue. */
 		Jotify connection = this.createConnection();
 		
 		this.releaseConnection(connection);
@@ -120,6 +130,7 @@ public class JotifyPool implements Jotify, Player {
 	public void close() throws ConnectionException {
 		this.connectionQueue.clear();
 		
+		/* Close all connections. */
 		for(Jotify connection : this.connectionList){
 			connection.close();
 		}

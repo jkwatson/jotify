@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.imageio.ImageIO;
 
@@ -32,11 +33,12 @@ public class JotifyConnection implements Jotify, CommandListener {
 	private Semaphore     userSemaphore;
 	private ChannelPlayer player;
 	private Cache         cache;
-	private boolean       close;
 	private float         volume;
+	private long          timeout;
+	private TimeUnit      unit;
 	
 	/**
-	 * Constants for browsing media.
+	 * Enum for browsing media.
 	 */
 	private enum BrowseType {
 		ARTIST(1), ALBUM(2), TRACK(3);
@@ -54,34 +56,48 @@ public class JotifyConnection implements Jotify, CommandListener {
 	
 	/**
 	 * Create a new Jotify instance using the default {@link Cache}
-	 * implementation.
+	 * implementation and timeout value (10 seconds).
 	 */
 	public JotifyConnection(){
-		this(new FileCache());
+		this(new FileCache(), 10, TimeUnit.SECONDS);
 	}
 	
 	/**
-	 * Create a new Jotify instance using a specified client revision
-	 * and {@link Cache} implementation.
+	 * Create a new Jotify instance using a specified {@link Cache}
+	 * implementation and timeout. Note: A {@link TimeoutException}
+	 * may also be caused by geographical restrictions.
 	 * 
-	 * @param revision Revision number to use when connecting.
-	 * @param cache    Cache implementation to use.
+	 * @param cache   Cache implementation to use.
+	 * @param timeout Timeout value to use.
+	 * @param unit    TimeUnit to use for timeout.
 	 * 
 	 * @see MemoryCache
 	 * @see FileCache
 	 */
-	public JotifyConnection(Cache cache){
+	public JotifyConnection(Cache cache, long timeout, TimeUnit unit){
 		this.session       = new Session();
 		this.protocol      = null;
 		this.user          = null;
 		this.userSemaphore = new Semaphore(2);
 		this.player        = null;
 		this.cache         = cache;
-		this.close         = false;
 		this.volume        = 1.0f;
+		this.timeout       = timeout;
+		this.unit          = unit;
 		
 		/* Acquire permits (country, prodinfo). */
 		this.userSemaphore.acquireUninterruptibly(2);
+	}
+	
+	/**
+	 * Set timeout for requests.
+	 * 
+	 * @param timeout Timeout value to use.
+	 * @param unit    TimeUnit to use for timeout.
+	 */
+	public void setTimeout(long timeout, TimeUnit unit){
+		this.timeout = timeout;
+		this.unit    = unit;
 	}
 	
 	/**
@@ -94,7 +110,12 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @throws AuthenticationException
 	 */
 	public void login(String username, String password) throws ConnectionException, AuthenticationException {
-		/* Authenticate session. */
+		/* Check if we're already logged in. */
+		if(this.protocol != null){
+			throw new IllegalStateException("Already logged in!");
+		}
+		
+		/* Authenticate session and get protocol. */
 		this.protocol = this.session.authenticate(username, password);
 		
 		/* Create user object. */
@@ -110,12 +131,13 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 *  @throws ConnectionException
 	 */
 	public void close() throws ConnectionException {
-		this.close = true;
-		
 		/* This will make receivePacket return immediately. */
 		if(this.protocol != null){
 			this.protocol.disconnect();
 		}
+		
+		/* Reset protocol to 'null'. */
+		this.protocol = null;
 	}
 	
 	/**
@@ -123,25 +145,19 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 *  Use a {@link Thread} to run this.
 	 */
 	public void run(){
+		/* Check if we're logged in. */
 		if(this.protocol == null){
 			throw new IllegalStateException("You need to login first!");
 		}
 		
+		/* Continuously receive packets until connection is closed. */
 		try{
-			while(!this.close){
+			while(true){
 				this.protocol.receivePacket();
 			}
 		}
 		catch(ProtocolException e){
-			/* Do nothing. Just disconnect. */
-		}
-		
-		/* Disconnect. */
-		try{
-			this.protocol.disconnect();
-		}
-		catch(ConnectionException e){
-			/* Don't care. */
+			/* Connection was closed. */
 		}
 	}
 	
@@ -153,8 +169,18 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @see User
 	 */
 	public User user(){
-		/* Acquire permits (country, prodinfo). */
-		this.userSemaphore.acquireUninterruptibly(2);
+		/* Wait for data to become available (country, prodinfo). */
+		try{
+			if(!this.userSemaphore.tryAcquire(2, this.timeout, this.unit)){
+				throw new TimeoutException("Timeout while waiting for user data.");
+			}
+		}
+		catch(InterruptedException e){
+			throw new RuntimeException(e);
+		}
+		catch(TimeoutException e){
+			throw new RuntimeException(e);
+		}
 		
 		/* Release so this can be called again. */
 		this.userSemaphore.release(2);
@@ -192,7 +218,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get());
+		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
 		
 		/* Cut off that last 0xFF byte... */
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
@@ -226,7 +252,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get());
+		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
 		
 		/* Cut off that last 0xFF byte... */
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
@@ -270,7 +296,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 			}
 			
 			/* Get data. */
-			data = callback.get();
+			data = callback.get(this.timeout, this.unit);
 			
 			/* Save to cache. */
 			if(this.cache != null){
@@ -311,7 +337,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get());
+		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
 		
 		/* Cut off that last 0xFF byte... */
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
@@ -471,7 +497,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 			}
 			
 			/* Get data and inflate it. */
-			data = GZIP.inflate(callback.get());
+			data = GZIP.inflate(callback.get(this.timeout, this.unit));
 			
 			/* Cut off that last 0xFF byte... */
 			data = Arrays.copyOfRange(data, 0, data.length - 1);
@@ -534,7 +560,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		
 		/* Get data and inflate it. */
 		try{
-			byte[] data = callback.get(10, TimeUnit.SECONDS);
+			byte[] data = callback.get(this.timeout, this.unit);
 			
 			/* Load XML. */
 			XMLElement playlistElement = XML.load(
@@ -606,7 +632,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get response. */
-		byte[] data = callback.get();
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		XMLElement playlistElement = XML.load(
 			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
@@ -667,7 +693,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 			}
 			
 			/* Get data and inflate it. */
-			data = callback.get(10, TimeUnit.SECONDS);
+			data = callback.get(this.timeout, this.unit);
 			
 			/* Save data to cache. */
 			if(this.cache != null){
@@ -734,7 +760,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get response. */
-		byte[] data = callback.get();
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		XMLElement playlistElement = XML.load(
 			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
@@ -790,6 +816,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	public boolean playlistAddTracks(Playlist playlist, List<Track> tracks, int position){
 		String user = this.session.getUsername();
 		
+		/* Check if user is allowed to edit playlist. */
 		if(!playlist.isCollaborative() && !playlist.getAuthor().equals(user)){
 			return false;
 		}
@@ -830,7 +857,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get response. */
-		byte[] data = callback.get();
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		XMLElement playlistElement = XML.load(
 			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
@@ -884,6 +911,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	public boolean playlistRemoveTracks(Playlist playlist, int position, int count){
 		String user = this.session.getUsername();
 		
+		/* Check if user is allowed to edit playlist. */
 		if(!playlist.isCollaborative() && !playlist.getAuthor().equals(user)){
 			return false;
 		}
@@ -922,7 +950,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get response. */
-		byte[] data = callback.get();
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		XMLElement playlistElement = XML.load(
 			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
@@ -969,6 +997,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	public boolean playlistRename(Playlist playlist, String name){
 		String user = this.session.getUsername();
 		
+		/* Check if user is allowed to rename playlist. */
 		if(!playlist.getAuthor().equals(user)){
 			return false;
 		}
@@ -994,7 +1023,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get response. */
-		byte[] data = callback.get();
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		XMLElement playlistElement = XML.load(
 			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
@@ -1034,6 +1063,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	public boolean playlistSetCollaborative(Playlist playlist, boolean collaborative){
 		String user = this.session.getUsername();
 		
+		/* Check if user is allowed to set playlist collaboration. */
 		if(!playlist.getAuthor().equals(user)){
 			return false;
 		}
@@ -1059,7 +1089,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get response. */
-		byte[] data = callback.get();
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		XMLElement playlistElement = XML.load(
 			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
@@ -1104,7 +1134,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Get AES key. */
-		byte[] key = callback.get();
+		byte[] key = callback.get(this.timeout, this.unit);
 		
 		/* Create channel player. */
 		this.player = new ChannelPlayer(this.protocol, track, key, listener);
