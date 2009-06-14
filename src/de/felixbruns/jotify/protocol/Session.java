@@ -81,20 +81,16 @@ public class Session {
 	protected byte[] initialServerPacket;
 	
 	/* Always up to date! ;-P */
-	public static final int CLIENT_REVISION = 99999;
-	
-	public Session(){
-		this(-1);
-	}
+	public static final int CLIENT_REVISION = 99998;
 	
 	/* Constructor for a new spotify session. */
-	public Session(int revision){
+	public Session(){
 		/* Initialize protocol with this session. */
 		this.protocol = new Protocol(this);
 		
 		/* Set client identification (Spotify 0.3.12 / r45126). */
 		this.clientId       = new byte[]{0x01, 0x04, 0x01, 0x01};
-		this.clientRevision = (revision < 0)?CLIENT_REVISION:revision;
+		this.clientRevision = CLIENT_REVISION;
 		
 		/* Client and server generate 16 random bytes each. */
 		this.clientRandom = new byte[16];

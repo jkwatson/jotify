@@ -41,14 +41,6 @@ public class JotifyPreferences extends Preferences {
 		this.setBoolean("login.remember", credentials.getRemember());
 	}
 	
-	public int getRevision(){
-		return this.getInteger("client.revision", -1);
-	}
-	
-	public void setRevision(int revision){
-		this.setInteger("client.revision", revision);
-	}
-	
 	public long getPlaylistsRevision(){
 		return this.getLong("playlists.revision", -1);
 	}

@@ -53,23 +53,11 @@ public class JotifyConnection implements Jotify, CommandListener {
 	}
 	
 	/**
-	 * Create a new Jotify instance using the default client revision
-	 * and {@link Cache} implementation ({@link FileCache}).
+	 * Create a new Jotify instance using the default {@link Cache}
+	 * implementation.
 	 */
 	public JotifyConnection(){
-		this(-1);
-	}
-	
-	/**
-	 * Create a new Jotify instance using a specified client revision
-	 * and a {@link FileCache} implementation.
-	 * 
-	 * @param revision Revision number to use when connecting.
-	 * 
-	 * @see FileCache
-	 */
-	public JotifyConnection(int revision){
-		this(revision, new FileCache());
+		this(new FileCache());
 	}
 	
 	/**
@@ -82,8 +70,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @see MemoryCache
 	 * @see FileCache
 	 */
-	public JotifyConnection(int revision, Cache cache){
-		this.session       = new Session(revision);
+	public JotifyConnection(Cache cache){
+		this.session       = new Session();
 		this.protocol      = null;
 		this.user          = null;
 		this.userSemaphore = new Semaphore(2);
@@ -1448,6 +1436,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 			}
 			else if(command.equals("toplist")){
 				Result result = jotify.toplist(argument, null, null);
+				
+				playlist = Playlist.fromResult("toplist", "jotify", result);
 				
 				int i = 0;
 				

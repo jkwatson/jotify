@@ -1,8 +1,5 @@
 package de.felixbruns.jotify.gui;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.JotifyPool;
 import de.felixbruns.jotify.exceptions.AuthenticationException;
@@ -141,26 +138,6 @@ public class JotifyApplication {
 			catch(AuthenticationException e){
 				JotifyLoginDialog.hideLoader();
 				JotifyLoginDialog.showError(e.getMessage());
-				
-				/* Check if it was an upgrade notification. */
-				if(e.getMessage().contains("upgrade")){
-					Pattern p = Pattern.compile("\\.([0-9]+)\\.exe");
-					Matcher m = p.matcher(e.getMessage());
-					
-					/* Find upgrade revision number in message. */
-					if(m.find()){
-						int revision = Integer.parseInt(m.group(1));
-						
-						/* Show message and upgrade to new revision. */
-						JotifyLoginDialog.showInformation("Upgraded to r" + revision + ". Try again!");
-						
-						//JotifyPool.setRevision(revision);
-						
-						/* Save revision. */
-						this.settings.setRevision(revision);
-						this.settings.save();
-					}
-				}
 				
 				/* Don't check "Remember me", if login failed. */
 				credentials.setRemember(false);

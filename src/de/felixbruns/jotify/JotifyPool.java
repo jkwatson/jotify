@@ -25,7 +25,6 @@ public class JotifyPool implements Jotify, Player {
 	private BlockingQueue<Jotify> connectionQueue;
 	private Jotify                playConnection;
 	private int                   poolSize;
-	private int                   revision;
 	private String                username;
 	private String                password;
 	
@@ -48,7 +47,6 @@ public class JotifyPool implements Jotify, Player {
 		this.connectionQueue = new LinkedBlockingQueue<Jotify>();
 		this.playConnection  = null;
 		this.poolSize        = poolSize;
-		this.revision        = -1;
 		this.username        = null;
 		this.password        = null;
 	}
@@ -58,7 +56,7 @@ public class JotifyPool implements Jotify, Player {
 			throw new ConnectionException("Not logged in!");
 		}
 		
-		Jotify connection = new JotifyConnection(this.revision);
+		Jotify connection = new JotifyConnection();
 				
 		connection.login(this.username, this.password);
 		
@@ -107,15 +105,10 @@ public class JotifyPool implements Jotify, Player {
 	}
 	
 	public void login(String username, String password) throws ConnectionException, AuthenticationException {
-		this.login(-1, username, password);
-	}
-	
-	public void login(int revision, String username, String password) throws ConnectionException, AuthenticationException {
 		if(!this.connectionList.isEmpty()){
 			throw new AuthenticationException("Already logged in!");
 		}
 		
-		this.revision = revision;
 		this.username = username;
 		this.password = password;
 		
