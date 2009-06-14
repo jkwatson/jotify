@@ -18,7 +18,6 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 import de.felixbruns.jotify.Jotify;
-import de.felixbruns.jotify.JotifyPool;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
 import de.felixbruns.jotify.gui.listeners.SearchListener;
 import de.felixbruns.jotify.gui.swing.components.JotifyButton;
@@ -30,7 +29,7 @@ public class JotifySearchPanel extends JPanel implements SearchListener {
 	private JTextField      searchField;
 	private JButton         searchButton;
 	
-	public JotifySearchPanel(){
+	public JotifySearchPanel(final Jotify jotify) {
 		this.broadcast = JotifyBroadcast.getInstance();
 		
 		/* Flow content to the left. */
@@ -65,9 +64,6 @@ public class JotifySearchPanel extends JPanel implements SearchListener {
 					/* Searching will be done in a thread, so the UI doesn't block. */
 					new Thread("Searching-Thread"){
 						public void run(){
-							/* Get jotify reference. */
-							Jotify jotify = JotifyPool.getInstance();
-							
 							/* Do search via jotify API. */
 							Result result = jotify.search(query);
 							

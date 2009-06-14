@@ -5,26 +5,30 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
+import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.TransferHandler;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.event.HyperlinkEvent.EventType;
 
-import de.felixbruns.jotify.JotifyPool;
+import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.gui.JotifyPlaybackQueue;
 import de.felixbruns.jotify.gui.listeners.BrowseListener;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
@@ -33,7 +37,7 @@ import de.felixbruns.jotify.gui.listeners.QueueListener;
 import de.felixbruns.jotify.gui.listeners.SearchListener;
 import de.felixbruns.jotify.gui.swing.components.JotifyTable;
 import de.felixbruns.jotify.gui.swing.components.JotifyTableModel;
-
+import de.felixbruns.jotify.gui.swing.dnd.TrackTransferable;
 import de.felixbruns.jotify.media.Album;
 import de.felixbruns.jotify.media.Artist;
 import de.felixbruns.jotify.media.Playlist;
@@ -49,8 +53,12 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 	private JotifyTableModel<Track> tableModel;
 	
 	private boolean isShowingQueue;
+  
+	private final Jotify jotify;
 	
-	public JotifyContentPanel(){
+	public JotifyContentPanel(final Jotify jotify){
+	  this.jotify = jotify;
+	  
 		this.broadcast = JotifyBroadcast.getInstance();
 		
 		this.isShowingQueue = false;
@@ -129,7 +137,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 					browseItem.addActionListener(new ActionListener(){
 						public void actionPerformed(ActionEvent e){
 							Track track = tableModel.get(table.getSelectedRow());
-							Album album = JotifyPool.getInstance().browse(track.getAlbum());
+							Album album = jotify.browse(track.getAlbum());
 							
 							broadcast.fireClearSelection();
 							broadcast.fireBrowsedAlbum(album);
@@ -176,6 +184,35 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.scrollPane.getViewport().setOpaque(false);
 		this.scrollPane.setBorder(new EmptyBorder(0, 0, 0, 0));
 		this.add(this.scrollPane, BorderLayout.CENTER);
+		
+		table.setDragEnabled(true);
+		table.setTransferHandler(new TransferHandler() {
+          @Override
+          public boolean canImport(TransferHandler.TransferSupport support) {
+            return false;
+          }
+    
+          @Override
+          protected Transferable createTransferable(JComponent c) {
+            if (table.getSelectedRowCount() == 0) {
+              return null;
+            }
+            
+            final JotifyTableModel<Track> model = tableModel;
+            final List<Track> selectedTracks = new LinkedList<Track>();
+            
+            for (int selectedRow : table.getSelectedRows()) {
+              selectedTracks.add(model.get(selectedRow));
+            }
+            
+            return new TrackTransferable(selectedTracks.get(0));
+          }
+    
+          @Override
+          public int getSourceActions(JComponent c) {
+            return TransferHandler.COPY;
+          }
+		});
 	}
 	
 	public void showAlbum(Album album){
@@ -297,12 +334,12 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			String[] parts = e.getDescription().split(":", 2);
 			
 			if(parts[0].equals("artist")){
-				Result result = JotifyPool.getInstance().search(parts[1]);
+				Result result = jotify.search(parts[1]);
 				
 				broadcast.fireSearchResultReceived(result);
 			}
 			else if(parts[0].equals("album")){
-				Album album = JotifyPool.getInstance().browseAlbum(parts[1]);
+				Album album = jotify.browseAlbum(parts[1]);
 				
 				broadcast.fireClearSelection();
 				broadcast.fireBrowsedAlbum(album);
@@ -321,6 +358,9 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 	}
 	
 	public void playlistUpdated(Playlist playlist){
+	  if (!isShowingQueue) { // TODO: compare with current playlist
+	    showTracks(playlist.getTracks());
+	  }
 	}
 	
 	public void queueSelected(JotifyPlaybackQueue queue){

@@ -2,13 +2,20 @@ package de.felixbruns.jotify.gui.swing.panels;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.io.IOException;
 
+import javax.swing.DropMode;
 import javax.swing.ImageIcon;
+import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.ListModel;
+import javax.swing.TransferHandler;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.gui.JotifyPlaybackQueue;
 import de.felixbruns.jotify.gui.listeners.ClearSelectionListener;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
@@ -19,6 +26,7 @@ import de.felixbruns.jotify.gui.listeners.SearchListener;
 import de.felixbruns.jotify.gui.swing.JotifyPreferencesDialog;
 import de.felixbruns.jotify.gui.swing.components.JotifyList;
 import de.felixbruns.jotify.gui.swing.components.JotifyList.JotifyListElement;
+import de.felixbruns.jotify.gui.swing.dnd.TrackTransferable;
 import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
@@ -31,7 +39,7 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 	private JotifyCurrentlyPlayingPanel info;
 	private JotifyPlaybackQueue         queue;
 	
-	public JotifySidePanel(){
+	public JotifySidePanel(final Jotify jotify) {
 		/* Set broadcast object. */
 		this.broadcast = JotifyBroadcast.getInstance();
 		
@@ -100,9 +108,46 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 				}
 			}
 		});
+		
+		list.setDragEnabled(true);
+        list.setDropMode(DropMode.ON);
+        list.setTransferHandler(new TransferHandler() {
+          @Override
+          public boolean canImport(TransferHandler.TransferSupport info) {
+            if (!info.isDataFlavorSupported(TrackTransferable.TRACK_FLAVOR)) {
+              return false;
+            }
+            
+            final JList.DropLocation dropLocation = (JList.DropLocation) info.getDropLocation();
+            return !dropLocation.isInsert() && dropLocation.getIndex() != -1;
+          }
+    
+          @Override
+          public boolean importData(TransferHandler.TransferSupport info) {
+            if (!canImport(info) || !info.isDrop()) {
+              return false;
+            }
+
+            final JList list = (JList) info.getComponent();
+            final JList.DropLocation dropLocation = (JList.DropLocation) info.getDropLocation();
+            final Playlist playlist = (Playlist) list.getModel().getElementAt(dropLocation.getIndex());
+            
+            try {
+              final Track track = (Track) info.getTransferable().getTransferData(TrackTransferable.TRACK_FLAVOR);
+              playlist.getTracks().add(track);
+              broadcast.firePlaylistUpdated(playlist); // playlistUpdated(playlist);
+              return true;
+            } catch (UnsupportedFlavorException e) {
+            } catch (IOException e) {
+            }
+            
+            return false;
+          }
+        });
+        
 		this.add(this.list, BorderLayout.CENTER);
 		
-		this.info = new JotifyCurrentlyPlayingPanel();
+		this.info = new JotifyCurrentlyPlayingPanel(jotify);
 		this.add(this.info, BorderLayout.SOUTH);
 	}
 	
@@ -120,7 +165,8 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 	}
 	
 	public void playlistUpdated(Playlist playlist){
-		this.list.updateElement(playlist);
+		list.updateElement(playlist);
+		repaint();
 	}
 	
 	public void playlistSelected(Playlist playlist){
