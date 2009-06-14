@@ -2,14 +2,11 @@ package de.felixbruns.jotify.gui.swing.panels;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.datatransfer.UnsupportedFlavorException;
-import java.io.IOException;
 
 import javax.swing.DropMode;
 import javax.swing.ImageIcon;
 import javax.swing.JList;
 import javax.swing.JPanel;
-import javax.swing.ListModel;
 import javax.swing.TransferHandler;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
@@ -166,7 +163,7 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 	}
 	
 	public void playlistUpdated(Playlist playlist){
-		list.updateElement(playlist);
+		this.list.updateElement(playlist);
 		
 		this.repaint();
 	}

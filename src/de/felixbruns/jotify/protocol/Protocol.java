@@ -4,10 +4,14 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import de.felixbruns.jotify.crypto.DH;
 import de.felixbruns.jotify.exceptions.ConnectionException;
@@ -486,6 +490,58 @@ public class Protocol {
 		this.sendPacket(Command.COMMAND_REQUESTAD, buffer);
 	}
 	
+	/* Get a toplist. The response comes as GZIP compressed XML. */
+	public void sendToplistRequest(ChannelListener listener, Map<String, String> params) throws ProtocolException {
+		/* Check if type parameter is present. */
+		if(!params.containsKey("type")){
+			throw new IllegalArgumentException("Parameter 'type' not given!");
+		}
+		
+		/* Create a map of parameters and calculate their length. */
+		Map<byte[], byte[]> parameters       = new HashMap<byte[], byte[]>();
+		int                 parametersLength = 0;
+		
+		for(Entry<String, String> param : params.entrySet()){
+			if(param.getKey() == null || param.getValue() == null){
+				continue;
+			}
+			
+			byte[] key   = param.getKey().getBytes(Charset.forName("UTF-8"));
+			byte[] value = param.getValue().getBytes(Charset.forName("UTF-8"));
+			
+			parametersLength += 1 + 2 + key.length + value.length;
+			
+			parameters.put(key, value);
+		}
+		
+		/* Create channel and buffer. */
+		Channel    channel = new Channel("Toplist-Channel", Channel.Type.TYPE_TOPLIST, listener);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 2 + 2 + parametersLength);
+		
+		/* Append channel id, some values, query length and query. */
+		buffer.putShort((short)channel.getId());
+		buffer.putShort((short)0x0000);
+		buffer.putShort((short)0x0000);
+		
+		for(Entry<byte[], byte[]> parameter : parameters.entrySet()){
+			byte[] key   = parameter.getKey();
+			byte[] value = parameter.getValue();
+			
+			buffer.put((byte)key.length);
+			buffer.putShort((short)value.length);
+			buffer.put(key);
+			buffer.put(value);
+		}
+		
+		buffer.flip();
+		
+		/* Register channel. */
+		Channel.register(channel);
+		
+		/* Send packet. */
+		this.sendPacket(0x38, buffer);
+	}
+	
 	/* Request image using a 20 byte id. The response is a JPG. */
 	public void sendImageRequest(ChannelListener listener, String id) throws ProtocolException {
 		/* Create channel and buffer. */
@@ -507,8 +563,9 @@ public class Protocol {
 	/* Search music. The response comes as GZIP compressed XML. */
 	public void sendSearchQuery(ChannelListener listener, String query, int offset, int limit) throws ProtocolException {
 		/* Create channel and buffer. */
-		Channel    channel = new Channel("Search-Channel", Channel.Type.TYPE_SEARCH, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(2 + 4 + 4 + 2 + 1 + query.getBytes().length);
+		byte[]     queryBytes = query.getBytes(Charset.forName("UTF-8"));
+		Channel    channel    = new Channel("Search-Channel", Channel.Type.TYPE_SEARCH, listener);
+		ByteBuffer buffer     = ByteBuffer.allocate(2 + 4 + 4 + 2 + 1 + queryBytes.length);
 		
 		/* Check offset and limit. */
 		if(offset < 0){
@@ -523,8 +580,8 @@ public class Protocol {
 		buffer.putInt(offset); /* Result offset. */
 		buffer.putInt(limit); /* Reply limit. */
 		buffer.putShort((short)0x0000);
-		buffer.put((byte)query.length());
-		buffer.put(query.getBytes());
+		buffer.put((byte)queryBytes.length);
+		buffer.put(queryBytes);
 		buffer.flip();
 		
 		/* Register channel. */
@@ -742,7 +799,7 @@ public class Protocol {
 		buffer.putShort((short)channel.getId());
 		buffer.put(Hex.toBytes(id)); /* 16 bytes */
 		buffer.put((byte)0x02); /* Playlist identifier. */
-		buffer.putInt(-1); /* Playlist history. -1: current. 0: changes since version 0, 1: since version 1, etc. */
+		buffer.putInt(-1); /* Playlist history. -1: current. 0: last change. */
 		buffer.putInt(0);
 		buffer.putInt(-1);
 		buffer.put((byte)0x01);

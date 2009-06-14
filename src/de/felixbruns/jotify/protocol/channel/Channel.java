@@ -196,6 +196,7 @@ public class Channel {
 	
 	public enum Type {
 		TYPE_AD,
+		TYPE_TOPLIST,
 		TYPE_IMAGE,
 		TYPE_SEARCH,
 		TYPE_AESKEY,

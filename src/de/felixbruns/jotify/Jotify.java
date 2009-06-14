@@ -27,6 +27,17 @@ public interface Jotify extends Runnable, Player {
 	public void close() throws ConnectionException;
 	
 	/**
+	 * Get user info.
+	 * 
+	 * @return A {@link User} object.
+	 * 
+	 * @throws IllegalStateException
+	 * 
+	 * @see User
+	 */
+	public User user();
+	
+	/**
 	 * Search for an artist, album or track.
 	 * 
 	 * @param query Your search query.
@@ -55,7 +66,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param artist An {@link Artist} object identifying the artist to browse.
 	 * 
-	 * @retrun A new {@link Artist} object holding more information about
+	 * @return A new {@link Artist} object holding more information about
 	 *         the artist or null on failure.
 	 * 
 	 * @see Artist
@@ -67,7 +78,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param album An {@link Album} object identifying the album to browse.
 	 * 
-	 * @retrun A new {@link Album} object holding more information about
+	 * @return A new {@link Album} object holding more information about
 	 *         the album or null on failure.
 	 * 
 	 * @see Album
@@ -79,7 +90,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param album A {@link Track} object identifying the track to browse.
 	 * 
-	 * @retrun A {@link Result} object holding more information about
+	 * @return A {@link Result} object holding more information about
 	 *         the track or null on failure.
 	 * 
 	 * @see Track
@@ -93,7 +104,7 @@ public interface Jotify extends Runnable, Player {
 	 * @param tracks A {@link List} of {@link Track} objects identifying
 	 *               the tracks to browse.
 	 * 
-	 * @retrun A {@link Result} object holding more information about
+	 * @return A {@link Result} object holding more information about
 	 *         the tracks or null on failure.
 	 * 
 	 * @see Track
@@ -106,7 +117,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param id An id identifying the artist to browse.
 	 * 
-	 * @retrun An {@link Artist} object holding more information about
+	 * @return An {@link Artist} object holding more information about
 	 *         the artist or null on failure.
 	 * 
 	 * @see Artist
@@ -118,7 +129,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param id An id identifying the album to browse.
 	 * 
-	 * @retrun An {@link Album} object holding more information about
+	 * @return An {@link Album} object holding more information about
 	 *         the album or null on failure.
 	 * 
 	 * @see Album
@@ -130,7 +141,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param id An id identifying the track to browse.
 	 * 
-	 * @retrun A {@link Result} object holding more information about
+	 * @return A {@link Result} object holding more information about
 	 *         the track or null on failure.
 	 * 
 	 * @see Track
@@ -143,7 +154,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param tracks A {@link List} of ids identifying the tracks to browse.
 	 * 
-	 * @retrun A {@link Result} object holding more information about
+	 * @return A {@link Result} object holding more information about
 	 *         the tracks or null on failure.
 	 * 
 	 * @see Track

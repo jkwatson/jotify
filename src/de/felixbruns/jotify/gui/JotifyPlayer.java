@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.felixbruns.jotify.Jotify;
-import de.felixbruns.jotify.JotifyPool;
 import de.felixbruns.jotify.exceptions.AuthenticationException;
 import de.felixbruns.jotify.exceptions.ConnectionException;
 import de.felixbruns.jotify.gui.listeners.ControlListener;

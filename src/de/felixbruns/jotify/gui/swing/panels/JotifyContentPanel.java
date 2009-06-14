@@ -323,7 +323,6 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.isShowingQueue = false;
 	}
 	
-	/* TODO: Do a browse query here, not a search. */
 	public void hyperlinkUpdate(final HyperlinkEvent e){
 		if(e.getEventType() == EventType.ACTIVATED){
 			String[] parts = e.getDescription().split(":", 2);
@@ -331,6 +330,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			if(parts[0].equals("artist")){
 				Result result = this.jotify.search(parts[1]);
 				
+				/* TODO: Do a browse query here, not a search. */
 				broadcast.fireSearchResultReceived(result);
 			}
 			else if(parts[0].equals("album")){

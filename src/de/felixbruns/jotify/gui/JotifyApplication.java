@@ -15,6 +15,7 @@ import de.felixbruns.jotify.gui.util.JotifyPreferences;
 import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.PlaylistContainer;
 import de.felixbruns.jotify.media.Result;
+import de.felixbruns.jotify.media.Track;
 
 public class JotifyApplication {
 	/* Application frame and broadcast. */
@@ -113,7 +114,14 @@ public class JotifyApplication {
 							/* Browse multiple tracks and add them to the playlist. */
 							Result result = jotify.browse(playlist.getTracks());
 							
-							playlist.setTracks(result.getTracks());
+							/* Add track information to playlist. */
+							for(Track track : result.getTracks()){
+								int index = playlist.getTracks().indexOf(track);
+								
+								if(index != -1){
+									playlist.getTracks().set(index, track);
+								}
+							}
 							
 							/* Fire playlist updated events. */
 							broadcast.firePlaylistUpdated(playlist);

@@ -16,6 +16,7 @@ import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.PlaylistContainer;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
+import de.felixbruns.jotify.media.User;
 import de.felixbruns.jotify.player.PlaybackListener;
 import de.felixbruns.jotify.player.Player;
 
@@ -135,6 +136,16 @@ public class JotifyPool implements Jotify, Player {
 	
 	public void run(){
 		/* Do nothing. */
+	}
+	
+	public User user(){
+		Jotify connection = this.getConnection();
+		
+		User user = connection.user();
+		
+		this.releaseConnection(connection);
+		
+		return user;
 	}
 	
 	public Result search(String query){

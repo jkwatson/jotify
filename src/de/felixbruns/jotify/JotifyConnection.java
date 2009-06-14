@@ -7,8 +7,11 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
@@ -25,6 +28,8 @@ import de.felixbruns.jotify.util.*;
 public class JotifyConnection implements Jotify, CommandListener {
 	private Session       session;
 	private Protocol      protocol;
+	private User          user;
+	private Semaphore     userSemaphore;
 	private ChannelPlayer player;
 	private Cache         cache;
 	private boolean       close;
@@ -78,12 +83,17 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @see FileCache
 	 */
 	public JotifyConnection(int revision, Cache cache){
-		this.session  = new Session(revision);
-		this.protocol = null;
-		this.player   = null;
-		this.cache    = cache;
-		this.close    = false;
-		this.volume   = 1.0f;
+		this.session       = new Session(revision);
+		this.protocol      = null;
+		this.user          = null;
+		this.userSemaphore = new Semaphore(2);
+		this.player        = null;
+		this.cache         = cache;
+		this.close         = false;
+		this.volume        = 1.0f;
+		
+		/* Acquire permits (country, prodinfo). */
+		this.userSemaphore.acquireUninterruptibly(2);
 	}
 	
 	/**
@@ -98,6 +108,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 	public void login(String username, String password) throws ConnectionException, AuthenticationException {
 		/* Authenticate session. */
 		this.protocol = this.session.authenticate(username, password);
+		
+		/* Create user object. */
+		this.user = new User(username);
 		
 		/* Add command handler. */
 		this.protocol.addListener(this);
@@ -123,7 +136,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 */
 	public void run(){
 		if(this.protocol == null){
-			throw new Error("You need to login first!");
+			throw new IllegalStateException("You need to login first!");
 		}
 		
 		try{
@@ -145,6 +158,65 @@ public class JotifyConnection implements Jotify, CommandListener {
 	}
 	
 	/**
+	 * Get user info.
+	 * 
+	 * @return A {@link User} object.
+	 * 
+	 * @see User
+	 */
+	public User user(){
+		/* Acquire permits (country, prodinfo). */
+		this.userSemaphore.acquireUninterruptibly(2);
+		
+		/* Release so this can be called again. */
+		this.userSemaphore.release(2);
+		
+		return this.user;
+	}
+	
+	/**
+	 * Fetch a toplist.
+	 * 
+	 * @param type     A toplist type. e.g. "artist", "album" or "track".
+	 * @param region   A region code or null. e.g. "SE" or "DE".
+	 * @param username A username or null.
+	 * 
+	 * @return A {@link Result} object.
+	 * 
+	 * @see Result
+	 */
+	public Result toplist(String type, String region, String username){
+		/* Create channel callback and parameter map. */
+		ChannelCallback callback   = new ChannelCallback();
+		Map<String, String> params = new HashMap<String, String>();
+		
+		/* Add parameters. */
+		params.put("type", type);
+		params.put("region", region);
+		params.put("username", username);
+		
+		/* Send search query. */
+		try{
+			this.protocol.sendToplistRequest(callback, params);
+		}
+		catch(ProtocolException e){
+			return null;
+		}
+		
+		/* Get data and inflate it. */
+		byte[] data = GZIP.inflate(callback.get());
+		
+		/* Cut off that last 0xFF byte... */
+		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		
+		/* Load XML. */
+		XMLElement toplistElement = XML.load(data, Charset.forName("UTF-8"));
+		
+		/* Create result from XML. */
+		return Result.fromXMLElement(toplistElement);
+	}
+	
+	/**
 	 * Search for an artist, album or track.
 	 * 
 	 * @param query Your search query.
@@ -154,7 +226,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @see Result
 	 */
 	public Result search(String query){
-		/* Create channel callback */
+		/* Create channel callback. */
 		ChannelCallback callback = new ChannelCallback();
 		
 		/* Send search query. */
@@ -198,7 +270,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 			data = this.cache.load("image", id);
 		}
 		else{
-			/* Create channel callback */
+			/* Create channel callback. */
 			ChannelCallback callback = new ChannelCallback();
 			
 			/* Send image request. */
@@ -239,7 +311,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @see BrowseType
 	 */
 	private XMLElement browse(BrowseType type, String id){
-		/* Create channel callback */
+		/* Create channel callback. */
 		ChannelCallback callback = new ChannelCallback();
 		
 		/* Send browse request. */
@@ -471,7 +543,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		catch(ProtocolException e){
 			return PlaylistContainer.EMPTY;
 		}
-
+		
 		/* Get data and inflate it. */
 		try{
 			byte[] data = callback.get(10, TimeUnit.SECONDS);
@@ -541,8 +613,6 @@ public class JotifyConnection implements Jotify, CommandListener {
 			new String(data, Charset.forName("UTF-8")) +
 			"</playlist>"
 		);		
-		
-		System.out.println(new String(data, Charset.forName("UTF-8")));
 		
 		/* Check for success. */
 		if(playlistElement.hasChild("confirm")){
@@ -764,7 +834,87 @@ public class JotifyConnection implements Jotify, CommandListener {
 		return false;
 	}
 	
-	// TODO: playlistAddTracks
+	/**
+	 * Add multiple tracks to a playlist.
+	 * 
+	 * @param playlist The playlist.
+	 * @param tracks   A {@link List} of tracks to be added.
+	 * @param position The target position of the added track.
+	 * 
+	 * @return true on success and false on failure.
+	 */
+	public boolean playlistAddTracks(Playlist playlist, List<Track> tracks, int position){
+		String user = this.session.getUsername();
+		
+		if(!playlist.isCollaborative() && !playlist.getAuthor().equals(user)){
+			return false;
+		}
+		
+		/* First add the tracks to calculate the new checksum. */
+		playlist.getTracks().addAll(position, tracks);
+		
+		/* Build a comma separated list of tracks. */
+		String trackList = "";
+		
+		for(int i = 0; i < tracks.size(); i++){
+			trackList += ((i > 0)?",":"") + tracks.get(i).getId();
+		}
+		
+		String xml = String.format(
+			"<change><ops><add><i>%d</i><items>%s01</items></add></ops>" +
+			"<time>%d</time><user>%s</user></change>" +
+			"<version>%010d,%010d,%010d,%d</version>",
+			position, trackList, new Date().getTime() / 1000, user,
+			playlist.getRevision() + 1, playlist.getTracks().size(),
+			playlist.getChecksum(), playlist.isCollaborative()?1:0
+		);
+		
+		/* Remove the tracks again, because we need the old checksum for sending. */
+		for(int i = 0; i < tracks.size(); i++){
+			playlist.getTracks().remove(position);
+		}
+		
+		/* Create channel callback */
+		ChannelCallback callback = new ChannelCallback();
+		
+		/* Send change playlist request. */
+		try{
+			this.protocol.sendChangePlaylist(callback, playlist, xml);
+		}
+		catch(ProtocolException e){
+			return false;
+		}
+		
+		/* Get response. */
+		byte[] data = callback.get();
+		
+		XMLElement playlistElement = XML.load(
+			"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
+			new String(data, Charset.forName("UTF-8")) +
+			"</playlist>"
+		);
+		
+		/* Check for success. */
+		if(playlistElement.hasChild("confirm")){
+			/* Split version string into parts. */
+			String[] parts = playlistElement.getChild("confirm").getChildText("version").split(",", 4);
+			
+			/* Set values. */
+			playlist.setRevision(Long.parseLong(parts[0]));
+			playlist.setCollaborative(Integer.parseInt(parts[3]) == 1);
+			
+			/* Add the tracks, since operation was successful. */
+			playlist.getTracks().addAll(position, tracks);
+			
+			if(playlist.getChecksum() != Long.parseLong(parts[2])){
+				System.out.println("Checksum error!");
+			}
+			
+			return true;
+		}
+		
+		return false;
+	}
 	
 	/**
 	 * Remove a track from a playlist.
@@ -799,7 +949,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 			playlist.getTracks().subList(position, position + count)
 		);
 		
-		/* First remove the track(s) to calculate the new checksum. */
+		/* First remove the track(s) to calculate the new checksum. FIXME: remove them in single steps. */
 		playlist.getTracks().removeAll(tracks);
 		
 		String xml = String.format(
@@ -968,8 +1118,6 @@ public class JotifyConnection implements Jotify, CommandListener {
 			new String(data, Charset.forName("UTF-8")) +
 			"</playlist>"
 		);		
-		
-		System.out.println(new String(data, Charset.forName("UTF-8")));
 		
 		if(playlistElement.hasChild("confirm")){
 			/* Split version string into parts. */
@@ -1169,7 +1317,11 @@ public class JotifyConnection implements Jotify, CommandListener {
 				break;
 			}
 			case Command.COMMAND_COUNTRYCODE: {
-				System.out.println("Country: " + new String(payload, Charset.forName("UTF-8")));
+				//System.out.println("Country: " + new String(payload, Charset.forName("UTF-8")));
+				this.user.setCountry(new String(payload, Charset.forName("UTF-8")));
+				
+				/* Release 'country' permit. */
+				this.userSemaphore.release();
 				
 				break;
 			}
@@ -1180,15 +1332,25 @@ public class JotifyConnection implements Jotify, CommandListener {
 			case Command.COMMAND_NOTIFY: {
 				/* HTML-notification, shown in a yellow bar in the official client. */
 				/* Skip 11 byte header... */
-				System.out.println("Notification: " + new String(
+				/*System.out.println("Notification: " + new String(
+					Arrays.copyOfRange(payload, 11, payload.length), Charset.forName("UTF-8")
+				));*/
+				this.user.setNotification(new String(
 					Arrays.copyOfRange(payload, 11, payload.length), Charset.forName("UTF-8")
 				));
 				
 				break;
 			}
 			case Command.COMMAND_PRODINFO: {
+				XMLElement prodinfoElement = XML.load(new String(payload, Charset.forName("UTF-8")));
+				
+				this.user = User.fromXMLElement(prodinfoElement, this.user);
+				
+				/* Release 'prodinfo' permit. */
+				this.userSemaphore.release();
+				
 				/* Payload is uncompressed XML. */
-				if(!new String(payload, Charset.forName("UTF-8")).contains("<type>premium</type>")){
+				if(!this.user.isPremium()){
 					System.err.println(
 						"Sorry, you need a premium account to use jotify (this is a restriction by Spotify)."
 					);
@@ -1253,6 +1415,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* Start packet IO in the background. */
 		new Thread(jotify, "JotifyConnection-Thread").start();
 		
+		/* Print user info. */
+		System.out.println(jotify.user());
+		
 		/* Wait for commands. */
 		while(true){
 			String   line     = scanner.nextLine();
@@ -1262,10 +1427,56 @@ public class JotifyConnection implements Jotify, CommandListener {
 			
 			if(command.equals("search")){
 				Result result = jotify.search(argument);
-				
+
 				playlist = Playlist.fromResult(result.getQuery(), "jotify", result);
 				
 				int i = 0;
+				
+				for(Track track : result.getTracks()){
+					System.out.format(
+						"%2d | %20s - %45s | %32s\n",
+						i++,
+						track.getArtist().getName(),
+						track.getTitle(),
+						track.getId()
+					);
+					
+					if(i == 15){
+						break;
+					}
+				}
+			}
+			else if(command.equals("toplist")){
+				Result result = jotify.toplist(argument, null, null);
+				
+				int i = 0;
+				
+				for(Artist artist : result.getArtists()){
+					System.out.format(
+						"%2d | %20s | %32s\n",
+						i++,
+						artist.getName(),
+						artist.getId()
+					);
+					
+					if(i == 15){
+						break;
+					}
+				}
+				
+				for(Album album : result.getAlbums()){
+					System.out.format(
+						"%2d | %20s - %45s | %32s\n",
+						i++,
+						album.getArtist().getName(),
+						album.getName(),
+						album.getId()
+					);
+					
+					if(i == 15){
+						break;
+					}
+				}
 				
 				for(Track track : result.getTracks()){
 					System.out.format(
@@ -1300,49 +1511,22 @@ public class JotifyConnection implements Jotify, CommandListener {
 			else if(command.equals("help")){
 				System.out.println("Available commands:");
 				System.out.println("	search <query>");
+				System.out.println("	toplist <type>");
 				System.out.println("	play   <id>");
+				System.out.println("	quit");
+			}
+			else if(command.equals("quit")){
+				/* Stop playing. */
+				jotify.stop();
+				
+				/* Close connection. */
+				jotify.close();
+				
+				break;
 			}
 			else{
 				System.out.println("Unrecognized command!");
 			}
 		}
-		
-		/* Get a list of this users playlists. */
-		//PlaylistContainer playlists = jotify.playlists();
-		
-		/* Load the first playlist. */
-		//Playlist playlist = jotify.playlist(playlists.getPlaylists().get(0).getId());
-		
-		/* Create a playlist */
-		//Playlist playlist2 = jotify.playlistCreate("New playlist", false);
-		
-		/* Add playlist to account. */
-		//jotify.playlistsAddPlaylist(playlists, playlist2, 1);
-		
-		/* Copy tracks from one playlist to another. */
-		/*for(Track track : playlist.getTracks()){
-			jotify.playlistAddTrack(playlist2, track, 0);
-		}*/
-		
-		/* Remove some tracks again. */
-		//jotify.playlistRemoveTracks(playlist2, 1, 3);
-		
-		/* Browse for playlist tracks. */
-		//jotify.browse(playlist.getTracks());
-		
-		/* Search for an artist / album / track. */
-		//Result result = jotify.search("Maximo Park");
-		
-		/* Play first track in result (in the background). */
-		//jotify.play(result.getTracks().get(0), null);
-		
-		/* Browse the artist. */
-		//Artist artist = jotify.browse(result.getArtists().get(0));
-		
-		/* Load an image. */
-		//jotify.image(artist.getPortrait());
-		
-		/* Close connection. */
-		//jotify.close();
 	}
 }

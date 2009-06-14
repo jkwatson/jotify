@@ -3,6 +3,8 @@ package de.felixbruns.jotify.crypto;
 /**
  * Implementation of the Shannon stream-cipher.
  * 
+ * Based on original reference implementation in C.
+ * 
  * @author Felix Bruns <felixbruns@web.de>
  */
 public class Shannon {
