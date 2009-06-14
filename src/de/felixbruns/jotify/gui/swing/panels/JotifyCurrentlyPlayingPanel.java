@@ -21,9 +21,9 @@ public class JotifyCurrentlyPlayingPanel extends JPanel {
 	
 	private final Jotify jotify;
 	
-	public JotifyCurrentlyPlayingPanel(final Jotify jotify) {
-	  this.jotify = jotify;
-	  
+	public JotifyCurrentlyPlayingPanel(final Jotify jotify){
+		this.jotify = jotify;
+		
 		/* Flow content to the left. */
 		this.setLayout(new BorderLayout());
 		
@@ -46,21 +46,22 @@ public class JotifyCurrentlyPlayingPanel extends JPanel {
 		this.setOpaque(false);
 	}
 	
-	public void setTrack(final Track track) {
+	public void setTrack(final Track track){
 		this.currentlyPlayingLabel.setTrack(track);
-
-      new Thread("Cover-Loading-Thread") {
-        public void run() {
-          String cover = track.getCover();
-  
-          if (cover != null) {
-            Image image = jotify.image(cover);
-  
-            coverLabel.setIcon(new ImageIcon(image.getScaledInstance(180, 180, Image.SCALE_SMOOTH)));
-          } else {
-            coverLabel.setIcon(null);
-          }
-        }
-      }.start();
+		
+		new Thread("Cover-Loading-Thread"){
+			public void run(){
+				String cover = track.getCover();
+				
+				if(cover != null){
+					Image image = jotify.image(cover);
+					
+					coverLabel.setIcon(new ImageIcon(image.getScaledInstance(180, 180, Image.SCALE_SMOOTH)));
+				}
+				else{
+					coverLabel.setIcon(null);
+				}
+			}
+		}.start();
 	}
 }

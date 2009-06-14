@@ -53,13 +53,12 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 	private JotifyTableModel<Track> tableModel;
 	
 	private boolean isShowingQueue;
-  
+	
 	private final Jotify jotify;
 	
 	public JotifyContentPanel(final Jotify jotify){
-	  this.jotify = jotify;
-	  
 		this.broadcast = JotifyBroadcast.getInstance();
+		this.jotify    = jotify;
 		
 		this.isShowingQueue = false;
 		
@@ -177,6 +176,31 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 				}
 			}
 		});
+		this.table.setDragEnabled(true);
+		this.table.setTransferHandler(new TransferHandler(){
+			public boolean canImport(TransferHandler.TransferSupport support){
+				return false;
+			}
+			
+			protected Transferable createTransferable(JComponent c){
+				if(table.getSelectedRowCount() == 0){
+					return null;
+				}
+				
+				final JotifyTableModel<Track> model = tableModel;
+				final List<Track> selectedTracks    = new LinkedList<Track>();
+				
+				for(int selectedRow : table.getSelectedRows()){
+					selectedTracks.add(model.get(selectedRow));
+				}
+				
+				return new TrackTransferable(selectedTracks.get(0));
+			}
+			
+			public int getSourceActions(JComponent c){
+				return TransferHandler.COPY;
+			}
+		});
 		
 		/* Create scoll pane. */
 		this.scrollPane = new JScrollPane(this.table);
@@ -184,35 +208,6 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.scrollPane.getViewport().setOpaque(false);
 		this.scrollPane.setBorder(new EmptyBorder(0, 0, 0, 0));
 		this.add(this.scrollPane, BorderLayout.CENTER);
-		
-		table.setDragEnabled(true);
-		table.setTransferHandler(new TransferHandler() {
-          @Override
-          public boolean canImport(TransferHandler.TransferSupport support) {
-            return false;
-          }
-    
-          @Override
-          protected Transferable createTransferable(JComponent c) {
-            if (table.getSelectedRowCount() == 0) {
-              return null;
-            }
-            
-            final JotifyTableModel<Track> model = tableModel;
-            final List<Track> selectedTracks = new LinkedList<Track>();
-            
-            for (int selectedRow : table.getSelectedRows()) {
-              selectedTracks.add(model.get(selectedRow));
-            }
-            
-            return new TrackTransferable(selectedTracks.get(0));
-          }
-    
-          @Override
-          public int getSourceActions(JComponent c) {
-            return TransferHandler.COPY;
-          }
-		});
 	}
 	
 	public void showAlbum(Album album){
@@ -334,12 +329,12 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			String[] parts = e.getDescription().split(":", 2);
 			
 			if(parts[0].equals("artist")){
-				Result result = jotify.search(parts[1]);
+				Result result = this.jotify.search(parts[1]);
 				
 				broadcast.fireSearchResultReceived(result);
 			}
 			else if(parts[0].equals("album")){
-				Album album = jotify.browseAlbum(parts[1]);
+				Album album = this.jotify.browseAlbum(parts[1]);
 				
 				broadcast.fireClearSelection();
 				broadcast.fireBrowsedAlbum(album);
@@ -358,9 +353,10 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 	}
 	
 	public void playlistUpdated(Playlist playlist){
-	  if (!isShowingQueue) { // TODO: compare with current playlist
-	    showTracks(playlist.getTracks());
-	  }
+		/* TODO: compare with current playlist. */
+		if(!isShowingQueue){
+			this.showTracks(playlist.getTracks());
+		}
 	}
 	
 	public void queueSelected(JotifyPlaybackQueue queue){

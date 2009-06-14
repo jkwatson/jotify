@@ -8,8 +8,8 @@ import de.felixbruns.jotify.util.SpotifyChecksum;
 import de.felixbruns.jotify.util.XMLElement;
 
 public class PlaylistContainer implements Iterable<Playlist> {
-  public static final PlaylistContainer EMPTY = new PlaylistContainer();
-  
+	public static final PlaylistContainer EMPTY = new PlaylistContainer();
+	
 	private String         author;
 	private List<Playlist> playlists;
 	private long           revision;

@@ -61,16 +61,18 @@ public class JotifyFrame extends JFrame {
 		this.searchPanel = new JotifySearchPanel(jotify);
 		this.panel.add(this.searchPanel, BorderLayout.NORTH);
 		
-		/* Create and add side panel. */
+		/* Create and add side panel in a scroll pane. */
 		this.sidePanel = new JotifySidePanel(jotify);
 		this.sidePanel.setPreferredSize(new Dimension(180, 600));
-
-        JScrollPane sidePane = new JScrollPane(sidePanel, 
-            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-            JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        sidePane.setOpaque(false);
-        sidePane.getViewport().setOpaque(false);
-        sidePane.setBorder(BorderFactory.createEmptyBorder());
+		
+		JScrollPane sidePane = new JScrollPane(
+			sidePanel,
+			JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+			JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
+		);
+		sidePane.setOpaque(false);
+		sidePane.getViewport().setOpaque(false);
+		sidePane.setBorder(BorderFactory.createEmptyBorder());
         
 		this.panel.add(sidePane, BorderLayout.WEST);
 

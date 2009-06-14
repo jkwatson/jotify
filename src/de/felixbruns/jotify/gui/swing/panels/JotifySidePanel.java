@@ -39,7 +39,7 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 	private JotifyCurrentlyPlayingPanel info;
 	private JotifyPlaybackQueue         queue;
 	
-	public JotifySidePanel(final Jotify jotify) {
+	public JotifySidePanel(final Jotify jotify){
 		/* Set broadcast object. */
 		this.broadcast = JotifyBroadcast.getInstance();
 		
@@ -108,42 +108,43 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 				}
 			}
 		});
-		
-		list.setDragEnabled(true);
-        list.setDropMode(DropMode.ON);
-        list.setTransferHandler(new TransferHandler() {
-          @Override
-          public boolean canImport(TransferHandler.TransferSupport info) {
-            if (!info.isDataFlavorSupported(TrackTransferable.TRACK_FLAVOR)) {
-              return false;
-            }
-            
-            final JList.DropLocation dropLocation = (JList.DropLocation) info.getDropLocation();
-            return !dropLocation.isInsert() && dropLocation.getIndex() != -1;
-          }
-    
-          @Override
-          public boolean importData(TransferHandler.TransferSupport info) {
-            if (!canImport(info) || !info.isDrop()) {
-              return false;
-            }
-
-            final JList list = (JList) info.getComponent();
-            final JList.DropLocation dropLocation = (JList.DropLocation) info.getDropLocation();
-            final Playlist playlist = (Playlist) list.getModel().getElementAt(dropLocation.getIndex());
-            
-            try {
-              final Track track = (Track) info.getTransferable().getTransferData(TrackTransferable.TRACK_FLAVOR);
-              playlist.getTracks().add(track);
-              broadcast.firePlaylistUpdated(playlist); // playlistUpdated(playlist);
-              return true;
-            } catch (UnsupportedFlavorException e) {
-            } catch (IOException e) {
-            }
-            
-            return false;
-          }
-        });
+		this.list.setDragEnabled(true);
+		this.list.setDropMode(DropMode.ON);
+		this.list.setTransferHandler(new TransferHandler(){
+			public boolean canImport(TransferHandler.TransferSupport info){
+				if(!info.isDataFlavorSupported(TrackTransferable.TRACK_FLAVOR)){
+					return false;
+				}
+				
+				final JList.DropLocation dropLocation = (JList.DropLocation)info.getDropLocation();
+				
+				return !dropLocation.isInsert() && dropLocation.getIndex() != -1;
+			}
+			
+			public boolean importData(TransferHandler.TransferSupport info){
+				if(!canImport(info) || !info.isDrop()){
+					return false;
+				}
+				
+				final JList              list         = (JList)info.getComponent();
+				final JList.DropLocation dropLocation = (JList.DropLocation)info.getDropLocation();
+				final Playlist           playlist     = (Playlist)list.getModel().getElementAt(dropLocation.getIndex());
+				
+				/* TODO: Actually send the playlist change to the server. */
+				try{
+					final Track track = (Track)info.getTransferable().getTransferData(TrackTransferable.TRACK_FLAVOR);
+					
+					playlist.getTracks().add(track);
+					
+					broadcast.firePlaylistUpdated(playlist);
+					
+					return true;
+				}
+				catch(Exception e){}
+				
+				return false;
+			}
+		});
         
 		this.add(this.list, BorderLayout.CENTER);
 		
@@ -166,7 +167,8 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 	
 	public void playlistUpdated(Playlist playlist){
 		list.updateElement(playlist);
-		repaint();
+		
+		this.repaint();
 	}
 	
 	public void playlistSelected(Playlist playlist){

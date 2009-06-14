@@ -50,14 +50,16 @@ public class Protocol {
 		
 		/* Try to connect to each server, stop trying when connected. */
 		for(InetSocketAddress server : servers){
-			try {
+			try{
 				/* Connect to server. */
 				this.channel = SocketChannel.open(server);
 				
 				/* Save server for later use. */
-				this.server = server;				
+				this.server = server;
+				
 				break;
-			} catch (Exception e) {
+			}
+			catch(Exception e){
 				System.err.println("Error connecting to '" + server + "': " + e.getMessage());
 			}
 		}

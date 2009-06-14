@@ -29,7 +29,7 @@ public class JotifySearchPanel extends JPanel implements SearchListener {
 	private JTextField      searchField;
 	private JButton         searchButton;
 	
-	public JotifySearchPanel(final Jotify jotify) {
+	public JotifySearchPanel(final Jotify jotify){
 		this.broadcast = JotifyBroadcast.getInstance();
 		
 		/* Flow content to the left. */

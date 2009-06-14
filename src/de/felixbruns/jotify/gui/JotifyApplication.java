@@ -17,21 +17,21 @@ import de.felixbruns.jotify.media.PlaylistContainer;
 import de.felixbruns.jotify.media.Result;
 
 public class JotifyApplication {
-	/* Jotify API, frame and broadcast. */
+	/* Application frame and broadcast. */
 	private JotifyFrame       frame;
 	private JotifyBroadcast   broadcast;
 	private JotifyPreferences settings;
 	private JotifyPlayer      player;
 	
+	/* Jotify API. */
 	private final Jotify jotify;
 	
-	public JotifyApplication(final Jotify jotify) {
-	  this.jotify = jotify;
-	  
+	public JotifyApplication(final Jotify jotify){
 		this.broadcast = JotifyBroadcast.getInstance();
 		this.frame     = null; /* Created in initialize method. */
 		this.settings  = null; /* Created in initialize method. */
 		this.player    = null; /* Created in initialize method. */
+		this.jotify    = jotify;
 	}
 	
 	public void initialize(){
@@ -60,7 +60,7 @@ public class JotifyApplication {
 			
 			try{
 				/* Try to login by getting the default Jotify instance. */
-				jotify.login(credentials.getUsername(), credentials.getPassword());
+				this.jotify.login(credentials.getUsername(), credentials.getPassword());
 				
 				/* Create player. */
 				this.player = new JotifyPlayer(jotify);
@@ -86,7 +86,7 @@ public class JotifyApplication {
 				
 				/* Load playlists in a separate thread. */
 				new Thread("Playlist-Loading-Thread"){
-					public void run() {
+					public void run(){
 						/* Get information about account playlists. */
 						PlaylistContainer playlists = jotify.playlists();
 						//boolean           useCache  = true;
@@ -166,7 +166,7 @@ public class JotifyApplication {
 	
 	/* Main entry point of program. Create application and initialize it. */
 	public static void main(String[] args) throws Exception {
-		JotifyApplication application = new JotifyApplication(new JotifyPool(4));
+		JotifyApplication application = new JotifyApplication(new JotifyPool());
 		
 		application.initialize();
 	}
