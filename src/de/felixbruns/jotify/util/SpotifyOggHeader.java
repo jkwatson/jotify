@@ -91,16 +91,16 @@ public class SpotifyOggHeader {
 	
 	/* Swap short bytes. */
 	private short swap(short value){
-		return  (short)(((value & 0xff  ) << 8) |
+		return  (short)(((value & 0x00ff) << 8) |
 						((value & 0xff00) >> 8));
 	}
 	
 	/* Swap integer bytes. */
 	private int swap(int value){
-		return  ((value & 0xff      ) << 24) |
-				((value & 0xff00    ) <<  8) |
-				((value & 0xff0000  ) >>  8) |
-				((value & 0xff000000) << 24);
+		return  ((value & 0x000000ff) << 24) |
+				((value & 0x0000ff00) <<  8) |
+				((value & 0x00ff0000) >>  8) |
+				((value & 0xff000000) >> 24);
 	}
 	
 	/* Decode Spotify OGG header. */

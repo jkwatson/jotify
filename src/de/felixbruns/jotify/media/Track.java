@@ -329,7 +329,7 @@ public class Track {
 	 */
 	public void setPopularity(float popularity){
 		/* Check if popularity value is valid. */
-		if(popularity != Float.NaN || popularity < 0.0 || popularity > 1.0){
+		if(popularity != Float.NaN && popularity < 0.0 && popularity > 1.0){
 			throw new IllegalArgumentException("Expecting a value from 0.0 to 1.0 or Float.NAN.");
 		}
 		
