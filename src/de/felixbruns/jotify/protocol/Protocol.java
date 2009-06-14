@@ -49,14 +49,16 @@ public class Protocol {
 		/* Lookup servers via DNS SRV query. */
 		List<InetSocketAddress> servers = DNS.lookupSRV("_spotify-client._tcp.spotify.com");
 		
-		/* Add a fallback server if others don't work. */
+		/* Add a fallback servers if others don't work. */
 		servers.add(new InetSocketAddress("ap.spotify.com", 4070));
-		
+		servers.add(new InetSocketAddress("ap.spotify.com", 80));
+				
 		/* Try to connect to each server, stop trying when connected. */
 		for(InetSocketAddress server : servers){
 			try{
-				/* Connect to server. */
-				this.channel = SocketChannel.open(server);
+				/* Try to connect to current server with a timeout of 1 second. */
+				this.channel = SocketChannel.open();
+				this.channel.socket().connect(server, 1000);
 				
 				/* Save server for later use. */
 				this.server = server;
@@ -69,8 +71,8 @@ public class Protocol {
 		}
 		
 		/* If connection was not established, return false. */
-		if(this.channel == null){
-			throw new ConnectionException("Error connectiong to any server!");
+		if(!this.channel.isConnected()){
+			throw new ConnectionException("Error connecting to any server!");
 		}
 		
 		System.out.format("Connected to '%s'\n", this.server);
