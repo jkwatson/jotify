@@ -14,12 +14,7 @@ import de.felixbruns.jotify.util.XMLElement;
  * 
  * @category Media
  */
-public class Album {
-	/**
-	 * Identifier for this album (32-character string).
-	 */
-	private String id;
-	
+public class Album extends Media {
 	/**
 	 * Name of this album.
 	 */
@@ -36,33 +31,53 @@ public class Album {
 	private String cover;
 	
 	/**
+	 * The type of this album (compilation, album, single).
+	 */
+	private String type;
+	
+	/**
+	 * The review of this album.
+	 */
+	private String review;
+	
+	/**
 	 * Release year of this album.
 	 */
 	private int year;
 	
 	/**
-	 * Popularity of this album (from 0.0 to 1.0).
-	 */
-	private float popularity;
-	
-	/**
-	 * A {@link List} of tracks of this album.
+	 * A {@link List} of discs of this album.
 	 * 
-	 * @see Track
+	 * @see Disc
 	 */
-	private List<Track> tracks;
+	private List<Disc> discs;
 	
 	/**
-	 * Creates an empty {@link Artist} object.
+	 * Similar albums of this album.
 	 */
-	private Album(){
-		this.id         = null;
-		this.name       = null;
-		this.artist     = null;
-		this.cover      = null;
-		this.year       = -1;
-		this.popularity = Float.NaN;
-		this.tracks     = new ArrayList<Track>();
+	private List<Album> similarAlbums;
+	
+	/**
+	 * Creates an empty {@link Album} object.
+	 */
+	public Album(){
+		this.name          = null;
+		this.artist        = null;
+		this.cover         = null;
+		this.type          = null;
+		this.review        = null;
+		this.year          = -1;
+		this.discs         = new ArrayList<Disc>();
+		this.similarAlbums = new ArrayList<Album>();
+	}
+	
+	/**
+	 * Creates an {@link Album} object with the specified {@code id}.
+	 * 
+	 * @param id Id of the album.
+	 */
+	public Album(String id){
+		this(id, null, null);
 	}
 	
 	/**
@@ -73,42 +88,17 @@ public class Album {
 	 * @param artist Artist of the album.
 	 */
 	public Album(String id, String name, Artist artist){
-		/* Check if id string is valid. */
-		if(id == null || id.length() != 32 || !Hex.isHex(id)){
-			throw new IllegalArgumentException("Expecting a 32-character hex string.");
-		}
+		super(id);
 		
 		/* Set object properties. */
-		this.id         = id;
-		this.name       = name;
-		this.artist     = artist;
-		this.cover      = null;
-		this.year       = -1;
-		this.popularity = Float.NaN;
-		this.tracks     = new ArrayList<Track>();
-	}
-	
-	/**
-	 * Get the albums identifier.
-	 * 
-	 * @return A 32-character identifier.
-	 */
-	public String getId(){
-		return this.id;
-	}
-	
-	/**
-	 * Set the albums identifier.
-	 * 
-	 * @param id A 32-character identifier.
-	 */
-	public void setId(String id){
-		/* Check if id string is valid. */
-		if(id == null || id.length() != 32 || !Hex.isHex(id)){
-			throw new IllegalArgumentException("Expecting a 32-character hex string.");
-		}
-		
-		this.id = id;
+		this.name          = name;
+		this.artist        = artist;
+		this.cover         = null;
+		this.type          = null;
+		this.review        = null;
+		this.year          = -1;
+		this.discs         = new ArrayList<Disc>();
+		this.similarAlbums = new ArrayList<Album>();
 	}
 	
 	/**
@@ -177,15 +167,51 @@ public class Album {
 	/**
 	 * Set the albums cover image identifier.
 	 * 
-	 * @param cover A 32-character image identifier.
+	 * @param cover A 40-character image identifier.
 	 */
 	public void setCover(String cover){
 		/* Check if portrait id string is valid. */
-		if(cover == null || cover.length() != 32 || !Hex.isHex(cover)){
-			throw new IllegalArgumentException("Expecting a 32-character hex string.");
+		if(cover == null || cover.length() != 40 || !Hex.isHex(cover)){
+			throw new IllegalArgumentException("Expecting a 40-character hex string.");
 		}
 		
 		this.cover = cover;
+	}
+	
+	/**
+	 * Get the albums type.
+	 * 
+	 * @return One of "compilation", "album" or "single".
+	 */
+	public String getType(){
+		return this.type;
+	}
+	
+	/**
+	 * Set the albums type.
+	 * 
+	 * @param type One of "compilation", "album" or "single".
+	 */
+	public void setType(String type){
+		this.type = type;
+	}
+	
+	/**
+	 * Get the albums review.
+	 * 
+	 * @return A review of this album.
+	 */
+	public String getReview(){
+		return this.review;
+	}
+	
+	/**
+	 * Set the albums review.
+	 * 
+	 * @param review A review of this album.
+	 */
+	public void setReview(String review){
+		this.review = review;
 	}
 	
 	/**
@@ -212,44 +238,55 @@ public class Album {
 	}
 	
 	/**
-	 * Get the albums popularity.
+	 * Get discs of this album.
 	 * 
-	 * @return A decimal value between 0.0 and 1.0 or {@link Float.NAN} if not available.
+	 * @return A {@link List} of {@link Disc} objects.
 	 */
-	public float getPopularity(){
-		return this.popularity;
+	public List<Disc> getDiscs(){
+		return this.discs;
 	}
 	
 	/**
-	 * Set the albums popularity.
+	 * Set discs for this album.
 	 * 
-	 * @param popularity A decimal value between 0.0 and 1.0 or {@link Float.NAN}.
+	 * @param discs A {@link List} of {@link Disc} objects.
 	 */
-	public void setPopularity(float popularity){
-		/* Check if popularity value is valid. */
-		if(popularity != Float.NaN || popularity < 0.0 || popularity > 1.0){
-			throw new IllegalArgumentException("Expecting a value from 0.0 to 1.0 or Float.NAN.");
-		}
-		
-		this.popularity = popularity;
+	public void setTracks(List<Disc> discs){
+		this.discs = discs;
 	}
 	
 	/**
-	 * Get tracks of this album.
+	 * Get tracks of this album. This automatically merges
+	 * tracks from this albums discs.
 	 * 
 	 * @return A {@link List} of {@link Track} objects.
 	 */
 	public List<Track> getTracks(){
-		return this.tracks;
+		List<Track> tracks = new ArrayList<Track>();
+		
+		for(Disc disc : this.discs){
+			tracks.addAll(disc.getTracks());
+		}
+		
+		return tracks;
 	}
 	
 	/**
-	 * Set tracks for this album.
+	 * Get similar albums for this album.
 	 * 
-	 * @param tracks A {@link List} of {@link Track} objects.
+	 * @return A {@link List} of {@link Album} objects.
 	 */
-	public void setTracks(List<Track> tracks){
-		this.tracks = tracks;
+	public List<Album> getSimilarAlbums(){
+		return this.similarAlbums;
+	}
+	
+	/**
+	 * Set similar albums for this album.
+	 * 
+	 * @param similarAlbums A {@link List} of {@link Album} objects.
+	 */
+	public void setSimilarAlbums(List<Album> similarAlbums){
+		this.similarAlbums = similarAlbums;
 	}
 	
 	/**
@@ -306,6 +343,11 @@ public class Album {
 		if(albumElement.hasChild("discs")){
 			/* Loop over discs. */
 			for(XMLElement discElement : albumElement.getChild("discs").getChildren("disc")){
+				Disc disc = new Disc(
+					Integer.parseInt(discElement.getChildText("disc-number")),
+					discElement.getChildText("name")
+				);
+				
 				/* Loop over tracks of current disc. */
 				for(XMLElement trackElement : discElement.getChildren("track")){
 					/* Parse track element. */
@@ -317,8 +359,10 @@ public class Album {
 					track.setCover(album.cover);
 					
 					/* Add track to list of tracks. */
-					album.tracks.add(track);
+					disc.getTracks().add(track);
 				}
+				
+				album.discs.add(disc);
 			}
 		}		
 		
@@ -353,5 +397,9 @@ public class Album {
 	 */
 	public int hashCode(){
 		return (this.id != null) ? this.id.hashCode() : 0;
+	}
+	
+	public String toString(){
+		return String.format("[Album: %s, %s]", this.artist, this.name);
 	}
 }

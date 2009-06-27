@@ -170,4 +170,8 @@ public class Playlist implements Iterable<Track> {
 	public int hashCode(){
 		return (this.id != null) ? this.id.hashCode() : 0;
 	}
+	
+	public String toString(){
+		return String.format("[Playlist: %s, %s]", this.author, this.name);
+	}
 }

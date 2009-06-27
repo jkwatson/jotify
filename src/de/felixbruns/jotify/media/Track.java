@@ -3,7 +3,6 @@ package de.felixbruns.jotify.media;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.felixbruns.jotify.util.Hex;
 import de.felixbruns.jotify.util.SpotifyURI;
 import de.felixbruns.jotify.util.XMLElement;
 
@@ -14,12 +13,7 @@ import de.felixbruns.jotify.util.XMLElement;
  * 
  * @category Media
  */
-public class Track {
-	/**
-	 * Identifier for this track (32-character string).
-	 */
-	private String id;
-	
+public class Track extends Media {
 	/**
 	 * Title of this track.
 	 */
@@ -51,9 +45,9 @@ public class Track {
 	private int length;
 	
 	/**
-	 * File identifiers for this track (40-character strings).
+	 * Files available for this track.
 	 */
-	private List<String> files;
+	private List<File> files;
 	
 	/**
 	 * The identifier for this tracks cover image (32-character string).
@@ -61,24 +55,32 @@ public class Track {
 	private String cover;
 	
 	/**
-	 * Popularity of this track (from 0.0 to 1.0).
+	 * Similar tracks of this track.
 	 */
-	private float popularity;
+	private List<Track> similarTracks;
 	
 	/**
 	 * Creates an empty {@link Track} object.
 	 */
-	private Track(){
-		this.id          = null;
-		this.title       = null;
-		this.artist      = null;
-		this.album       = null;
-		this.year        = -1;
-		this.trackNumber = -1;
-		this.length      = -1;
-		this.files       = new ArrayList<String>();
-		this.cover       = null;
-		this.popularity  = Float.NaN;
+	public Track(){
+		this.title         = null;
+		this.artist        = null;
+		this.album         = null;
+		this.year          = -1;
+		this.trackNumber   = -1;
+		this.length        = -1;
+		this.files         = new ArrayList<File>();
+		this.cover         = null;
+		this.similarTracks = new ArrayList<Track>();
+	}
+	
+	/**
+	 * Creates a {@link Track} object with the specified {@code id}.
+	 * 
+	 * @param id Id of the track.
+	 */
+	public Track(String id){
+		this(id, null, null, null);
 	}
 	
 	/**
@@ -91,40 +93,18 @@ public class Track {
 	 * @param album  Album of the track.
 	 */
 	public Track(String id, String title, Artist artist, Album album){
-		/* Check if id string is valid. */
-		if(id == null || id.length() != 32 || !Hex.isHex(id)){
-			throw new IllegalArgumentException("Expecting a 32-character hex string.");
-		}
+		super(id);
 		
 		/* Set object properties. */
-		this.id          = id;
-		this.title       = title;
-		this.artist      = artist;
-		this.album       = album;
-		this.year        = -1;
-		this.trackNumber = -1;
-		this.length      = -1;
-		this.files       = new ArrayList<String>();
-		this.cover       = null;
-		this.popularity  = Float.NaN;
-	}
-	
-	/**
-	 * Get the tracks identifier.
-	 * 
-	 * @return A 32-character identifier.
-	 */
-	public String getId(){
-		return this.id;
-	}
-	
-	/**
-	 * Set the tracks identifier.
-	 * 
-	 * @param id A 32-character identifier.
-	 */
-	public void setId(String id){
-		this.id = id;
+		this.title         = title;
+		this.artist        = artist;
+		this.album         = album;
+		this.year          = -1;
+		this.trackNumber   = -1;
+		this.length        = -1;
+		this.files         = new ArrayList<File>();
+		this.cover         = null;
+		this.similarTracks = new ArrayList<Track>();
 	}
 	
 	/**
@@ -246,18 +226,18 @@ public class Track {
 	}
 	
 	/**
-	 * Get the tracks length in seconds.
+	 * Get the tracks length in milliseconds.
 	 * 
-	 * @return An integer representing the length in seconds or -1 if not available.
+	 * @return An integer representing the length in milliseconds or -1 if not available.
 	 */
 	public int getLength(){
 		return this.length;
 	}
 	
 	/**
-	 * Set the tracks length in seconds.
+	 * Set the tracks length in milliseconds.
 	 * 
-	 * @return length A positive integer greater than zero representing the length in seconds.
+	 * @return length A positive integer greater than zero representing the length in milliseconds.
 	 */
 	public void setLength(int length){
 		/* Check if length is valid. */
@@ -269,30 +249,30 @@ public class Track {
 	}
 	
 	/**
-	 * Get a list of file ids of this track.
+	 * Get a list of files of this track.
 	 * 
-	 * @return A {@link List} of file ids.
+	 * @return A {@link List} of {@link File} objects.
 	 */
-	public List<String> getFiles(){
+	public List<File> getFiles(){
 		return this.files;
 	}
 	
 	/**
-	 * Set the file id list of this track.
+	 * Set the list of {@link File} objects for this track.
 	 * 
-	 * @param files A {@link List} of file ids.
+	 * @param files A {@link List} of {@link File} objects.
 	 */
-	public void setFiles(List<String> files){
+	public void setFiles(List<File> files){
 		this.files = files;
 	}
 	
 	/**
-	 * Add a file id to the list of file ids.
+	 * Add a {@link File} to the list of files.
 	 * 
-	 * @param id The file id to add.
+	 * @param id The {@link File} to add.
 	 */
-	public void addFile(String id){
-		this.files.add(id);
+	public void addFile(File file){
+		this.files.add(file);
 	}
 	
 	/**
@@ -314,26 +294,21 @@ public class Track {
 	}
 	
 	/**
-	 * Get the tracks popularity.
+	 * Get similar tracks for this track.
 	 * 
-	 * @return A decimal value between 0.0 and 1.0 or {@link Float.NAN} if not available.
+	 * @return A {@link List} of {@link Track} objects.
 	 */
-	public float getPopularity(){
-		return this.popularity;
+	public List<Track> getSimilarTracks(){
+		return this.similarTracks;
 	}
 	
 	/**
-	 * Set the tracks popularity.
+	 * Set similar tracks for this track.
 	 * 
-	 * @param popularity A decimal value between 0.0 and 1.0 or {@link Float.NAN}.
+	 * @param similarTracks A {@link List} of {@link Track} objects.
 	 */
-	public void setPopularity(float popularity){
-		/* Check if popularity value is valid. */
-		if(popularity != Float.NaN && (popularity < 0.0 || popularity > 1.0)){
-			throw new IllegalArgumentException("Expecting a value from 0.0 to 1.0 or Float.NAN.");
-		}
-		
-		this.popularity = popularity;
+	public void setSimilarTracks(List<Track> similarTracks){
+		this.similarTracks = similarTracks;
 	}
 	
 	/**
@@ -396,7 +371,12 @@ public class Track {
 		/* Set files. */
 		if(trackElement.hasChild("files")){
 			for(XMLElement fileElement : trackElement.getChild("files").getChildren()){
-				track.files.add(fileElement.getAttribute("id"));
+				File file = new File(
+					fileElement.getAttribute("id"),
+					fileElement.getAttribute("format")
+				);
+				
+				track.files.add(file);
 			}
 		}
 		
@@ -413,6 +393,8 @@ public class Track {
 		if(trackElement.hasChild("popularity")){
 			track.popularity = Float.parseFloat(trackElement.getChildText("popularity"));
 		}
+		
+		//TODO: similar-tracks
 		
 		return track;
 	}
@@ -443,5 +425,9 @@ public class Track {
 	 */
 	public int hashCode(){
 		return (this.id != null) ? this.id.hashCode() : 0;
+	}
+	
+	public String toString(){
+		return String.format("[Track: %s, %s, %s]", this.artist, this.album, this.title);
 	}
 }

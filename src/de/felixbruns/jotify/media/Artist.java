@@ -3,7 +3,6 @@ package de.felixbruns.jotify.media;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.felixbruns.jotify.util.Hex;
 import de.felixbruns.jotify.util.SpotifyURI;
 import de.felixbruns.jotify.util.XMLElement;
 
@@ -14,12 +13,7 @@ import de.felixbruns.jotify.util.XMLElement;
  * 
  * @category Media
  */
-public class Artist {
-	/**
-	 * Identifier for this artist (32-character string).
-	 */
-	private String id;
-	
+public class Artist extends Media {
 	/**
 	 * Name of this artist.
 	 */
@@ -28,12 +22,27 @@ public class Artist {
 	/**
 	 * The identifier for this artists portrait image (32-character string).
 	 */
-	private String portrait;
+	private Image portrait;
 	
 	/**
-	 * Popularity of this artist (from 0.0 to 1.0).
+	 * A {@link List} of genres.
 	 */
-	private float popularity;
+	private List<String> genres;
+	
+	/**
+	 * A {@link List} of years active.
+	 */
+	private List<String> yearsActive;
+	
+	/**
+	 * A {@link List} of biographies.
+	 */
+	private List<Biography> bios;
+	
+	/**
+	 * A {@link List} of albums.
+	 */
+	private List<Album> albums;
 	
 	/**
 	 * A {@link List} of similar artists.
@@ -43,11 +52,13 @@ public class Artist {
 	/**
 	 * Creates an empty {@link Artist} object.
 	 */
-	private Artist(){
-		this.id             = null;
+	public Artist(){
 		this.name           = null;
 		this.portrait       = null;
-		this.popularity     = Float.NaN;
+		this.genres         = new ArrayList<String>();
+		this.yearsActive    = new ArrayList<String>();
+		this.bios           = new ArrayList<Biography>();
+		this.albums         = new ArrayList<Album>();
 		this.similarArtists = new ArrayList<Artist>();
 	}
 	
@@ -67,40 +78,16 @@ public class Artist {
 	 * @param name Name of the artist or {@code null}.
 	 */
 	public Artist(String id, String name){
-		/* Check if id string is valid. */
-		if(id == null || id.length() != 32 || !Hex.isHex(id)){
-			throw new IllegalArgumentException("Expecting a 32-character hex string.");
-		}
+		super(id);
 		
 		/* Set object properties. */
-		this.id             = id;
 		this.name           = name;
 		this.portrait       = null;
-		this.popularity     = Float.NaN;
+		this.genres         = new ArrayList<String>();
+		this.yearsActive    = new ArrayList<String>();
+		this.bios           = new ArrayList<Biography>();
 		this.similarArtists = new ArrayList<Artist>();
-	}
-	
-	/**
-	 * Get the artists identifier.
-	 * 
-	 * @return A 32-character identifier.
-	 */
-	public String getId(){
-		return this.id;
-	}
-	
-	/**
-	 * Set the artists identifier.
-	 * 
-	 * @param id A 32-character identifier.
-	 */
-	public void setId(String id){
-		/* Check if id string is valid. */
-		if(id == null || id.length() != 32 || !Hex.isHex(id)){
-			throw new IllegalArgumentException("Expecting a 32-character hex string.");
-		}
-		
-		this.id = id;
+		this.albums         = new ArrayList<Album>();
 	}
 	
 	/**
@@ -142,47 +129,91 @@ public class Artist {
 	/**
 	 * Get the artists portrait image identifier.
 	 * 
-	 * @return A 32-character image identifier.
+	 * @return An {@link Image} object.
 	 */
-	public String getPortrait(){
+	public Image getPortrait(){
 		return this.portrait;
 	}
 	
 	/**
 	 * Set the artists portrait image identifier.
 	 * 
-	 * @param portrait A 32-character image identifier.
+	 * @param portrait An {@link Image} object.
 	 */
-	public void setPortrait(String portrait){
-		/* Check if portrait id string is valid. */
-		if(portrait == null || portrait.length() != 32 || !Hex.isHex(portrait)){
-			throw new IllegalArgumentException("Expecting a 32-character hex string.");
-		}
-		
+	public void setPortrait(Image portrait){
 		this.portrait = portrait;
 	}
 	
 	/**
-	 * Get the artists popularity.
+	 * Get genres for this artist.
 	 * 
-	 * @return A decimal value between 0.0 and 1.0 or {@link Float.NAN} if not available.
+	 * @return A {@link List} of genres.
 	 */
-	public float getPopularity(){
-		return this.popularity;
+	public List<String> getGenres(){
+		return this.genres;
 	}
 	
 	/**
-	 * Set the artists popularity.
+	 * Set genres for this artist.
 	 * 
-	 * @param popularity A decimal value between 0.0 and 1.0 or {@link Float.NAN}.
+	 * @param genres A {@link List} of genres.
 	 */
-	public void setPopularity(float popularity){
-		/* Check if popularity value is valid. */
-		if(popularity != Float.NaN || popularity < 0.0 || popularity > 1.0){
-			throw new IllegalArgumentException("Expecting a value from 0.0 to 1.0 or Float.NAN.");
-		}
-		
-		this.popularity = popularity;
+	public void setGenres(List<String> genres){
+		this.genres = genres;
+	}
+	
+	/**
+	 * Get active years for this artist.
+	 * 
+	 * @return A {@link List} of active years.
+	 */
+	public List<String> getYearsActive(){
+		return this.yearsActive;
+	}
+	
+	/**
+	 * Set active years for this artist.
+	 * 
+	 * @param yearsActive A {@link List} of active years.
+	 */
+	public void setYearsActive(List<String> yearsActive){
+		this.yearsActive = yearsActive;
+	}
+	
+	/**
+	 * Get biographies for this artist.
+	 * 
+	 * @return A {@link List} of {@link Biography} objects.
+	 */
+	public List<Biography> getBios(){
+		return this.bios;
+	}
+	
+	/**
+	 * Set biographies for this artist.
+	 * 
+	 * @param biographies A {@link List} of {@link Biography} objects.
+	 */
+	public void setBios(List<Biography> bios){
+		this.bios = bios;
+	}
+	
+	/**
+	 * Get albums for this artist.
+	 * 
+	 * @return A {@link List} of {@link Album} objects.
+	 */
+	public List<Album> getAlbums(){
+		return this.albums;
+	}
+	
+	/**
+	 * Set albums for this artist.
+	 * 
+	 * @param albums A {@link List} of {@link Album} objects.
+	 */
+	public void setAlbums(List<Album> albums){
+		this.albums = albums;
 	}
 	
 	/**
@@ -226,10 +257,10 @@ public class Artist {
 		
 		/* Set portrait. */
 		if(artistElement.hasChild("portrait") && artistElement.getChild("portrait").hasChild("id")){
-			String value = artistElement.getChild("portrait").getChildText("id");
+			String id = artistElement.getChild("portrait").getChildText("id");
 			
-			if(!value.isEmpty()){
-				artist.portrait = value;
+			if(!id.isEmpty()){
+				artist.portrait = new Image(id, -1, -1);
 			}
 		}
 		
@@ -276,5 +307,9 @@ public class Artist {
 	 */
 	public int hashCode(){
 		return (this.id != null) ? this.id.hashCode() : 0;
+	}
+	
+	public String toString(){
+		return String.format("[Artist: %s]", this.name);
 	}
 }
