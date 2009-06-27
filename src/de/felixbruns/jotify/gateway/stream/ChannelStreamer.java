@@ -1,4 +1,4 @@
-package de.felixbruns.jotify.gateway;
+package de.felixbruns.jotify.gateway.stream;
 
 import java.io.IOException;
 import java.io.OutputStream;

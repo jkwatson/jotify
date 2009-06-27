@@ -1,4 +1,4 @@
-package de.felixbruns.jotify.gateway;
+package de.felixbruns.jotify.gateway.util;
 
 import java.util.HashMap;
 import java.util.Map;

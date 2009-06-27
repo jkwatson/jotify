@@ -3,30 +3,47 @@ package de.felixbruns.jotify.gateway;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import de.felixbruns.jotify.cache.Cache;
 import de.felixbruns.jotify.cache.FileCache;
+import de.felixbruns.jotify.cache.MemoryCache;
 import de.felixbruns.jotify.crypto.RSA;
 import de.felixbruns.jotify.exceptions.AuthenticationException;
 import de.felixbruns.jotify.exceptions.ConnectionException;
 import de.felixbruns.jotify.exceptions.ProtocolException;
+import de.felixbruns.jotify.gateway.stream.ChannelStreamer;
+import de.felixbruns.jotify.gateway.stream.HTTPStreamer;
+import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
+import de.felixbruns.jotify.media.User;
 import de.felixbruns.jotify.protocol.Command;
 import de.felixbruns.jotify.protocol.CommandListener;
 import de.felixbruns.jotify.protocol.Protocol;
 import de.felixbruns.jotify.protocol.Session;
 import de.felixbruns.jotify.protocol.channel.Channel;
 import de.felixbruns.jotify.protocol.channel.ChannelCallback;
+import de.felixbruns.jotify.protocol.channel.ChannelHeaderCallback;
 import de.felixbruns.jotify.util.GZIP;
+import de.felixbruns.jotify.util.XML;
+import de.felixbruns.jotify.util.XMLElement;
 
-public class GatewaySession implements Runnable, CommandListener {
-	private Session  session;
-	private Protocol protocol;
-	private Cache    cache;
-	private boolean  close;
+public class GatewayConnection implements Runnable, CommandListener {
+	private Session   session;
+	private Protocol  protocol;
+	private User      user;
+	private Semaphore wait;
+	private Cache     cache;
+	private long      timeout;
+	private TimeUnit  unit;
 	
 	/**
-	 * Constants for browsing media.
+	 * Enum for browsing media.
 	 */
 	public enum BrowseType {
 		ARTIST(1), ALBUM(2), TRACK(3);
@@ -53,13 +70,47 @@ public class GatewaySession implements Runnable, CommandListener {
 	}
 	
 	/**
-	 * Create a new JotifySession instance.
+	 * Create a new GatewayConnection using the default {@link Cache}
+	 * implementation and timeout value (10 seconds).
 	 */
-	public GatewaySession(){
+	public GatewayConnection(){
+		this(new FileCache(), 10, TimeUnit.SECONDS);
+	}
+	
+	/**
+	 * Create a new GatewayConnection using a specified {@link Cache}
+	 * implementation and timeout. Note: A {@link TimeoutException}
+	 * may also be caused by geographical restrictions.
+	 * 
+	 * @param cache   Cache implementation to use.
+	 * @param timeout Timeout value to use.
+	 * @param unit    TimeUnit to use for timeout.
+	 * 
+	 * @see MemoryCache
+	 * @see FileCache
+	 */
+	public GatewayConnection(Cache cache, long timeout, TimeUnit unit){
 		this.session  = new Session();
 		this.protocol = null;
-		this.cache    = new FileCache();
-		this.close    = false;
+		this.user     = null;
+		this.wait     = new Semaphore(2);
+		this.cache    = cache;
+		this.timeout  = timeout;
+		this.unit     = unit;
+		
+		/* Acquire permits (country, prodinfo). */
+		this.wait.acquireUninterruptibly(2);
+	}
+	
+	/**
+	 * Set timeout for requests.
+	 * 
+	 * @param timeout Timeout value to use.
+	 * @param unit    TimeUnit to use for timeout.
+	 */
+	public void setTimeout(long timeout, TimeUnit unit){
+		this.timeout = timeout;
+		this.unit    = unit;
 	}
 	
 	/**
@@ -72,25 +123,34 @@ public class GatewaySession implements Runnable, CommandListener {
 	 * @throws AuthenticationException
 	 */
 	public void login(String username, String password) throws ConnectionException, AuthenticationException {
-		/* Authenticate session. */
+		/* Check if we're already logged in. */
+		if(this.protocol != null){
+			throw new IllegalStateException("Already logged in!");
+		}
+		
+		/* Authenticate session and get protocol. */
 		this.protocol = this.session.authenticate(username, password);
+		
+		/* Create user object. */
+		this.user = new User(username);
 		
 		/* Add command handler. */
 		this.protocol.addListener(this);
 	}
 	
 	/**
-	 *  Closes connection to a Spotify server.
+	 *  Closes the connection to a Spotify server.
 	 *  
 	 *  @throws ConnectionException
 	 */
 	public void close() throws ConnectionException {
-		this.close = true;
-		
 		/* This will make receivePacket return immediately. */
 		if(this.protocol != null){
 			this.protocol.disconnect();
 		}
+		
+		/* Reset protocol to 'null'. */
+		this.protocol = null;
 	}
 	
 	/**
@@ -98,26 +158,90 @@ public class GatewaySession implements Runnable, CommandListener {
 	 *  Use a {@link Thread} to run this.
 	 */
 	public void run(){
+		/* Check if we're logged in. */
 		if(this.protocol == null){
-			throw new Error("You need to login first!");
+			throw new IllegalStateException("You need to login first!");
 		}
 		
+		/* Continuously receive packets until connection is closed. */
 		try{
-			while(!this.close){
+			while(true){
 				this.protocol.receivePacket();
 			}
 		}
 		catch(ProtocolException e){
-			/* Do nothing. Just disconnect. */
+			/* Connection was closed. */
+		}
+	}
+	
+	/**
+	 * Get user info.
+	 * 
+	 * @return A xml string.
+	 */
+	public String user(){
+		/* Wait for data to become available (country, prodinfo). */
+		try{
+			if(!this.wait.tryAcquire(2, this.timeout, this.unit)){
+				throw new TimeoutException("Timeout while waiting for user data.");
+			}
+		}
+		catch(InterruptedException e){
+			throw new RuntimeException(e);
+		}
+		catch(TimeoutException e){
+			throw new RuntimeException(e);
 		}
 		
-		/* Disconnect. */
+		/* Release so this can be called again. */
+		this.wait.release(2);
+		
+		/* Build xml string. */
+		String xml =
+			"<user>" + 
+				"<name>" + this.user.getName() + "</name>" +
+				"<country>" + this.user.getCountry() + "</country>" +
+				"<type>" + this.user.getType() + "</type>" +
+			"</user>";
+		
+		return xml;
+	}
+	
+	/**
+	 * Fetch a toplist.
+	 * 
+	 * @param type     A toplist type. e.g. "artist", "album" or "track".
+	 * @param region   A region code or null. e.g. "SE" or "DE".
+	 * @param username A username or null.
+	 * 
+	 * @return A xml string.
+	 */
+	public String toplist(String type, String region, String username){
+		/* Create channel callback and parameter map. */
+		ChannelCallback callback   = new ChannelCallback();
+		Map<String, String> params = new HashMap<String, String>();
+		
+		/* Add parameters. */
+		params.put("type", type);
+		params.put("region", region);
+		params.put("username", username);
+		
+		/* Send search query. */
 		try{
-			this.protocol.disconnect();
+			this.protocol.sendToplistRequest(callback, params);
 		}
-		catch(ConnectionException e){
-			/* Don't care. */
+		catch(ProtocolException e){
+			return null;
 		}
+		
+		/* Get data and inflate it. */
+		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
+		
+		/* Cut off that last 0xFF byte... */
+		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		
+		/* Return xml string. */
+		return new String(data, Charset.forName("UTF-8"));
 	}
 	
 	/**
@@ -140,7 +264,7 @@ public class GatewaySession implements Runnable, CommandListener {
 		}
 		
 		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get());
+		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
 		
 		/* Cut off that last 0xFF byte... */
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
@@ -178,7 +302,7 @@ public class GatewaySession implements Runnable, CommandListener {
 			}
 			
 			/* Get data. */
-			data = callback.get();
+			data = callback.get(this.timeout, this.unit);
 			
 			/* Save to cache. */
 			if(this.cache != null){
@@ -213,7 +337,7 @@ public class GatewaySession implements Runnable, CommandListener {
 		}
 		
 		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get());
+		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
 		
 		/* Cut off that last 0xFF byte... */
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
@@ -242,7 +366,7 @@ public class GatewaySession implements Runnable, CommandListener {
 		}
 		
 		/* Get data and inflate it. */
-		byte[] data = callback.get();
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		/* Return string. */
 		return	"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
@@ -255,26 +379,46 @@ public class GatewaySession implements Runnable, CommandListener {
 	 */
 	public void stream(String id, String fileId, OutputStream stream){
 		/* Create track and set file id. */
-		Track track = new Track(id, null, null, null);
+		Result result = Result.fromXMLElement(XML.load(browse(BrowseType.TRACK, id)));
+		Track  track  = result.getTracks().get(0);
 		
-		track.addFile(fileId);
-		
-		/* Create channel callback */
-		ChannelCallback callback = new ChannelCallback();
+		/* Create channel callbacks. */
+		ChannelCallback       callback       = new ChannelCallback();
+		ChannelHeaderCallback headerCallback = new ChannelHeaderCallback();
 		
 		/* Send play request (token notify + AES key). */
 		try{
 			this.protocol.sendAesKeyRequest(callback, track);
 		}
 		catch(ProtocolException e){
+			e.printStackTrace();
+			
 			return;
 		}
 		
 		/* Get AES key. */
-		byte[] key = callback.get();
+		byte[] key = callback.get(this.timeout, this.unit);
 		
-		/* Create channel streamer. */
-		new ChannelStreamer(this.protocol, track, key, stream);
+		/* Send header request to check for HTTP stream. */
+		try{
+			this.protocol.sendSubstreamRequest(headerCallback, track, 0, 0);
+		}
+		catch(ProtocolException e){
+			
+			e.printStackTrace();
+			return;
+		}
+		
+		/* Get list of HTTP stream URLs. */
+		List<String> urls = headerCallback.get(this.timeout, this.unit);
+		
+		/* If we got 4 HTTP stream URLs use them, otherwise use default channel streaming. */
+		if(urls.size() == 4){
+			new HTTPStreamer(urls, track, key, stream);
+		}
+		else{
+			new ChannelStreamer(this.protocol, track, key, stream);
+		}
 	}
 	
 	/**
@@ -341,22 +485,32 @@ public class GatewaySession implements Runnable, CommandListener {
 				break;
 			}
 			case Command.COMMAND_COUNTRYCODE: {
-				System.out.println("Country: " + new String(payload, Charset.forName("UTF-8")));
+				this.user.setCountry(new String(payload, Charset.forName("UTF-8")));
+				
+				/* Release 'country' permit. */
+				this.wait.release();
 				
 				break;
 			}
 			case Command.COMMAND_NOTIFY: {
 				/* HTML-notification, shown in a yellow bar in the official client. */
 				/* Skip 11 byte header... */
-				System.out.println("Notification: " + new String(
+				this.user.setNotification(new String(
 					Arrays.copyOfRange(payload, 11, payload.length), Charset.forName("UTF-8")
 				));
 				
 				break;
 			}
 			case Command.COMMAND_PRODINFO: {
+				XMLElement prodinfoElement = XML.load(new String(payload, Charset.forName("UTF-8")));
+				
+				this.user = User.fromXMLElement(prodinfoElement, this.user);
+				
+				/* Release 'prodinfo' permit. */
+				this.wait.release();
+				
 				/* Payload is uncompressed XML. */
-				if(!new String(payload, Charset.forName("UTF-8")).contains("<type>premium</type>")){
+				if(!this.user.isPremium()){
 					System.err.println(
 						"Sorry, you need a premium account to use jotify (this is a restriction by Spotify)."
 					);

@@ -8,134 +8,413 @@
 		<style type="text/css" media="screen">
 			@import url('style.css');
 		</style>
-		<script type="text/javascript" src="jquery.js"></script>
+		<script type="text/javascript" src="jquery.min.js"></script>
+		<script type="text/javascript" src="jquery.tablesorter.min.js"></script>
+		<script type="text/javascript" src="jotify.js"></script>
 		<script type="text/javascript">
 			//<![CDATA[
-				var session  = '';
-				var hostname = window.location.hostname;
+				/* Jotify gateway. */
+				var jotify;
+				var session;
 				
+				/* HTML audio element. */
+				var audio;
+				
+				/* Tracks and queue. */
+				var currentTracks;
+				var currentTrack;
+				var queuedTracks;
+				
+				/* Display an error message. */
+				var error = function(message){
+					$('#error-label').html(message);
+					
+					$('#info-label').hide();
+					$('#success-label').hide();
+					$('#error-label').show();
+				};
+				
+				/* Display a success message. */
+				var success = function(message){
+					$('#success-label').html(message);
+					
+					$('#info-label').hide();
+					$('#error-label').hide();
+					$('#success-label').show();
+				};
+				
+				/* Display an info message. */
+				var info = function(message){
+					$('#info-label').html(message);
+					
+					$('#error-label').hide();
+					$('#success-label').hide();
+					$('#info-label').show();
+				};
+				
+				/* Append a track to the table. */
+				var appendTrack = function(index, track){
+					$('#search-table > tbody').append(
+						'<tr>' +
+							'<td>' +
+								'<a id="track-' + index + '" href="#" rel="' + index + '">' + track.title + '</a>' +
+							'</td>' +
+							'<td>' +
+								'<a id="artist-' + index + '" href="#" rel="' + index + '">' + track.artist + '</a>' +
+							'</td>' +
+							'<td style="text-align: right;">' + formatSeconds(track.length / 1000) + '</td>' +
+							'<td class="popularity-indicator" style="background-image: ' + popularityIndicator(track.popularity) + ';">' +
+								'<span style="display: none;">' + track.popularity + '</span>' +
+							'</td>' +
+							'<td>' +
+								'<a id="album-' + index + '" href="#" rel="' + index + '">' + track.album + '</a>' +
+							'</td>' +
+						'</tr>'
+					);
+				};
+				
+				/* Append a track to the table. */
+				/*var appendTrack2 = function(index, track){
+					$('#album-table > tbody').append(
+						'<tr>' +
+							'<td>' + track['track-number'] + '</td>' +
+							'<td>' +
+								'<a id="track-' + index + '" href="#" rel="' + index + '">' + track.title + '</a>' +
+							'</td>' +
+							'<td style="text-align: right;">' + formatSeconds(track.length / 1000) + '</td>' +
+							'<td>' +
+								'<div class="popularity-indicator" style="background-image: ' + popularityIndicator(track.popularity) + ';"></div>' +
+							'</td>' +
+						'</tr>'
+					);
+				};*/
+				
+				
+				var playTrack = function(track){
+					/* Set current track. */
+					currentTrack = track;
+					
+					/* Play selected track (play() will be called in 'canplay' event handler). */
+					audio.src = jotify.stream(track, session);
+					audio.load();
+					
+					/* Show now playing label. */
+					$('#playing-label').show();
+					$('#playing-label').html(
+						'<h4 title="' + track.title + '">' + track.title.toString().truncate() + '</h4><br />' +
+						track.artist + ' (' + track.album + ')'
+					);
+					
+					/* Show progress. */
+					$('#progress-label').show();
+					$('#progress-label').html(
+						'00:00 / ' + formatSeconds(track.length / 1000)
+					);
+					
+					/* Show album cover. */
+					$('#cover-label').show();
+					$('#cover-label').attr('src', jotify.image(track.cover, session));
+				};
+				
+				/*var loadUser = function(){
+					jotify.user(session, {
+						success: function(data){
+							
+						},
+						error: error
+					});
+				};*/
+				
+				var drawProgress = function(position, length){
+					var canvas    = document.getElementById('progress-bar');
+					var ctx       = canvas.getContext("2d");
+					var progress  = position / length;
+					var seconds   = formatSeconds(position);
+					var remaining = '-' + formatSeconds(length - position);
+					
+					ctx.globalCompositeOperation = 'source-over';
+					
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					
+					ctx.shadowBlur  = 2.0;
+					ctx.shadowColor = "#003E88";
+					ctx.fillStyle   = "#003E88";
+					
+					ctx.fillRect(2, 2, (canvas.width - 4) * progress, canvas.height - 4);
+					
+					ctx.globalCompositeOperation = 'xor';
+					
+					ctx.shadowBlur  = 0.0;
+					ctx.shadowColor = "transparent black";
+					
+					ctx.textBaseline = 'middle';
+					ctx.fillText(seconds, 5, canvas.height / 2);
+					ctx.fillText(remaining, canvas.width - ctx.measureText(remaining).width - 5, canvas.height / 2);
+					
+					//ctx.fillStyle = "rgba(0, 0, 200, 0.5)";
+					//ctx.fillRect(150, 0, 50, 20);
+				};
+				
+				/* DOM ready. */
 				$(document).ready(function(){
-					$('#login').click(function(){
-						$.get('http://' + hostname + ':8080/auth', {
-							username : $('#username').val(),
-							password : $('#password').val()
-						}, function(data, textStatus){
-							if(data.indexOf('session') == 0){
-								session = data.substr(8);
+					/* Create Jotify object. */
+					jotify = new Jotify({gateway: 'http://' + window.location.hostname + ':8080'});
+					
+					/* Try to auto-login. */
+					if((session = localStorage.getItem('jotify-session')) != null){
+						jotify.check(session, {
+							success: function(data){
+								success('Automatically logged in!');
 								
-								$('#message').text('Successfully logged in!');
-								$('#message').css('border', '2px solid #00DD00');
+								//loadUser();
 								
-								$('#login-panel').hide();
-								$('#search-panel').show();
-							}
-							else if(data.indexOf('error') == 0){
-								$('#message').text(data.substr(6));
-								$('#message').css('border', '2px solid #EE0000');
-							}
-						}, "text");
+								$('#main-panel').show();
+							},
+							error: function(data){
+								info('Please login using a premium account!');
+								
+								$('#login-panel').show();
+							},
+						});
+					}
+					else{
+						info('Please login using a premium account!');
 						
+						$('#login-panel').show();
+					}
+					
+					/* Get audio element. */
+					audio = document.getElementById('audio');
+					
+					/* Bind to audio element events. */
+					$(audio).bind('canplay', function(){
+						audio.play();
+					});
+					$(audio).bind('timeupdate', function(){						
+						drawProgress(audio.currentTime, currentTrack.length / 1000);
+					});
+					$(audio).bind('ended', function(){
+						drawProgress(currentTrack.length / 1000, currentTrack.length / 1000);
+						
+						playTrack(queuedTracks.shift());
 					});
 					
-					$('#search').click(function(){
-						$.get('http://' + hostname + ':8080/search', {
-							session : session,
-							query   : $('#query').val()
-						}, function(data, textStatus){
-							var portrait = $('artists > artist > portrait > id', data).text();
-							
-							$('#portrait').attr('src',
-								'http://' + hostname + ':8080/image?session=' + session + '&id=' + portrait
-							);
-							
-							$('#tracks').empty();
-							
-							$('tracks > track', data).each(function(index){
-								var id     = $(this).find('id').text();
-								var file   = $(this).find('file').attr('id');
-								var artist = $(this).find('artist').text();
-								var title  = $(this).find('title').text();
+					/* Make table sortable. */
+					$('#search-table').tablesorter();
+					
+					/* Login handler. */
+					$('#login').click(function(event){
+						jotify.login({username: $('#username').val(), password: $('#password').val()}, {
+							success: function(data){
+								session = data.session;
 								
-								$('#tracks').append(
-									'<li><a id="track-' + index + '" href="http://' + hostname + ':8080/stream?session=' + session +
-									'&id=' + id + '&file=' + file + '" title="' + artist + ' - ' + title + '">' +
-									artist + ' - ' + title + '</a></li>'
-								);
-							});
-							
-							$('a[ id ^= "track" ]').click(function(event){
-								$('#audio').html(
-									'<audio controls="true" autoplay="true" src="' + $(this).attr('href') + '">' +
-									'	Your browser doesn\'t support HTML 5 audio!' +
-									'	Try the last <a href="http://www.mozilla.com/en-US/firefox/all-beta.html" target="_blank">Firefox 3.5 beta</a>.' +
-									'</audio>'
-								);
+								localStorage.setItem('jotify-session', session);
 								
-								$('#playing').show();
-								$('#playing').text($(this).attr('title'));
+								success('Successfully logged in!');
 								
-								event.preventDefault();
-							});
-							
-							$('#message').text('Search results for \'' + $('#query').val() + '\'.');
-							$('#message').css('border', '2px solid #BBBBBB');
+								//loadUser();
+								
+								$('#login-panel').hide();
+								$('#main-panel').show();
+							},
+							error: error
 						});
+						
+						event.preventDefault();
+					});
+					
+					/* Search handler. */
+					$('#search, #did-you-mean').live('click', function(event){
+						var target = $(event.target);
+						
+						if(target.is('a')){
+							$('#query').val(target.attr('rel'));
+						}
+						
+						jotify.search({query: $('#query').val()}, session, {
+							success: function(data){
+								/* Clear track table. */
+								$('#search-table > tbody').empty();
+								
+								/* Get tracks from search result. */
+								currentTracks = data.result.tracks;
+								
+								if(typeof(currentTracks.track) == 'undefined'){
+									currentTracks = [];
+								}
+								else if(currentTracks.track instanceof Array){
+									currentTracks = currentTracks.track;
+								}
+								else{
+									currentTracks = [currentTracks.track];
+								}
+								
+								/* Loop over tracks and add them to the table. */
+								for(var i in currentTracks){
+									appendTrack(i, currentTracks[i]);
+								}
+								
+								/* Trigger update event (tablesorter). */
+								$('#search-table').trigger('update');
+								
+								if(typeof(data.result['did-you-mean']) != 'undefined'){
+									info(
+										'Search results for <strong>' + $('#query').val() +
+										'</strong>. Did you mean <a id="did-you-mean" href="#" rel="' +
+										data.result['did-you-mean'] + '">' + data.result['did-you-mean'] + '</a>?'
+									);
+								}
+								else{
+									info('Search results for <strong>' + $('#query').val() + '</strong>.');
+								}
+							},
+							error: error
+						});
+						
+						event.preventDefault();
+					});
+					
+					/* Bind live click handler to tracks. */
+					$('a[ id ^= "track" ]').live('click', function(event){
+						var track = currentTracks[$(this).attr('rel')];
+						
+						queuedTracks = currentTracks.slice($(this).attr('rel') + 1);
+						
+						playTrack(track);
+						
+						event.preventDefault();
+					});
+					
+					/* Bind live click handler to albums. */
+					$('a[ id ^= "album" ]').live('click', function(event){
+						var track = currentTracks[$(this).attr('rel')];
+						
+						/* Browse for selected album. */
+						jotify.browse({type: '2', id: track['album-id']}, session, {
+							success: function(data){
+								var discs = data.album.discs;
+								
+								if(typeof(discs.disc) == 'undefined'){
+									discs = [];
+								}
+								else if(discs.disc instanceof Array){
+									discs = discs.disc;
+								}
+								else{
+									discs = [discs.disc];
+								}
+								
+								/* Clear track table. */
+								$('#search-table > tbody').empty();
+								
+								currentTracks = [];
+								
+								/* Loop over discs and tracks and add them to the table. */
+								for(var i in discs){
+									for(var j in discs[i].track){
+										discs[i].track[j]['album-id'] = data.album.id;
+										discs[i].track[j].album       = data.album.name;
+										discs[i].track[j].cover       = data.album.cover;
+										
+										currentTracks.push(discs[i].track[j]);
+										
+										appendTrack(currentTracks.length - 1, discs[i].track[j]);
+									}
+								}
+								
+								/* Trigger update event (tablesorter). */
+								$('#search-table').trigger('update');
+								
+								info('<strong>' + data.album.name + '</strong> by <strong>' + data.album.artist + '</strong>');
+							},
+							error: error
+						});
+						
+						event.preventDefault();
 					});
 				});
 			//]]>
 		</script>
 	</head>
 	<body>
+		<audio id="audio">
+			Your browser doesn't support HTML 5 audio!
+		</audio>
 		<div id="container">
 			<div id="header">
 				<div class="left">
-					<img src="icon.png" alt="icon" />
-					<img src="logo.png" alt="logo" />
+					<img src="images/icon.png" alt="icon" />
+					<img src="images/logo.png" alt="logo" />
 					<br />
 					<br />
 					<h4>A Java Spotify client library</h4>
 				</div>
+				<div class="right">
+					<div class="left">
+						<div id="playing-label" style="display: none;"></div>
+						<canvas id="progress-bar" width="350" height="15"></canvas>
+					</div>
+					<img id="cover-label" class="right" src="images/cover.png" style="display: none;" />
+					<br class="clear" />
+				</div>
 				<br class="clear" />
 			</div>
 			<div id="content">
-				<div id="message" class="box">
-					Please login using a premium account!
+				<div id="info-label" class="label">
+					Please wait... <img src="images/load.gif" />
 				</div>
+				<div id="error-label" class="label" style="display: none;"></div>
+				<div id="success-label" class="label" style="display: none;"></div>
 				<br />
-				<div id="login-panel">
+				<div id="login-panel" style="display: none;">
 					<input type="text" id="username" />
 					<input type="password" id="password" />
 					<input type="submit" id="login" value="Login" />
 				</div>
-				<div id="search-panel" style="display: none;">
-					<div class="left">
+				<div id="main-panel" style="display: none;">
+					<div id="search-panel">
 						<input type="text" id="query" />
 						<input type="submit" id="search" value="Search" />
 					</div>
-					
-					<div id="audio" class="right">
-						<!-- Empty -->
-					</div>
-					
-					<span id="playing" class="right box" style="margin-right: 10px; display: none;">
-						<!-- Empty -->
-					</span>
-					
 					<br />
-					<br class="clear" />
-					<br />
-					
-					<img id="portrait" class="right" />
-					
-					<ul id="tracks" class="left">
-						<!-- Empty -->
-					</ul>
-					
-					<br class="clear" />
+					<table id="search-table" cellpadding="2" cellspacing="2" style="display: noane;">
+						<thead>
+							<tr>
+								<th>Track</th>
+								<th>Artist</th>
+								<th>Time</th>
+								<th>Popularity</th>
+								<th>Album</th>
+							</tr>
+						</thead>
+						<tbody id="tracks">
+							<!-- Empty -->
+						</tbody>
+					</table>
+<!--					<div id="browse-album">
+						<img src="#" style="width: 20%;" class="left" />
+						<div class="right" style="width: 79%;">
+							<h6>Artist &raquo; Album</h6>
+							<br />
+							<table id="album-table" cellpadding="2" cellspacing="2">
+								<thead>
+									<tr>
+										<th>&nbsp;</th>
+										<th>Track</th>
+										<th>Time</th>
+										<th>Popularity</th>
+									</tr>
+								</thead>
+								<tbody>
+								</tbody>
+							</table>
+						</div>
+						<br class="clear";
+					</div>-->
 				</div>
 			</div>
 			<div id="footer">
-				Copyright &copy; 2009, Felix Bruns
+				Copyright &copy 2009, Felix Bruns
 			</div>
 		</div>
 	</body>
