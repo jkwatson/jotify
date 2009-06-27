@@ -20,6 +20,10 @@ public class ChannelCallback implements ChannelListener {
 		this.done.acquireUninterruptibly();
 	}
 	
+	public void channelHeader(Channel channel, byte[] header){
+		/* Ignore */
+	}
+	
 	public void channelData(Channel channel, byte[] data){
 		ByteBuffer buffer = ByteBuffer.wrap(data);
 		
@@ -36,10 +40,6 @@ public class ChannelCallback implements ChannelListener {
 	
 	public void channelError(Channel channel){
 		this.done.release();
-	}
-	
-	public void channelHeader(Channel channel, byte[] header){
-		/* Ignore */
 	}
 	
 	private byte[] getData(){

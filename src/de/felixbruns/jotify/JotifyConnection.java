@@ -21,21 +21,23 @@ import de.felixbruns.jotify.cache.*;
 import de.felixbruns.jotify.crypto.*;
 import de.felixbruns.jotify.exceptions.*;
 import de.felixbruns.jotify.media.*;
+import de.felixbruns.jotify.media.parser.XMLMediaParser;
 import de.felixbruns.jotify.player.*;
+import de.felixbruns.jotify.player.http.HTTPStreamPlayer;
 import de.felixbruns.jotify.protocol.*;
 import de.felixbruns.jotify.protocol.channel.*;
 import de.felixbruns.jotify.util.*;
 
 public class JotifyConnection implements Jotify, CommandListener {
-	private Session       session;
-	private Protocol      protocol;
-	private User          user;
-	private Semaphore     userSemaphore;
-	private ChannelPlayer player;
-	private Cache         cache;
-	private float         volume;
-	private long          timeout;
-	private TimeUnit      unit;
+	private Session   session;
+	private Protocol  protocol;
+	private User      user;
+	private Semaphore userSemaphore;
+	private Player    player;
+	private Cache     cache;
+	private float     volume;
+	private long      timeout;
+	private TimeUnit  unit;
 	
 	/**
 	 * Enum for browsing media.
@@ -209,7 +211,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		params.put("region", region);
 		params.put("username", username);
 		
-		/* Send search query. */
+		/* Send toplist request. */
 		try{
 			this.protocol.sendToplistRequest(callback, params);
 		}
@@ -223,11 +225,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* Cut off that last 0xFF byte... */
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
-		/* Load XML. */
-		XMLElement toplistElement = XML.load(data, Charset.forName("UTF-8"));
-		
 		/* Create result from XML. */
-		return Result.fromXMLElement(toplistElement);
+		return XMLMediaParser.parseResult(data, "UTF-8");
 	}
 	
 	/**
@@ -257,11 +256,12 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* Cut off that last 0xFF byte... */
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
-		/* Load XML. */
-		XMLElement resultElement = XML.load(data, Charset.forName("UTF-8"));
-		
 		/* Create result from XML. */
-		return Result.fromXMLElement(query, resultElement);
+		Result result = XMLMediaParser.parseResult(data, "UTF-8");
+		
+		result.setQuery(query);
+		
+		return result;
 	}
 	
 	/**
@@ -324,7 +324,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see BrowseType
 	 */
-	private XMLElement browse(BrowseType type, String id){
+	private Object browse(BrowseType type, String id){
 		/* Create channel callback. */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -342,8 +342,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* Cut off that last 0xFF byte... */
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
-		/* Load XML. */
-		return XML.load(data, Charset.forName("UTF-8"));
+		/* Create object from XML. */
+		return XMLMediaParser.parse(data, "UTF-8");
 	}
 	
 	/**
@@ -358,14 +358,13 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 */
 	public Artist browseArtist(String id){
 		/* Browse. */
-		XMLElement artistElement = this.browse(BrowseType.ARTIST, id);
+		Object artist = this.browse(BrowseType.ARTIST, id);
 		
-		if(artistElement == null){
-			return null;
+		if(artist instanceof Artist){
+			return (Artist)artist;
 		}
 		
-		/* Create result from XML. */
-		return Artist.fromXMLElement(artistElement);
+		return null;
 	}
 	
 	/**
@@ -394,14 +393,13 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 */
 	public Album browseAlbum(String id){
 		/* Browse. */
-		XMLElement albumElement = this.browse(BrowseType.ALBUM, id);
+		Object album = this.browse(BrowseType.ALBUM, id);
 		
-		if(albumElement == null){
-			return null;
+		if(album instanceof Album){
+			return (Album)album;
 		}
 		
-		/* Create result from XML. */
-		return Album.fromXMLElement(albumElement);
+		return null;
 	}
 	
 	/**
@@ -431,14 +429,13 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 */
 	public Result browseTrack(String id){
 		/* Browse. */
-		XMLElement resultElement = this.browse(BrowseType.TRACK, id);
+		Object result = this.browse(BrowseType.TRACK, id);
 		
-		if(resultElement == null){
-			return null;
+		if(result instanceof Result){
+			return (Result)result;
 		}
 		
-		/* Create result from XML. */
-		return Result.fromXMLElement(resultElement);
+		return null;
 	}
 	
 	/**
@@ -508,11 +505,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 			}
 		}
 		
-		/* Load XML. */
-		XMLElement resultElement = XML.load(data, Charset.forName("UTF-8"));
-		
 		/* Create result from XML. */
-		return Result.fromXMLElement(resultElement);
+		return XMLMediaParser.parseResult(data, "UTF-8");
 	}
 	
 	/**
@@ -1122,8 +1116,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @param listener A {@link PlaybackListener} receiving playback status updates.
 	 */
 	public void play(Track track, PlaybackListener listener){
-		/* Create channel callback */
-		ChannelCallback callback = new ChannelCallback();
+		/* Create channel callbacks. */
+		ChannelCallback       callback       = new ChannelCallback();
+		ChannelHeaderCallback headerCallback = new ChannelHeaderCallback();
 		
 		/* Send play request (token notify + AES key). */
 		try{
@@ -1136,9 +1131,26 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* Get AES key. */
 		byte[] key = callback.get(this.timeout, this.unit);
 		
-		/* Create channel player. */
-		this.player = new ChannelPlayer(this.protocol, track, key, listener);
-		this.player.volume(this.volume);
+		/* Send header request to check for HTTP stream. */
+		try{
+			this.protocol.sendSubstreamRequest(headerCallback, track, 0, 0);
+		}
+		catch(ProtocolException e){
+			return;
+		}
+		
+		/* Get list of HTTP stream URLs. */
+		List<String> urls = headerCallback.get(this.timeout, this.unit);
+		
+		/* If we got 4 HTTP stream URLs use them, otherwise use default channel streaming. */
+		if(urls.size() == 4){
+			this.player = new HTTPStreamPlayer(urls, track, key, listener);
+			this.player.volume(this.volume);
+		}
+		else{
+			this.player = new ChannelPlayer(this.protocol, track, key, listener);
+			this.player.volume(this.volume);
+		}
 		
 		/* Start playing. */
 		this.play();

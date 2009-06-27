@@ -34,7 +34,7 @@ import de.felixbruns.jotify.protocol.channel.ChannelListener;
 import de.felixbruns.jotify.util.MathUtilities;
 import de.felixbruns.jotify.util.SpotifyOggHeader;
 
-public class ChannelPlayer implements Runnable, ChannelListener {
+public class ChannelPlayer implements Runnable, Player, ChannelListener {
 	/* 
 	 * Cipher implementation, key and IV
 	 * for decryption of audio stream.
@@ -339,6 +339,10 @@ public class ChannelPlayer implements Runnable, ChannelListener {
 		
 		/* Set player status. */
 		this.active = false;
+	}
+	
+	public void play(Track track, PlaybackListener listener) {
+		this.play();
 	}
 	
 	/**
