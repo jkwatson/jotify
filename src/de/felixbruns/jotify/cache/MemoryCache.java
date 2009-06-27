@@ -1,7 +1,9 @@
 package de.felixbruns.jotify.cache;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -97,5 +99,25 @@ public class MemoryCache implements Cache {
 	 */
 	public void store(String category, String hash, byte[] data, int size){
 		this.data.put(category + "-" + hash, Arrays.copyOf(data, size));
+	}
+	
+	
+	/**
+	 * List data in a cache category.
+	 * 
+	 * @param category The cache category to list.
+	 * 
+	 * @return A {@link List} of cache hashes.
+	 */
+	public List<String> list(String category){
+		List<String> hashes = new ArrayList<String>();
+		
+		for(String key : this.data.keySet()){
+			if(key.startsWith(category + "-")){
+				hashes.add(key.replaceFirst(category + "-", ""));
+			}
+		}
+		
+		return hashes;
 	}
 }

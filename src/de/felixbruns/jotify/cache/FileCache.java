@@ -1,6 +1,8 @@
 package de.felixbruns.jotify.cache;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A {@link Cache} implementation that stores data in the filesystem.
@@ -152,5 +154,28 @@ public class FileCache implements Cache {
 		catch(IOException e){
 			/* Ignore. */
 		}
+	}
+	
+	/**
+	 * List data in a cache category.
+	 * 
+	 * @param category The cache category to list.
+	 * 
+	 * @return A {@link List} of cache hashes.
+	 */
+	public List<String> list(String category){
+		List<String> hashes = new ArrayList<String>();
+		
+		/* Get subdirectory of the specified category. */
+		File directory = new File(this.directory, category);
+		
+		/* Loop over all files in that directory. */
+		for(File file : directory.listFiles()){
+			if(file.isFile()){
+				hashes.add(file.getName());
+			}
+		}
+		
+		return hashes;
 	}
 }

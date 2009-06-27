@@ -1,5 +1,7 @@
 package de.felixbruns.jotify.cache;
 
+import java.util.List;
+
 /**
  * Interface for cache implementations.
  * 
@@ -64,4 +66,13 @@ public interface Cache {
 	 * @param size     The size of the data.
 	 */
 	public void store(String category, String hash, byte[] data, int size);
+	
+	/**
+	 * List data in a cache category.
+	 * 
+	 * @param category The cache category to list.
+	 * 
+	 * @return A {@link List} of cache hashes.
+	 */
+	public List<String> list(String category);
 }
