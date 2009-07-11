@@ -52,7 +52,8 @@ public class Protocol {
 		/* Add a fallback servers if others don't work. */
 		servers.add(new InetSocketAddress("ap.spotify.com", 4070));
 		servers.add(new InetSocketAddress("ap.spotify.com", 80));
-				
+		servers.add(new InetSocketAddress("ap.spotify.com", 443));
+		
 		/* Try to connect to each server, stop trying when connected. */
 		for(InetSocketAddress server : servers){
 			try{
@@ -144,12 +145,12 @@ public class Protocol {
 		ByteBuffer serverPacketBuffer = ByteBuffer.allocate(1024);
 		
 		/* Read server random (first 2 bytes). */
-		if((ret = this.receive(this.session.serverRandom, 0, 2)) == -1){
+		if((ret = this.receive(this.session.serverRandom, 0, 2)) != 2){
 			throw new ProtocolException("Failed to read server random.");
 		}
 		
 		/* Check if we got a status message. */
-		if(this.session.serverRandom[0] != 0x00 || ret != 2){
+		if(this.session.serverRandom[0] != 0x00){
 			/*
 			 * Substatuses:
 			 * 0x01    : Client upgrade required.
