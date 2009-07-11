@@ -247,6 +247,15 @@ public class Album extends Media {
 	}
 	
 	/**
+	 * Set discs of this album.
+	 * 
+	 * @param discs A {@link List} of {@link Disc} objects.
+	 */
+	public void setDiscs(List<Disc> discs){
+		this.discs = discs;
+	}
+	
+	/**
 	 * Set discs for this album.
 	 * 
 	 * @param discs A {@link List} of {@link Disc} objects.

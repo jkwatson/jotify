@@ -419,6 +419,8 @@ public class XMLMediaParser implements XMLStreamConstants {
 				this.getElementString();
 			}
 			else if(name.equals("discs")){
+				List<Disc> discs = new ArrayList<Disc>();
+				
 				/* Go to next element and check if it is a start element. */
 				while(this.reader.next() == START_ELEMENT){
 					name = this.reader.getLocalName();
@@ -450,6 +452,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 						
 						/* Set disc tracks. */
 						disc.setTracks(tracks);
+						discs.add(disc);
 					}
 					else{
 						throw new XMLMediaParseException(
@@ -457,6 +460,8 @@ public class XMLMediaParser implements XMLStreamConstants {
 						);
 					}
 				}
+				
+				album.setDiscs(discs);
 			}
 			else if(name.equals("similar-albums")){
 				List<Album> similarAlbums = new ArrayList<Album>();
