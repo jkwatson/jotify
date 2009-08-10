@@ -288,7 +288,7 @@
 				/* DOM ready. */
 				$(document).ready(function(){
 					/* Create Jotify object. */
-					jotify = new Jotify({gateway: 'http://' + window.location.hostname + ':8080'});
+					jotify = new Jotify({gateway: 'http://' + window.location.hostname + ':' + window.location.port});
 					cache  = new Cache('jotify');
 					
 					//cache.clear();

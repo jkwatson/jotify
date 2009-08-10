@@ -23,8 +23,14 @@ public class GatewayApplication {
 	
 	/* Main thread to listen for client connections. */
 	public static void main(String[] args) throws IOException {
-		/* Create a HTTP server that listens for connections on port 8080. */
-		HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+		int port = 8080;
+		
+		if(args.length == 1){
+			port = Integer.parseInt(args[0]);		
+		}
+		
+		/* Create a HTTP server that listens for connections on port 8080 or the given port. */
+		HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 		
 		/* Set up content handlers. */
 		server.createContext("/",       new ContentHandler());

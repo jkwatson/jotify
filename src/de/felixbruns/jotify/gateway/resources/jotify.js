@@ -6,7 +6,7 @@
 
 function Jotify(options){
 	/* Set default values for required options. */
-	this.gateway = options.gateway || 'http://localhost:8080';
+	this.gateway = options.gateway || 'http://' + window.location.hostname + ':' + window.location.port;
 }
 
 /* Gateway request. */
