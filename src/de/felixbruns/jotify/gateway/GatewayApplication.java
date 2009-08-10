@@ -31,17 +31,19 @@ public class GatewayApplication {
 		server.createContext("/images", new ContentHandler());
 		
 		/* Set up gateway handlers. */
-		server.createContext("/start",    new StartHandler());
-		server.createContext("/check",    new CheckHandler());
-		server.createContext("/login",    new LoginHandler());
-		server.createContext("/close",    new CloseHandler());
-		server.createContext("/user",     new UserHandler());
-		server.createContext("/toplist",  new ToplistHandler());
-		server.createContext("/search",   new SearchHandler());
-		server.createContext("/image",    new ImageHandler());
-		server.createContext("/browse",   new BrowseHandler());
-		server.createContext("/playlist", new PlaylistHandler());
-		server.createContext("/stream",   new StreamHandler());
+		server.createContext("/start",     new StartHandler());
+		server.createContext("/check",     new CheckHandler());
+		server.createContext("/login",     new LoginHandler());
+		server.createContext("/close",     new CloseHandler());
+		server.createContext("/user",      new UserHandler());
+		server.createContext("/toplist",   new ToplistHandler());
+		server.createContext("/search",    new SearchHandler());
+		server.createContext("/image",     new ImageHandler());
+		server.createContext("/browse",    new BrowseHandler());
+		server.createContext("/playlist",  new PlaylistHandler());
+		server.createContext("/playlists", new PlaylistsHandler());
+		server.createContext("/stream",    new StreamHandler());
+		server.createContext("/play",      new PlayHandler());
 		
 		/* Set executor for server threads. */
 		server.setExecutor(executor);

@@ -20,7 +20,12 @@ public class ToplistHandler extends GatewayHandler {
 				GatewayConnection jotify = GatewayApplication.sessions.get(session);
 				
 				/* Get toplist. */
-				return jotify.toplist(type, region, username);
+				try{
+					return jotify.toplist(type, region, username);
+				}
+				catch(RuntimeException e){
+					return "<error>" + e.getCause().getMessage() + "</error>";
+				}
 			}
 			else{
 				return "<error>Session not found!</error>";

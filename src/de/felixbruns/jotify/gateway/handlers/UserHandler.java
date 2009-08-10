@@ -17,7 +17,12 @@ public class UserHandler extends GatewayHandler {
 				GatewayConnection jotify = GatewayApplication.sessions.get(session);
 				
 				/* Get user info. */
-				return jotify.user();
+				try{
+					return jotify.user();
+				}
+				catch(RuntimeException e){
+					return "<error>" + e.getCause().getMessage() + "</error>";
+				}
 			}
 			else{
 				return "<error>Session not found!</error>";

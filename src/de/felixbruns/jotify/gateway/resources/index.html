@@ -10,20 +10,28 @@
 		</style>
 		<script type="text/javascript" src="jquery.min.js"></script>
 		<script type="text/javascript" src="jquery.tablesorter.min.js"></script>
+		<script type="text/javascript" src="jquery.dimensions.js"></script>
+		<script type="text/javascript" src="jquery.jqModal.js"></script>
+		<script type="text/javascript" src="jquery.jqDnR.js"></script>
 		<script type="text/javascript" src="jotify.js"></script>
+		<script type="text/javascript" src="jotify.playlist.js"></script>
+		<script type="text/javascript" src="cache.js"></script>
+		<script type="text/javascript" src="prettyPrint.js"></script>
 		<script type="text/javascript">
 			//<![CDATA[
 				/* Jotify gateway. */
 				var jotify;
+				var cache;
 				var session;
 				
-				/* HTML audio element. */
+				/* HTML5 audio element. */
 				var audio;
 				
 				/* Tracks and queue. */
 				var currentTracks;
 				var currentTrack;
 				var queuedTracks;
+				var currentPlaylists;
 				
 				/* Display an error message. */
 				var error = function(message){
@@ -73,9 +81,9 @@
 					);
 				};
 				
-				/* Append a track to the table. */
-				/*var appendTrack2 = function(index, track){
-					$('#album-table > tbody').append(
+				/* Append a track to a disc table. */
+				var appendTrackToDisc = function(disc, index, track){
+					$('#disc-' + disc).append(
 						'<tr>' +
 							'<td>' + track['track-number'] + '</td>' +
 							'<td>' +
@@ -87,16 +95,21 @@
 							'</td>' +
 						'</tr>'
 					);
-				};*/
+				};
 				
-				
+				/* Play a track via HTML5 audio. */
 				var playTrack = function(track){
 					/* Set current track. */
 					currentTrack = track;
 					
 					/* Play selected track (play() will be called in 'canplay' event handler). */
-					audio.src = jotify.stream(track, session);
-					audio.load();
+					if($('#play-on-server-checkbox').is(':checked')){
+						jotify.play(track, session, {});
+					}
+					else{
+						audio.src = jotify.stream(track, session);
+						audio.load();
+					}
 					
 					/* Show now playing label. */
 					$('#playing-label').show();
@@ -116,15 +129,135 @@
 					$('#cover-label').attr('src', jotify.image(track.cover, session));
 				};
 				
-				/*var loadUser = function(){
+				/* Load user info. */
+				var loadUser = function(callback){
 					jotify.user(session, {
-						success: function(data){
-							
-						},
-						error: error
+						success: callback,
+						error: function(data){
+							loadUser(callback);
+						}
 					});
-				};*/
+				};
 				
+				var loadedUser = function(data){
+					//$('body').prepend(prettyPrint(data));
+				};
+				
+				/* Load playlists (uses cache and also retries if loading fails). */
+				var loadPlaylists = function(callback){
+					jotify.playlists(session, {
+						success: function(data){
+							/* Remote and local playlist containers. */
+							var rpc         = new PlaylistContainer(data);
+							var lpc         = null;
+							var playlistIds = [];
+							var playlists   = {};
+							
+							/* Check for locally cached playlists. */
+							if(cache.contains('playlists')){
+								lpc = new PlaylistContainer(
+									cache.load('playlists')
+								);
+							}
+							
+							/* Compare local and remote revision. */
+							if(lpc == null || rpc.getRevision() > lpc.getRevision()){
+								playlistIds = rpc.getPlaylists();
+								
+								/* Store new version in cache. */
+								cache.store('playlists', data);
+								
+								/* Load playlists, one at a time (notice the last argument: async = false). */
+								var index;
+								
+								for(index = 0; index < playlistIds.length; index++){
+									info("Loading playlist " + (index + 1) + "... <img src=\"images/load.gif\" />");
+									
+									jotify.playlist({id: playlistIds[index]}, session, {
+										success: function(data){
+											var rp = new Playlist(data);
+											var lp = null;
+											var trackIds = [];
+											
+											/* Check for a locally cached playlist. */
+											if(cache.contains('playlist-' + playlistIds[index])){
+												lp = new Playlist(
+													cache.load('playlist-' + playlistIds[index])
+												);
+											}
+											
+											info("Loaded playlist '" + rp.getName() + "'");
+											
+											/* Compare local and remote revision. */
+											if(lp == null || rp.getRevision() > lp.getRevision()){
+												/* Store new version in cache. */
+												cache.store('playlist-' + playlistIds[index], data);
+												
+												jotify.browse({ids: rp.getTracks().join(',')}, session, {
+													success: function(data){
+														/* Store in cache. */
+														cache.store('browse-' + rp.getTracks().join(','), data);
+														
+														playlists[rp.getName()] = data.result.tracks.track;
+													},
+													error: function(data){
+														info("Retrying playlist '" + rp.getName() + "'");
+														
+														index--;
+													}
+												}, false);
+											}
+											else{
+												playlists[lp.getName()] =
+													cache.load('browse-' + lp.getTracks().join(',')).result.tracks.track;
+											}
+										},
+										error: function(data){
+											info("Retrying playlist " + (index + 1) + "... <img src=\"images/load.gif\" />");
+											
+											index--;
+										}
+									}, false);
+								}
+							}
+							else{
+								playlistIds = lpc.getPlaylists();
+								
+								for(index in playlistIds){
+									p = new Playlist(
+										cache.load('playlist-' + playlistIds[index])
+									);
+									
+									playlists[p.getName()] =
+										cache.load('browse-' + p.getTracks().join(',')).result.tracks.track;
+								}
+							}
+							
+							if(typeof(callback) != 'undefined'){
+								callback(playlists);
+							}
+						},
+						error: function(data){
+							info("Loading playlists (retry)... <img src=\"images/load.gif\" />");
+							
+							loadPlaylists(callback);
+						}
+					});
+				};
+				
+				var loadedPlaylists = function(playlists){
+					currentPlaylists = playlists;
+					
+					info('Loaded playlists!');
+					
+					for(var index in currentPlaylists){
+						$('#playlist-list').append('<li><a id="playlist-' + index + '" href="#" rel="' + index + '">' + index + '</a></li>');
+					}
+					
+					$('#playlists-window-show').show();
+				};
+				
+				/* Draw audio progress bar. */
 				var drawProgress = function(position, length){
 					var canvas    = document.getElementById('progress-bar');
 					var ctx       = canvas.getContext("2d");
@@ -150,25 +283,28 @@
 					ctx.textBaseline = 'middle';
 					ctx.fillText(seconds, 5, canvas.height / 2);
 					ctx.fillText(remaining, canvas.width - ctx.measureText(remaining).width - 5, canvas.height / 2);
-					
-					//ctx.fillStyle = "rgba(0, 0, 200, 0.5)";
-					//ctx.fillRect(150, 0, 50, 20);
 				};
 				
 				/* DOM ready. */
 				$(document).ready(function(){
 					/* Create Jotify object. */
 					jotify = new Jotify({gateway: 'http://' + window.location.hostname + ':8080'});
+					cache  = new Cache('jotify');
+					
+					//cache.clear();
 					
 					/* Try to auto-login. */
-					if((session = localStorage.getItem('jotify-session')) != null){
+					if((session = localStorage['jotify-session']) != null){
 						jotify.check(session, {
 							success: function(data){
 								success('Automatically logged in!');
 								
 								//loadUser();
+								info("Loading playlists... <img src=\"images/load.gif\" />");
+								loadPlaylists(loadedPlaylists);
 								
 								$('#main-panel').show();
+								$('#play-on-server').show();
 							},
 							error: function(data){
 								info('Please login using a premium account!');
@@ -208,14 +344,17 @@
 							success: function(data){
 								session = data.session;
 								
-								localStorage.setItem('jotify-session', session);
+								localStorage['jotify-session'] = session;
 								
 								success('Successfully logged in!');
 								
 								//loadUser();
+								info("Loading playlists... <img src=\"images/load.gif\" />");
+								loadPlaylists(loadedPlaylists);
 								
 								$('#login-panel').hide();
 								$('#main-panel').show();
+								$('#play-on-server').show();
 							},
 							error: error
 						});
@@ -231,8 +370,13 @@
 							$('#query').val(target.attr('rel'));
 						}
 						
+						info("Searching for '" + $('#query').val() + "'... <img src=\"images/load.gif\" />");
+						
 						jotify.search({query: $('#query').val()}, session, {
 							success: function(data){
+								$('#browse-album').hide();
+								$('#search-table').show();
+								
 								/* Clear track table. */
 								$('#search-table > tbody').empty();
 								
@@ -248,6 +392,11 @@
 								else{
 									currentTracks = [currentTracks.track];
 								}
+								
+								//currentTracks = jotify.groupIdenticalTracks(currentTracks);
+								//currentTracks = jotify.sortTracks(currentTracks, 'popularity', 'asc');
+								
+								//$('body').prepend(prettyPrint(currentTracks));
 								
 								/* Loop over tracks and add them to the table. */
 								for(var i in currentTracks){
@@ -289,6 +438,10 @@
 					$('a[ id ^= "album" ]').live('click', function(event){
 						var track = currentTracks[$(this).attr('rel')];
 						
+						$('#album-cover').attr('src', 'images/cover.png');
+						
+						info("Browsing... <img src=\"images/load.gif\" />");
+						
 						/* Browse for selected album. */
 						jotify.browse({type: '2', id: track['album-id']}, session, {
 							success: function(data){
@@ -304,13 +457,35 @@
 									discs = [discs.disc];
 								}
 								
-								/* Clear track table. */
-								$('#search-table > tbody').empty();
+								$('#search-table').hide();
+								$('#browse-album').show();
+								
+								$('#album-cover').attr('src', jotify.image(data.album.cover, session));
+								$('#album-name').html(data.album.artist + ' &raquo; ' + data.album.name);
+								
+								/* Clear album table. */
+								//$('#album-table > tbody').empty();
+								$('#album-table').empty();
 								
 								currentTracks = [];
 								
 								/* Loop over discs and tracks and add them to the table. */
 								for(var i in discs){
+									$('#album-table').append([
+										'<thead>',
+										'	<tr>',
+										'		<th style="font-size: 1.2em;">',
+										'			<img src="images/disc.png" />',
+										' 			' + (1 * i + 1) + '</th>',
+										'		<th>Track</th>',
+										'		<th>Time</th>',
+										'		<th>Popularity</th>',
+										'	</tr>',
+										'</thead>',
+										'<tbody id="disc-' + i +'">',
+										'</tbody>'
+									].join(''));
+									
 									for(var j in discs[i].track){
 										discs[i].track[j]['album-id'] = data.album.id;
 										discs[i].track[j].album       = data.album.name;
@@ -318,12 +493,11 @@
 										
 										currentTracks.push(discs[i].track[j]);
 										
-										appendTrack(currentTracks.length - 1, discs[i].track[j]);
+										appendTrackToDisc(i, currentTracks.length - 1, discs[i].track[j]);
 									}
+									
+									$('#album-table').append('<tbody><tr><td colspan="4">&nbsp;</td></tr></tbody>');
 								}
-								
-								/* Trigger update event (tablesorter). */
-								$('#search-table').trigger('update');
 								
 								info('<strong>' + data.album.name + '</strong> by <strong>' + data.album.artist + '</strong>');
 							},
@@ -332,6 +506,44 @@
 						
 						event.preventDefault();
 					});
+					
+					/* Bind live click handler to playlists. */
+					$('a[ id ^= "playlist" ]').live('click', function(event){
+						var playlist = currentPlaylists[$(this).attr('rel')];
+						
+						$('#browse-album').hide();
+						$('#search-table').show();
+						
+						/* Clear track table. */
+						$('#search-table > tbody').empty();
+						
+						/* Get tracks from playlist. */
+						if(playlist instanceof Array){
+							currentTracks = playlist;
+						}
+						else{
+							currentTracks = [playlist];
+						}
+						
+						/* Loop over tracks and add them to the table. */
+						for(var i in currentTracks){
+							appendTrack(i, currentTracks[i]);
+						}
+						
+						/* Trigger update event (tablesorter). */
+						$('#search-table').trigger('update');
+						
+						info('Playlist <strong>' + $(this).attr('rel') + '</strong>.');
+						
+						$('#playlists-window').jqmHide();
+						
+						event.preventDefault();
+					});
+					
+					$('#playlists-window').jqm({overlay: 30, modal: true});
+					$('#playlists-window').jqmAddTrigger('#playlists-window-show');
+					$('#playlists-window').jqmAddClose('#playlists-window-close');
+					$('#playlists-window').jqDrag('#playlists-window-header');
 				});
 			//]]>
 		</script>
@@ -360,11 +572,19 @@
 				<br class="clear" />
 			</div>
 			<div id="content">
-				<div id="info-label" class="label">
+				<div id="info-label" class="label left">
 					Please wait... <img src="images/load.gif" />
 				</div>
-				<div id="error-label" class="label" style="display: none;"></div>
-				<div id="success-label" class="label" style="display: none;"></div>
+				<div id="error-label" class="label left" style="display: none;"></div>
+				<div id="success-label" class="label left" style="display: none;"></div>
+				<span id="play-on-server" class="right label" href="#" style="margin-left: 25px; display: none;">
+					<input id="play-on-server-checkbox" type="checkbox" name="play-on-server-checkbox" style="vertical-align: middle;" />
+					<label for="play-on-server-checkbox">Play on server</label>
+				</span>
+				<a id="playlists-window-show" class="right label" href="#" style="display: none;">
+					Playlists
+				</a>
+				<br class="clear" />
 				<br />
 				<div id="login-panel" style="display: none;">
 					<input type="text" id="username" />
@@ -377,7 +597,7 @@
 						<input type="submit" id="search" value="Search" />
 					</div>
 					<br />
-					<table id="search-table" cellpadding="2" cellspacing="2" style="display: noane;">
+					<table id="search-table" cellpadding="2" cellspacing="2">
 						<thead>
 							<tr>
 								<th>Track</th>
@@ -387,14 +607,14 @@
 								<th>Album</th>
 							</tr>
 						</thead>
-						<tbody id="tracks">
+						<tbody>
 							<!-- Empty -->
 						</tbody>
 					</table>
-<!--					<div id="browse-album">
-						<img src="#" style="width: 20%;" class="left" />
+					<div id="browse-album" style="display: none;">
+						<img id="album-cover" src="images/cover.png" style="width: 20%;" class="left" />
 						<div class="right" style="width: 79%;">
-							<h6>Artist &raquo; Album</h6>
+							<h6 id="album-name">Artist &raquo; Album</h6>
 							<br />
 							<table id="album-table" cellpadding="2" cellspacing="2">
 								<thead>
@@ -410,11 +630,24 @@
 							</table>
 						</div>
 						<br class="clear";
-					</div>-->
+					</div>
 				</div>
 			</div>
 			<div id="footer">
 				Copyright &copy 2009, Felix Bruns
+			</div>
+		</div>
+		<div class="jqmWindow" id="playlists-window">
+			<div class="jqmHeader" id="playlists-window-header">
+				<span class="left">Playlists</span>
+				<a id="playlists-window-close" class="right" href="#">
+					<img src="images/cross.png" />
+				</a>
+				<br class="clear" />
+			</div>
+			<div class="jqmContent">
+				<ul id="playlist-list">
+				</ul>
 			</div>
 		</div>
 	</body>

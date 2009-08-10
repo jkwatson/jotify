@@ -18,7 +18,12 @@ public class PlaylistHandler extends GatewayHandler {
 				GatewayConnection jotify = GatewayApplication.sessions.get(session);
 				
 				/* Get playlist. */
-				return jotify.playlist(id);
+				try{
+					return jotify.playlist(id);
+				}
+				catch(RuntimeException e){
+					return "<error>" + e.getCause().getMessage() + "</error>";
+				}
 			}
 			else{
 				return "<error>Session not found!</error>";

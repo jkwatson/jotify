@@ -3,6 +3,7 @@ package de.felixbruns.jotify.gateway;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import de.felixbruns.jotify.JotifyPlayer;
 import de.felixbruns.jotify.cache.Cache;
 import de.felixbruns.jotify.cache.FileCache;
 import de.felixbruns.jotify.cache.MemoryCache;
@@ -22,6 +24,8 @@ import de.felixbruns.jotify.gateway.stream.HTTPStreamer;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
 import de.felixbruns.jotify.media.User;
+import de.felixbruns.jotify.player.PlaybackListener;
+import de.felixbruns.jotify.player.Player;
 import de.felixbruns.jotify.protocol.Command;
 import de.felixbruns.jotify.protocol.CommandListener;
 import de.felixbruns.jotify.protocol.Protocol;
@@ -33,14 +37,15 @@ import de.felixbruns.jotify.util.GZIP;
 import de.felixbruns.jotify.util.XML;
 import de.felixbruns.jotify.util.XMLElement;
 
-public class GatewayConnection implements Runnable, CommandListener {
-	private Session   session;
-	private Protocol  protocol;
-	private User      user;
-	private Semaphore wait;
-	private Cache     cache;
-	private long      timeout;
-	private TimeUnit  unit;
+public class GatewayConnection implements Runnable, CommandListener, Player {
+	private Session      session;
+	private Protocol     protocol;
+	private User         user;
+	private Semaphore    wait;
+	private Cache        cache;
+	private long         timeout;
+	private TimeUnit     unit;
+	private JotifyPlayer player;
 	
 	/**
 	 * Enum for browsing media.
@@ -97,6 +102,7 @@ public class GatewayConnection implements Runnable, CommandListener {
 		this.cache    = cache;
 		this.timeout  = timeout;
 		this.unit     = unit;
+		this.player   = null;
 		
 		/* Acquire permits (country, prodinfo). */
 		this.wait.acquireUninterruptibly(2);
@@ -133,6 +139,9 @@ public class GatewayConnection implements Runnable, CommandListener {
 		
 		/* Create user object. */
 		this.user = new User(username);
+		
+		/* Create player. */
+		this.player = new JotifyPlayer(this.protocol);
 		
 		/* Add command handler. */
 		this.protocol.addListener(this);
@@ -347,6 +356,61 @@ public class GatewayConnection implements Runnable, CommandListener {
 	}
 	
 	/**
+	 * Browse multiple tracks info.
+	 * 
+	 * @param ids Ids of tracks to browse.
+	 * 
+	 * @return A xml string.
+	 */
+	public String browse(Collection<String> ids){
+		/* Create channel callback */
+		ChannelCallback callback = new ChannelCallback();
+		
+		/* Send browse request. */
+		try{
+			this.protocol.sendBrowseRequest(callback, BrowseType.TRACK.getValue(), ids);
+		}
+		catch(ProtocolException e){
+			return null;
+		}
+		
+		/* Get data and inflate it. */
+		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
+		
+		/* Cut off that last 0xFF byte... */
+		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		
+		/* Load XML. */
+		return new String(data, Charset.forName("UTF-8"));
+	}
+	
+	/**
+	 * Get a list of stored playlists.
+	 * 
+	 * @return A xml string.
+	 */
+	public String playlists(){
+		/* Create channel callback. */
+		ChannelCallback callback = new ChannelCallback();
+		
+		/* Send stored playlists request. */
+		try{
+			this.protocol.sendUserPlaylistsRequest(callback);
+		}
+		catch(ProtocolException e){
+			return null;
+		}
+		
+		/* Get data and inflate it. */
+		byte[] data = callback.get(this.timeout, this.unit);
+		
+		/* Return string. */
+		return	"<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
+				new String(data, Charset.forName("UTF-8")) +
+				"</playlist>";
+	}
+	
+	/**
 	 * Get a playlist.
 	 * 
 	 * @param id Id of the playlist to load.
@@ -391,8 +455,6 @@ public class GatewayConnection implements Runnable, CommandListener {
 			this.protocol.sendAesKeyRequest(callback, track);
 		}
 		catch(ProtocolException e){
-			e.printStackTrace();
-			
 			return;
 		}
 		
@@ -404,8 +466,6 @@ public class GatewayConnection implements Runnable, CommandListener {
 			this.protocol.sendSubstreamRequest(headerCallback, track, 0, 0);
 		}
 		catch(ProtocolException e){
-			
-			e.printStackTrace();
 			return;
 		}
 		
@@ -522,5 +582,37 @@ public class GatewayConnection implements Runnable, CommandListener {
 				break;
 			}
 		}
+	}
+	
+	public int length(){
+		return this.player.length();
+	}
+	
+	public void pause() {
+		this.player.pause();
+	}
+	
+	public void play(Track track, PlaybackListener listener){
+		this.player.play(track, listener);
+	}
+	
+	public void play(){
+		this.player.play();
+	}
+	
+	public int position(){
+		return this.player.position();
+	}
+	
+	public void stop(){
+		this.player.stop();
+	}
+	
+	public float volume(){
+		return this.player.volume();
+	}
+	
+	public void volume(float volume){
+		this.player.volume(volume);
 	}
 }

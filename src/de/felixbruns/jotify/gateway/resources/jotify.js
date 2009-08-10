@@ -6,112 +6,217 @@
 
 function Jotify(options){
 	/* Set default values for required options. */
-	var gateway = options.gateway || 'http://localhost:8080';
+	this.gateway = options.gateway || 'http://localhost:8080';
+}
+
+/* Gateway request. */
+Jotify.prototype.request = function(handler, params, callbacks, async){
+	/* Set default values. */
+	params    = params    || {};
+	callbacks = callbacks || {};
+	async     = (typeof(async) != 'undefined') ? async : true;
 	
-	/* Set gateway. */
-	this.setGateway = function(_gateway){
-		gateway = _gateway;
-	};
+	/* Set format. */
+	params.format = 'json';
 	
-	/* Gateway request. */
-	var request = function(handler, params, callbacks){
-		/* Set default values. */
-		params    = params    || {};
-		callbacks = callbacks || {};
-		
-		/* Set format. */
-		params.format = 'json';
-		
-		/* Request data. */
-		$.ajax({
-			data     : params,
-			dataType : 'json',
-			cache    : false,
-			timeout  : 10000,
-			type     : 'GET',
-			url      : gateway + '/' + handler,
-			error    : function(xhr, textStatus, errorThrown){
+	/* Request data. */
+	$.ajax({
+		data     : params,
+		dataType : 'json',
+		cache    : false,
+		timeout  : 10000,
+		type     : 'GET',
+		async    : async,
+		url      : this.gateway + '/' + handler,
+		error    : function(xhr, textStatus, errorThrown){
+			if(typeof(callbacks.error) != 'undefined'){
+				callbacks.error('Error (' + textStatus + ')');
+			}
+		},
+		success  : function(data, textStatus){
+			/* Call user callback. */
+			if(typeof(data.error) != 'undefined'){
 				if(typeof(callbacks.error) != 'undefined'){
-					callbacks.error('Error (' + textStatus + ')');
-				}
-			},
-			success  : function(data, textStatus){
-				/* Call user callback. */
-				if(typeof(data.error) != 'undefined'){
-					if(typeof(callbacks.error) != 'undefined'){
-						callbacks.error(data.error);
-					}
-				}
-				else if(typeof(callbacks.success) != 'undefined'){
-					callbacks.success(data);
+					callbacks.error(data.error);
 				}
 			}
-		});
-	};
+			else if(typeof(callbacks.success) != 'undefined'){
+				callbacks.success(data);
+			}
+		}
+	});
+};
+
+/* Set gateway. */
+Jotify.prototype.setGateway = function(_gateway){
+	this.gateway = _gateway;
+};
+
+/* Start. */
+Jotify.prototype.start = function(callbacks){
+	this.request('start', {}, callbacks);
+};
+
+/* Check. */
+Jotify.prototype.check = function(session, callbacks){
+	this.request('check', {session: session}, callbacks);
+};
+
+/* Login. */
+Jotify.prototype.login = function(params, callbacks){
+	this.request('login', params, callbacks);
+};
+
+/* Close. */
+Jotify.prototype.close = function(session, callbacks){
+	this.request('close', {session: session}, callbacks);
+};
+
+/* User. */
+Jotify.prototype.user = function(session, callbacks){
+	this.request('user', {session: session}, callbacks);
+};
+
+/* Toplist. */
+Jotify.prototype.toplist = function(params, session, callbacks){
+	params.session = session;
 	
-	/* Start. */
-	this.start = function(callbacks){
-		request('start', {}, callbacks);
-	};
+	this.request('toplist', params, callbacks);
+};
+
+/* Search. */
+Jotify.prototype.search = function(params, session, callbacks){
+	params.session = session;
 	
-	/* Check. */
-	this.check = function(session, callbacks){
-		request('check', {session: session}, callbacks);
-	};
+	this.request('search', params, callbacks);
+};
+
+/* Image. */
+Jotify.prototype.image = function(id, session){
+	return this.gateway + '/image?session=' + session + '&id=' + id;
+};
+
+/* Browse. */
+Jotify.prototype.browse = function(params, session, callbacks, async){
+	params.session = session;
+	async          = (typeof(async) != 'undefined') ? async : true;
 	
-	/* Login. */
-	this.login = function(params, callbacks){
-		request('login', params, callbacks);
-	};
+	this.request('browse', params, callbacks, async);
+};
+
+/* Playlists. */
+Jotify.prototype.playlists = function(session, callbacks){
+	this.request('playlists', {session : session}, callbacks);
+};
+
+/* Playlist. */
+Jotify.prototype.playlist = function(params, session, callbacks, async){
+	params.session = session;
+	async          = (typeof(async) != 'undefined') ? async : true;
 	
-	/* Close. */
-	this.close = function(session, callbacks){
-		request('close', {session: session}, callbacks);
-	};
+	this.request('playlist', params, callbacks, async);
+};
+
+/* Stream. */
+Jotify.prototype.stream = function(track, session){
+	var files = [];
 	
-	/* User. */
-	this.user = function(session, callbacks){
-		request('user', {session: session}, callbacks);
-	};
+	if(track.files.file instanceof Array){
+		files = track.files.file;
+	}
+	else{
+		files = [track.files.file];
+	}
 	
-	/* Toplist. */
-	this.toplist = function(params, session, callbacks){
-		params.session = session;
+	return this.gateway + '/stream?session=' + session + '&id=' + track.id + '&file=' + files[0].id;
+};
+
+/* Play. */
+Jotify.prototype.play = function(track, session, callbacks){
+	var files = [];
+	
+	if(track.files.file instanceof Array){
+		files = track.files.file;
+	}
+	else{
+		files = [track.files.file];
+	}
+	
+	this.request('play', {
+		session : session,
+		id      : track.id,
+		file    : files[0].id
+	}, callbacks);
+};
+
+/*
+ * Find identical tracks and group them together.
+ *
+ * Returns an array of tracks with each having an additional
+ * 'identical-tracks' array.
+ */
+Jotify.prototype.groupIdenticalTracks = function(tracks){
+	var groupedTracks = [];
+	
+	/* Outer loop over all tracks. */
+	for(var i in tracks){
+		/* Get track. */
+		var track = tracks[i];
 		
-		request('toplist', params, callbacks);
-	};
-	
-	/* Search. */
-	this.search = function(params, session, callbacks){
-		params.session = session;
+		/* Initialize 'identical-tracks' array. */
+		track['identical-tracks'] = [];
 		
-		request('search', params, callbacks);
-	};
-	
-	/* Image. */
-	this.image = function(id, session){
-		return gateway + '/image?session=' + session + '&id=' + id;
-	};
-	
-	/* Browse. */
-	this.browse = function(params, session, callbacks){
-		params.session = session;
+		/* Inner loop over all tracks. */
+		for(var j in tracks){
+			/* If a track at a different position is identical. */
+			if(i != j &&
+				tracks[i].title  == tracks[j].title &&
+				tracks[i].artist == tracks[j].artist){
+				/* Add track to 'identical-tracks' array. */
+				track['identical-tracks'].push(tracks[j]);
+				
+				/* Remove track from array. */
+				delete tracks[j];
+			}
+		}
 		
-		request('browse', params, callbacks);
-	};
-	
-	/* Playlist. */
-	this.playlist = function(params, session, callbacks){
-		params.session = session;
+		/* Add track to new array. */
+		groupedTracks.push(track);
 		
-		request('playlist', params, callbacks);
+		/* Remove track from array. */
+		delete tracks[i];
+	}
+	
+	/* Return grouped track array. */
+	return groupedTracks;
+};
+
+/*
+ * Sort tracks by given field.
+ *
+ * Returns a sorted array of tracks.
+ */
+Jotify.prototype.sortTracks = function(tracks, field, order){
+	field = field || 'title';
+	order = order || 'asc';
+	
+	var sortFunction = function(a, b){
+		if(typeof a[field] == 'number'){
+			return (order == 'asc') ? (a[field] - b[field]) : (b[field] - a[field]);
+		}
+		else if(typeof a[field] == 'string'){
+			return (order == 'asc') ?
+				((a[field] < b[field]) ? -1 : ((a[field] > b[field]) ? 1 : 0)) :
+				((b[field] < a[field]) ? -1 : ((b[field] > a[field]) ? 1 : 0));
+		}
+		
+		return 0;
 	};
 	
-	/* Stream. */
-	this.stream = function(track, session){
-		return gateway + '/stream?session=' + session + '&id=' + track.id + '&file=' + track.files.file.id;
-	};
-}
+	return tracks.sort(sortFunction);
+};
+
+
 
 /* Draws a popularity indicator using canvas and returns it as CSS data URL. */
 function popularityIndicator(popularity){
@@ -154,7 +259,7 @@ function popularityIndicator(popularity){
 };
 
 /* Formats seconds as a human readable mm:ss string. */
-function formatSeconds(s){
+function formatSeconds(s){	
 	var minutes = Math.floor(s / 60);
 	var seconds = Math.round(s % 60);
 	

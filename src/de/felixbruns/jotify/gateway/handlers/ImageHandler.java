@@ -70,7 +70,12 @@ public class ImageHandler implements HttpHandler {
 					GatewayConnection jotify = GatewayApplication.sessions.get(session);
 					
 					/* Load image. */
-					responseBytes = jotify.image(id);
+					try{
+						responseBytes = jotify.image(id);
+					}
+					catch(RuntimeException e){
+						responseString = "<error>" + e.getCause().getMessage() + "</error>";
+					}
 				}
 				else{
 					responseString = "<error>Session not found!</error>";

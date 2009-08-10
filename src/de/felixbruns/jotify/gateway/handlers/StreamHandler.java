@@ -59,7 +59,12 @@ public class StreamHandler implements HttpHandler {
 					responseHeaders.set("Content-Type", "audio/ogg");
 					
 					/* Start streaming OGG audio (chunked encoding). */
-					jotify.stream(id, file, responseBody);
+					try{
+						jotify.stream(id, file, responseBody);
+					}
+					catch(RuntimeException e){
+						responseString = "<error>" + e.getCause().getMessage() + "</error>";
+					}
 					
 					/* Send response code and headers. */
 					exchange.sendResponseHeaders(200, 0);

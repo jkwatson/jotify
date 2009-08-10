@@ -1,5 +1,6 @@
 package de.felixbruns.jotify.gateway.handlers;
 
+import java.util.Arrays;
 import java.util.Map;
 
 import de.felixbruns.jotify.gateway.GatewayConnection;
@@ -22,7 +23,28 @@ public class BrowseHandler extends GatewayHandler {
 				GatewayConnection jotify = GatewayApplication.sessions.get(session);
 				
 				/* Browse. */
-				return jotify.browse(BrowseType.valueOf(type), id);
+				try{
+					return jotify.browse(BrowseType.valueOf(type), id);
+				}
+				catch(RuntimeException e){
+					return "<error>" + e.getCause().getMessage() + "</error>";
+				}
+			}
+			else{
+				return "<error>Session not found!</error>";
+			}
+		}
+		else if(params.containsKey("session") &&
+				params.containsKey("ids")){
+			String   session = params.get("session");
+			String[] ids     = params.get("ids").split(",");
+			
+			/* Check if session is valid. */
+			if(GatewayApplication.sessions.containsKey(session)){
+				GatewayConnection jotify = GatewayApplication.sessions.get(session);
+				
+				/* Browse. */
+				return jotify.browse(Arrays.asList(ids));
 			}
 			else{
 				return "<error>Session not found!</error>";
