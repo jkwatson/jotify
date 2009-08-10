@@ -578,7 +578,11 @@ public class XMLMediaParser implements XMLStreamConstants {
 				track.setTrackNumber(this.getElementInteger());
 			}
 			else if(name.equals("length")){
-				track.setLength(this.getElementInteger());
+				int length = this.getElementInteger();
+				
+				if(length > 0){
+					track.setLength(length);
+				}
 			}
 			else if(name.equals("files")){
 				track.setFiles(parseFiles());
