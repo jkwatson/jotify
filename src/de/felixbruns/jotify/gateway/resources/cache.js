@@ -9,7 +9,7 @@ function Cache(name){
 	this.name = name || 'default';
 	
 	/* Create cache if it doesn't exist. */
-	if(typeof(localStorage[this.name]) == 'undefined'){
+	if(typeof(localStorage[this.name]) == 'undefined' || localStorage[this.name] == null){
 		localStorage[this.name] = '{}';
 	}
 }
