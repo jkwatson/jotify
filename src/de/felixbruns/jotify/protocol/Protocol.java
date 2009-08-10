@@ -118,7 +118,6 @@ public class Protocol {
 		buffer.put((byte)0); /* Random length */
 		buffer.put((byte)this.session.username.length); /* Username length */
 		buffer.putShort((short)0x0100); /* Unknown */
-		//buffer.put(randomBytes); /* Zero random bytes. */
 		buffer.put(this.session.username);
 		buffer.put((byte)0x40); /* Unknown */
 		
@@ -542,7 +541,7 @@ public class Protocol {
 		Channel.register(channel);
 		
 		/* Send packet. */
-		this.sendPacket(0x38, buffer);
+		this.sendPacket(Command.COMMAND_GETTOPLIST, buffer);
 	}
 	
 	/* Request image using a 20 byte id. The response is a JPG. */
