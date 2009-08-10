@@ -6,6 +6,7 @@ import java.util.List;
 
 import de.felixbruns.jotify.util.SpotifyChecksum;
 import de.felixbruns.jotify.util.XMLElement;
+import de.felixbruns.jotify.util.SpotifyURI;
 
 /**
  * Holds information about a playlist.
@@ -100,6 +101,25 @@ public class Playlist implements Iterable<Track> {
 	public void setCollaborative(boolean collaborative){
 		this.collaborative = collaborative;
 	}
+	
+	/**
+	 * Get the playlists Spotify URI.
+	 * 
+	 * @return A Spotify URI (e.g. {@code spotify:user:username:playlist:<base62-encoded-id>})
+	 */
+	public String getURI(){
+		return "spotify:user:" + getAuthor() + ":playlist:" + SpotifyURI.toURI(this.id);
+	}
+	
+	/**
+	 * Get the playlists Spotify URI as a HTTP-link.
+	 * 
+	 * @return A link which redirects to a Spotify URI.
+	 */
+	public String getLink(){
+		return "http://open.spotify.com/user/" + getAuthor() + "/playlist/" + SpotifyURI.toURI(this.id);
+	}
+	
 	
 	public Iterator<Track> iterator(){
 		return this.tracks.iterator();

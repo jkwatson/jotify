@@ -108,17 +108,19 @@ public class JotifyApplication {
 							//playlist = jotify.playlist(playlist.getId(), useCache); TODO load from cache
 							playlist = jotify.playlist(playlist.getId());
 							
-							/* Browse multiple tracks and add them to the playlist. */
-							Result result = jotify.browse(playlist.getTracks());
+							if (!playlist.getTracks().isEmpty()) {
+					  		/* Browse multiple tracks and add them to the playlist. */
+  							Result result = jotify.browse(playlist.getTracks());
 							
-							/* Add track information to playlist. */
-							for(Track track : result.getTracks()){
-								int index = playlist.getTracks().indexOf(track);
+  							/* Add track information to playlist. */
+  							for(Track track : result.getTracks()){
+  								int index = playlist.getTracks().indexOf(track);
 								
-								if(index != -1){
-									playlist.getTracks().set(index, track);
-								}
-							}
+  								if(index != -1){
+  									playlist.getTracks().set(index, track);
+  								}
+  							}
+						  }
 							
 							/* Fire playlist updated events. */
 							broadcast.firePlaylistUpdated(playlist);

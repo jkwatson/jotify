@@ -81,6 +81,10 @@ public class JotifyTableModel<T extends Track> extends AbstractTableModel {
 	}
 	
 	public Object getValueAt(int row, int col){
+	  if (this.rows.size() < row) {
+	    return null;
+	  }
+	  
 		T element = this.rows.get(row);
 		
 		switch(col){

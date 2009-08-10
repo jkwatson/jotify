@@ -1,5 +1,7 @@
 package de.felixbruns.jotify.gui.swing.components;
 
+import java.util.Set;
+import java.util.HashSet;
 import java.awt.Color;
 import java.awt.Component;
 
@@ -13,11 +15,14 @@ import javax.swing.border.EmptyBorder;
 
 import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.Result;
+import de.felixbruns.jotify.gui.listeners.PlaylistListener;
+import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
 
 @SuppressWarnings("serial")
-public class JotifyList extends JList {
+public class JotifyList extends JList implements PlaylistListener {
 	private ImageIcon searchIcon;
 	private ImageIcon playlistIcon;
+	private Set<Playlist> playlists = new HashSet<Playlist>();
 	
 	public JotifyList(){
 		/* Use default table model. */
@@ -39,8 +44,10 @@ public class JotifyList extends JList {
 		this.setForeground(Color.WHITE);
 		this.setSelectionForeground(Color.LIGHT_GRAY);
 		
+		JotifyBroadcast.getInstance().addPlaylistListener(this);
+		
 		/* Set a custom cell renderer. */
-		this.setCellRenderer(new DefaultListCellRenderer(){
+		this.setCellRenderer(new DefaultListCellRenderer()  {
 			public Component getListCellRendererComponent(JList list, Object value,
 				int index, boolean isSelected, boolean cellHasFocus){
 				/* Get label from superclass. */
@@ -63,8 +70,8 @@ public class JotifyList extends JList {
 				if(value instanceof Result){
 					label.setText(((Result)value).getQuery());
 				}
-				else if(value instanceof Playlist){
-					if(((Playlist)value).hasTracks()){
+				else if(value instanceof Playlist){				  
+				  if (JotifyList.this.playlists.contains((Playlist)value)) {				  
 						label.setEnabled(true);
 						label.setText(((Playlist)value).getName());
 					}
@@ -138,6 +145,16 @@ public class JotifyList extends JList {
 	public void appendElement(ImageIcon icon, String text){
 		this.appendElement(new JotifyListElement(icon, text));
 	}
+	
+	public void playlistAdded(Playlist playlist) { }
+	public void playlistUpdated(Playlist playlist) { 
+	  playlists.add(playlist);
+	} 
+	public void playlistRemoved(Playlist playlist) { 
+	  playlists.remove(playlist);
+	}
+	public void playlistSelected(Playlist playlist) { }
+  
 	
 	public class JotifyListElement {
 		private ImageIcon icon;
