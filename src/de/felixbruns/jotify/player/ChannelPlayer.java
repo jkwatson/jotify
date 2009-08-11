@@ -133,7 +133,7 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 			this.output = new PipedOutputStream(this.input);
 		}
 		catch(IOException e){
-			System.err.println("Can't connect piped streams!");
+			throw new RuntimeException("Can't connect piped streams!", e);
 		}
 		
 		/* Audio will be initialized in "open" method. */
@@ -168,15 +168,13 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 				this.protocol.sendSubstreamRequest(this, this.track, this.streamOffset, this.streamLength);
 			}
 			catch(ProtocolException e){
-				System.err.println("Error sending substream request!");
-				
-				return;
+				throw new RuntimeException("Error sending substream request!", e);
 			}
 		}
 		
 		/* Open input stream for playing. */
 		if(!this.open(this.input)){
-			System.err.println("Can't open input stream for playing!");
+			throw new RuntimeException("Can't open input stream for playing!");
 		}
 	}
 	
