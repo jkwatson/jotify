@@ -221,6 +221,7 @@ input {
 
 #playing-label {
 	width   : 350px;
+	height  : 50px;
 	padding : 15px;
 }
 

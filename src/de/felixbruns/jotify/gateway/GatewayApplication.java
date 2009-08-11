@@ -26,7 +26,7 @@ public class GatewayApplication {
 		int port = 8080;
 		
 		if(args.length == 1){
-			port = Integer.parseInt(args[0]);		
+			port = Integer.parseInt(args[0]);
 		}
 		
 		/* Create a HTTP server that listens for connections on port 8080 or the given port. */
@@ -49,7 +49,12 @@ public class GatewayApplication {
 		server.createContext("/playlist",  new PlaylistHandler());
 		server.createContext("/playlists", new PlaylistsHandler());
 		server.createContext("/stream",    new StreamHandler());
-		server.createContext("/play",      new PlayHandler());
+		
+		/* Play on server. */
+		server.createContext("/play",   new PlayHandler());
+		server.createContext("/pause",  new PauseHandler());
+		server.createContext("/stop",   new StopHandler());
+		//server.createContext("/volume", new VolumeHandler());
 		
 		/* Set executor for server threads. */
 		server.setExecutor(executor);

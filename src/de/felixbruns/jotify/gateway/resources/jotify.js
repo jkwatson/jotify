@@ -132,7 +132,7 @@ Jotify.prototype.stream = function(track, session){
 };
 
 /* Play. */
-Jotify.prototype.play = function(track, session, callbacks){
+Jotify.prototype.playTrack = function(track, session, callbacks){
 	var files = [];
 	
 	if(track.files.file instanceof Array){
@@ -147,6 +147,21 @@ Jotify.prototype.play = function(track, session, callbacks){
 		id      : track.id,
 		file    : files[0].id
 	}, callbacks);
+};
+
+/* Pause. */
+Jotify.prototype.play = function(session, callbacks){
+	this.request('play', {session: session}, callbacks);
+};
+
+/* Pause. */
+Jotify.prototype.pause = function(session, callbacks){
+	this.request('pause', {session: session}, callbacks);
+};
+
+/* Stop. */
+Jotify.prototype.stop = function(session, callbacks){
+	this.request('stop', {session: session}, callbacks);
 };
 
 /*

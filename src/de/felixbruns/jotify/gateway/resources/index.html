@@ -104,7 +104,7 @@
 					
 					/* Play selected track (play() will be called in 'canplay' event handler). */
 					if($('#play-on-server-checkbox').is(':checked')){
-						jotify.play(track, session, {});
+						jotify.playTrack(track, session);
 					}
 					else{
 						audio.src = jotify.stream(track, session);
@@ -288,7 +288,7 @@
 				/* DOM ready. */
 				$(document).ready(function(){
 					/* Create Jotify object. */
-					jotify = new Jotify({gateway: 'http://' + window.location.hostname + ':' + window.location.port});
+					jotify = new Jotify();
 					cache  = new Cache('jotify');
 					
 					//cache.clear();
@@ -305,6 +305,7 @@
 								
 								$('#main-panel').show();
 								$('#play-on-server').show();
+								$('#info-panel').show();
 							},
 							error: function(data){
 								info('Please login using a premium account!');
@@ -355,6 +356,7 @@
 								$('#login-panel').hide();
 								$('#main-panel').show();
 								$('#play-on-server').show();
+								$('#info-panel').show();
 							},
 							error: error
 						});
@@ -540,6 +542,40 @@
 						event.preventDefault();
 					});
 					
+					/* Bind controls. */
+					$('#control-stop').click(function(event){
+						if($('#play-on-server-checkbox').is(':checked')){
+							jotify.stop(session);
+						}
+						else{
+							audio.src = null;
+						}
+						
+						event.preventDefault();
+					});
+					
+					$('#control-pause').click(function(event){
+						if($('#play-on-server-checkbox').is(':checked')){
+							jotify.pause(session);
+						}
+						else{
+							audio.pause();
+						}
+						
+						event.preventDefault();
+					});
+					
+					$('#control-play').click(function(event){
+						if($('#play-on-server-checkbox').is(':checked')){
+							jotify.play(session);
+						}
+						else{
+							audio.play();
+						}
+						
+						event.preventDefault();
+					});
+					
 					$('#playlists-window').jqm({overlay: 30, modal: true});
 					$('#playlists-window').jqmAddTrigger('#playlists-window-show');
 					$('#playlists-window').jqmAddClose('#playlists-window-close');
@@ -561,12 +597,17 @@
 					<br />
 					<h4>A Java Spotify client library</h4>
 				</div>
-				<div class="right">
+				<div id="info-panel" class="right" style="display: none;">
 					<div class="left">
-						<div id="playing-label" style="display: none;"></div>
+						<div id="playing-label"></div>
 						<canvas id="progress-bar" width="350" height="15"></canvas>
+						<div id="control-label">
+							<a id="control-stop" href="#"><img src="images/control_stop_blue.png" /></a>
+							<a id="control-pause" href="#"><img src="images/control_pause_blue.png" /></a>
+							<a id="control-play" href="#"><img src="images/control_play_blue.png" /></a>
+						</div>
 					</div>
-					<img id="cover-label" class="right" src="images/cover.png" style="display: none;" />
+					<img id="cover-label" class="right" src="images/cover.png" />
 					<br class="clear" />
 				</div>
 				<br class="clear" />
