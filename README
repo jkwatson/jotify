@@ -4,12 +4,12 @@ theres few documentation :)
 Greets to the despotify team and #hack.se!
 
 Dependancies:
-	- JOrbis               (http://www.jcraft.com/jorbis/)
-	- tritonus_share.jar   (http://www.tritonus.org/plugins.html)
-	- tritonus_jorbis.jar  (http://www.tritonus.org/plugins.html)
+	- JOrbis               ( http://www.jcraft.com/jorbis/ )
+	- tritonus_share.jar   ( http://www.tritonus.org/plugins.html )
+	- tritonus_jorbis.jar  ( http://www.tritonus.org/plugins.html )
 
 Extra dependancies (GUI):
-	- last.fm API bindings (http://www.u-mass.de/lastfm)
+	- last.fm API bindings ( http://www.u-mass.de/lastfm )
 	
 Extra dependancies (Gateway):
-	- org.json             (http://www.json.org/java)
+	- org.json             ( http://www.json.org/java )
