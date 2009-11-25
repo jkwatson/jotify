@@ -108,7 +108,7 @@ public class Playlist implements Iterable<Track> {
 	 * @return A Spotify URI (e.g. {@code spotify:user:username:playlist:<base62-encoded-id>})
 	 */
 	public String getURI(){
-		return "spotify:user:" + getAuthor() + ":playlist:" + SpotifyURI.toURI(this.id);
+		return "spotify:user:" + getAuthor() + ":playlist:" + SpotifyURI.toBase62(this.id);
 	}
 	
 	/**
@@ -117,7 +117,7 @@ public class Playlist implements Iterable<Track> {
 	 * @return A link which redirects to a Spotify URI.
 	 */
 	public String getLink(){
-		return "http://open.spotify.com/user/" + getAuthor() + "/playlist/" + SpotifyURI.toURI(this.id);
+		return "http://open.spotify.com/user/" + getAuthor() + "/playlist/" + SpotifyURI.toBase62(this.id);
 	}
 	
 	

@@ -15,6 +15,11 @@ public class Media {
 	protected String id;
 	
 	/**
+	 * Redirects (other identifiers) for this media (32-character strings).
+	 */
+	protected List<String> redirects;
+	
+	/**
 	 * Popularity of this media (from 0.0 to 1.0).
 	 */
 	protected float popularity;
@@ -34,6 +39,7 @@ public class Media {
 	 */
 	protected Media(){
 		this.id           = null;
+		this.redirects    = new ArrayList<String>();
 		this.popularity   = Float.NaN;
 		this.restrictions = new ArrayList<Restriction>();
 		this.externalIds  = new HashMap<String, String>();
@@ -59,7 +65,7 @@ public class Media {
 	}
 	
 	/**
-	 * Get the medias identifier.
+	 * Get the media identifier.
 	 * 
 	 * @return A 32-character identifier.
 	 */
@@ -68,7 +74,7 @@ public class Media {
 	}
 	
 	/**
-	 * Set the medias identifier.
+	 * Set the media identifier.
 	 * 
 	 * @param id A 32-character identifier.
 	 * 
@@ -84,7 +90,25 @@ public class Media {
 	}
 	
 	/**
-	 * Get the medias popularity.
+	 * Get the media redirects.
+	 * 
+	 * @return A {@link List} of 32-character identifiers.
+	 */
+	public List<String> getRedirects(){
+		return this.redirects;
+	}
+	
+	/**
+	 * Add a media redirect.
+	 * 
+	 * @param id A 32-character identifier.
+	 */
+	public void addRedirect(String redirect){
+		this.redirects.add(redirect);
+	}
+	
+	/**
+	 * Get the media popularity.
 	 * 
 	 * @return A decimal value between 0.0 and 1.0 or {@link Float.NAN} if not available.
 	 */
@@ -93,7 +117,7 @@ public class Media {
 	}
 	
 	/**
-	 * Set the medias popularity.
+	 * Set the media popularity.
 	 * 
 	 * @param popularity A decimal value between 0.0 and 1.0 or {@link Float.NAN}.
 	 * 
@@ -109,7 +133,7 @@ public class Media {
 	}
 	
 	/**
-	 * Get the medias restrictions.
+	 * Get the media restrictions.
 	 * 
 	 * @return A {@link List} of {@link Restriction} objects.
 	 */
@@ -144,7 +168,7 @@ public class Media {
 	}
 	
 	/**
-	 * Set the medias restrictions.
+	 * Set the media restrictions.
 	 * 
 	 * @param restrictions A {@link List} of {@link Restriction} objects.
 	 */
@@ -153,7 +177,7 @@ public class Media {
 	}
 	
 	/**
-	 * Get the medias external identifiers.
+	 * Get the media external identifiers.
 	 * 
 	 * @return A {@link Map} of external services and their identifers for the media.
 	 */
@@ -173,7 +197,7 @@ public class Media {
 	}
 	
 	/**
-	 * Set the medias external identifiers.
+	 * Set the media external identifiers.
 	 * 
 	 * @param externalIds A {@link Map} of external services and their identifers for the media.
 	 */

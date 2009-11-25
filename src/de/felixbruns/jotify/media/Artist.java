@@ -96,7 +96,7 @@ public class Artist extends Media {
 	 * @return A Spotify URI (e.g. {@code spotify:artist:<base62-encoded-id>})
 	 */
 	public String getURI(){
-		return "spotify:artist:" + SpotifyURI.toURI(this.id);
+		return "spotify:artist:" + SpotifyURI.toBase62(this.id);
 	}
 	
 	/**
@@ -105,7 +105,7 @@ public class Artist extends Media {
 	 * @return A link which redirects to a Spotify URI.
 	 */
 	public String getLink(){
-		return "http://open.spotify.com/artist/" + SpotifyURI.toURI(this.id);
+		return "http://open.spotify.com/artist/" + SpotifyURI.toBase62(this.id);
 	}
 	
 	/**
@@ -293,7 +293,15 @@ public class Artist extends Media {
 		if(o instanceof Artist){
 			Artist a = (Artist)o;
 			
-			return this.id.equals(a.id);
+			if(this.id.equals(a.id)){
+				return true;
+			}
+			
+			for(String id : this.redirects){
+				if(id.equals(a.id)){
+					return true;
+				}
+			}
 		}
 		
 		return false;

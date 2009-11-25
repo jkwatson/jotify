@@ -113,7 +113,7 @@ public class Track extends Media {
 	 * @return A Spotify URI (e.g. {@code spotify:track:<base62-encoded-id>})
 	 */
 	public String getURI(){
-		return "spotify:track:" + SpotifyURI.toURI(this.id);
+		return "spotify:track:" + SpotifyURI.toBase62(this.id);
 	}
 	
 	/**
@@ -122,7 +122,7 @@ public class Track extends Media {
 	 * @return A link which redirects to a Spotify URI.
 	 */
 	public String getLink(){
-		return "http://open.spotify.com/track/" + SpotifyURI.toURI(this.id);
+		return "http://open.spotify.com/track/" + SpotifyURI.toBase62(this.id);
 	}
 	
 	/**
@@ -411,7 +411,15 @@ public class Track extends Media {
 		if(o instanceof Track){
 			Track t = (Track)o;
 			
-			return this.id.equals(t.id);
+			if(this.id.equals(t.id)){
+				return true;
+			}
+			
+			for(String id : this.redirects){
+				if(id.equals(t.id)){
+					return true;
+				}
+			}
 		}
 		
 		return false;
