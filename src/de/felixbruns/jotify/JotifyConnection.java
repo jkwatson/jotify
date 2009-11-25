@@ -250,9 +250,6 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* Get data. */
 		byte[] data = callback.get(this.timeout, this.unit);
 		
-		/* Cut off that last 0xFF byte... */
-		data = Arrays.copyOfRange(data, 0, data.length - 1);
-		
 		/* Create result from XML. */
 		Result result = XMLMediaParser.parseResult(data, "UTF-8");
 		
