@@ -20,6 +20,8 @@ import de.felixbruns.jotify.media.Biography;
 import de.felixbruns.jotify.media.Disc;
 import de.felixbruns.jotify.media.File;
 import de.felixbruns.jotify.media.Image;
+import de.felixbruns.jotify.media.Playlist;
+import de.felixbruns.jotify.media.PlaylistContainer;
 import de.felixbruns.jotify.media.Restriction;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
@@ -79,6 +81,12 @@ public class XMLMediaParser implements XMLStreamConstants {
 			}
 			else if(name.equals("track")){
 				return this.parseTrack();
+			}
+			else if(name.equals("playlists")){
+				return this.parsePlaylistContainer();
+			}
+			else if(name.equals("playlist")){
+				return this.parsePlaylist();
 			}
 			else{
 				throw new XMLMediaParseException(
@@ -189,7 +197,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 	private List<Album> parseAlbums() throws XMLStreamException, XMLMediaParseException {
 		List<Album> albums = new ArrayList<Album>();
 		String      name;
-		
+				
 		/* Go to next element and check if it is a start element. */
 		while(this.reader.next() == START_ELEMENT){
 			name = this.reader.getLocalName();
@@ -266,7 +274,13 @@ public class XMLMediaParser implements XMLStreamConstants {
 				}
 			}
 			else if(name.equals("id")){
-				artist.setId(this.getElementString());
+				/* TODO: handle different ID types. */
+				if(this.getAttributeString("type") == null){
+					artist.setId(this.getElementString());
+				}
+			}
+			else if(name.equals("redirect")){
+				artist.addRedirect(this.getElementString());
 			}
 			else if(name.equals("name")){
 				artist.setName(this.getElementString());
@@ -340,7 +354,13 @@ public class XMLMediaParser implements XMLStreamConstants {
 				}
 			}
 			else if(name.equals("id")){
-				album.setId(this.getElementString());
+				/* TODO: handle different ID types. */
+				if(this.getAttributeString("type") == null){
+					album.setId(this.getElementString());
+				}
+			}
+			else if(name.equals("redirect")){
+				album.addRedirect(this.getElementString());
 			}
 			else if(name.equals("name")){
 				album.setName(this.getElementString());
@@ -348,6 +368,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 			else if(name.equals("artist") || name.equals("artist-name")){
 				Artist artist = (album.getArtist() != null)?album.getArtist():new Artist();
 				
+				/* Get artist name. */
 				artist.setName(this.getElementString());
 				
 				album.setArtist(artist);
@@ -376,7 +397,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 			else if(name.equals("review")){
 				album.setReview(this.getElementString());
 			}
-			else if(name.equals("year")){
+			else if(name.equals("year") || name.equals("released")){
 				album.setYear(this.getElementInteger());
 			}
 			/* TODO: currently skipped. */
@@ -407,6 +428,10 @@ public class XMLMediaParser implements XMLStreamConstants {
 			}
 			else if(name.equals("restrictions")){
 				album.setRestrictions(parseRestrictions());
+			}
+			/* TODO: currently skipped. */
+			else if(name.equals("availability")){
+				skipAvailability();
 			}
 			/* Seems to be deprecated. */
 			else if(name.equals("allowed")){
@@ -441,7 +466,11 @@ public class XMLMediaParser implements XMLStreamConstants {
 								disc.setName(this.getElementString());
 							}
 							else if(name.equals("track")){
-								tracks.add(parseTrack());
+								Track track = parseTrack();
+								
+								track.setAlbum(album);
+								
+								tracks.add(track);
 							}
 							else{
 								throw new XMLMediaParseException(
@@ -515,19 +544,30 @@ public class XMLMediaParser implements XMLStreamConstants {
 			
 			/* Process depending on element name. */
 			if(name.equals("id")){
-				track.setId(this.getElementString());
+				/* TODO: handle different ID types. */
+				//if(this.getAttributeString("type") == null){
+					track.setId(this.getElementString());
+				//}
+				//else{
+					/* Skip. */
+				//	this.getElementString();
+				//}
+			}
+			else if(name.equals("redirect")){
+				track.addRedirect(this.getElementString());
 			}
 			/* TODO: currently skipped. */
 			else if(name.equals("redirect")){
 				/* Skip text. */
 				this.getElementString();
 			}
-			else if(name.equals("title")){
+			else if(name.equals("title") || name.equals("name")){
 				track.setTitle(this.getElementString());
 			}
 			else if(name.equals("artist")){
 				Artist artist = (track.getArtist() != null)?track.getArtist():new Artist();
 				
+				/* Get artist name. */
 				artist.setName(this.getElementString());
 				
 				track.setArtist(artist);
@@ -542,6 +582,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 			else if(name.equals("album")){
 				Album album = (track.getAlbum() != null)?track.getAlbum():new Album();
 				
+				/* Get album name. */
 				album.setName(this.getElementString());
 				
 				track.setAlbum(album);
@@ -651,6 +692,16 @@ public class XMLMediaParser implements XMLStreamConstants {
 		}
 		
 		return track;
+	}
+	
+	/** TODO: Implement. */
+	private PlaylistContainer parsePlaylistContainer() throws XMLStreamException, XMLMediaParseException {
+		return null;
+	}
+	
+	/** TODO: Implement. */
+	private Playlist parsePlaylist() throws XMLStreamException, XMLMediaParseException {
+		return null;
 	}
 	
 	/**
@@ -901,6 +952,26 @@ public class XMLMediaParser implements XMLStreamConstants {
 		}
 	}
 	
+	private void skipAvailability() throws XMLStreamException, XMLMediaParseException {
+		String name;
+		
+		/* Go to next element and check if it is a start element. */
+		while(this.reader.next() == START_ELEMENT){
+			name = this.reader.getLocalName();
+			
+			/* Process depending on element name. */
+			if(name.equals("territories")){
+				/* Skip text. */
+				this.getElementString();
+			}
+			else{
+				throw new XMLMediaParseException(
+					"Unexpected element '<" + name + ">'", this.reader.getLocation()
+				);
+			}
+		}
+	}
+	
 	/**
 	 * Get an attributes value.
 	 * 
@@ -970,9 +1041,13 @@ public class XMLMediaParser implements XMLStreamConstants {
 			return parser.parse();
 		}
 		catch(XMLStreamException e){
+			e.printStackTrace();
+			
 			return null;
 		}
 		catch(XMLMediaParseException e){
+			e.printStackTrace();
+			
 			return null;
 		}
 	}
