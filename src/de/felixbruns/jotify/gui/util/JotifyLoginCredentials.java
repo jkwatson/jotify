@@ -50,4 +50,8 @@ public class JotifyLoginCredentials {
 	public void setRemember(boolean remember){
 		this.remember = remember;
 	}
+	
+	public static JotifyLoginCredentials emptyLoginCredentials(){
+		return new JotifyLoginCredentials(null, (String)null);
+	}
 }

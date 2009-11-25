@@ -30,8 +30,8 @@ public class JotifyPreferences extends Preferences {
 			);
 		}
 		
-		/* Return null otherwise. */
-		return null;
+		/* Return empty login credentials otherwise. */
+		return JotifyLoginCredentials.emptyLoginCredentials();
 	}
 	
 	public void setLoginCredentials(JotifyLoginCredentials credentials){

@@ -59,8 +59,8 @@ public class JotifyApplication {
 		
 		/* Login process. Repeat if login failed. */
 		while(true){
-			/* Ask for login credentials if they're not saved. */
-			if(credentials == null || !credentials.getRemember()){
+			/* Ask for login credentials if they're not marked as remebmered. */
+			if(!credentials.getRemember()){
 				JotifyLoginDialog.getLoginCredentials(credentials);
 			}
 			/* If credentials are present, just show loader. */
