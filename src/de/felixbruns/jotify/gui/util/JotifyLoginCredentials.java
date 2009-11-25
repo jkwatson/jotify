@@ -35,6 +35,10 @@ public class JotifyLoginCredentials {
 		return this.password;
 	}
 	
+	public void setPassword(char[] password){
+		this.password = new String(password);
+	}
+	
 	public void setPassword(String password){
 		this.password = password;
 	}

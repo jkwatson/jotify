@@ -45,7 +45,7 @@ public class JotifyFrame extends JFrame {
 		/* Set some options. */
 		this.setTitle("Jotify");
 		this.setIconImages(icons);
-		this.setBounds(100, 100, 800, 600);
+		this.setBounds(100, 100, 1000, 600);
 		this.setMinimumSize(new Dimension(640, 480));
 		this.setDefaultCloseOperation(JDialog.EXIT_ON_CLOSE);
 		

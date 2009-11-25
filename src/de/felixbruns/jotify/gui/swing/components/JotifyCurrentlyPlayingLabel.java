@@ -43,7 +43,7 @@ public class JotifyCurrentlyPlayingLabel extends JPanel {
 		
 		/* Create timers for scrolling text. */
 		this.timer = new Timer(25, new ActionListener(){
-			public void actionPerformed(ActionEvent e) {
+			public void actionPerformed(ActionEvent e){
 				repaint();
 			}
 		});

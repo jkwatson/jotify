@@ -88,6 +88,7 @@ public class Preferences {
 			output.close();
 		}
 		catch(IOException e){
+			e.printStackTrace();
 			return false;
 		}
 		

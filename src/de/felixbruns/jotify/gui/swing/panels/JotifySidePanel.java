@@ -36,6 +36,7 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 	private JotifyList                  list;
 	private JotifyCurrentlyPlayingPanel info;
 	private JotifyPlaybackQueue         queue;
+	private int                         lastMenuIndex = -1;
 	
 	public JotifySidePanel(final Jotify jotify){
 		/* Set broadcast object. */
@@ -52,13 +53,15 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 		
 		/* Create and add list to panel. */
 		this.menu = new JotifyList();
-		this.menu.setBorder(new EmptyBorder(5, 5, 5, 5));
+		this.menu.setBorder(new EmptyBorder(5, 0, 5, 0));
 		this.menu.appendElement(
 			new ImageIcon(JotifyList.class.getResource("images/preferences_icon.png")),
+			new ImageIcon(JotifyList.class.getResource("images/preferences_icon_selected.png")),
 			"Preferences"
 		);
 		this.menu.appendElement(
 			new ImageIcon(JotifyList.class.getResource("images/preferences_icon.png")),
+			new ImageIcon(JotifyList.class.getResource("images/preferences_icon_selected.png")),
 			"Queue"
 		);
 		this.menu.addListSelectionListener(new ListSelectionListener(){
@@ -75,18 +78,27 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 						list.clearSelection();
 					}
 					else if(element.getText().equals("Preferences")){
+						menu.repaint();
+						
 						JotifyPreferencesDialog.showDialog();
 						
-						menu.clearSelection();
+						if(lastMenuIndex > 0){
+							menu.setSelectedIndex(lastMenuIndex);
+						}
+						else{
+							menu.clearSelection();
+						}
 					}
 				}
+				
+				lastMenuIndex = menu.getSelectedIndex();
 			}
 		});
 		this.add(this.menu, BorderLayout.NORTH);
 		
 		/* Create and add list to panel. */
 		this.list = new JotifyList();
-		this.list.setBorder(new EmptyBorder(5, 5, 5, 5));
+		this.list.setBorder(new EmptyBorder(5, 0, 5, 0));
 		this.list.addListSelectionListener(new ListSelectionListener(){
 			public void valueChanged(ListSelectionEvent e){
 				/* Get selected object from list. */
@@ -145,7 +157,6 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 				return false;
 			}
 		});
-        
 		this.add(this.list, BorderLayout.CENTER);
 		
 		this.info = new JotifyCurrentlyPlayingPanel(jotify);

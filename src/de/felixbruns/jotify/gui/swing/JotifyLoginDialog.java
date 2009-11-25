@@ -11,8 +11,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
@@ -65,21 +63,7 @@ public class JotifyLoginDialog extends JFrame implements MouseListener, MouseMot
 	}
 	
 	/* Show a login dialog. */
-	public static JotifyLoginCredentials showDialog(){
-		/* Show dialog. */
-		dialog.setVisible(true);
-		
-		/* Center dialog on screen. */
-		dialog.setLocationRelativeTo(null);
-		
-		/* Get login credentials (will block until available). */
-		JotifyLoginCredentials credentials = dialog.getLoginCredentials();
-		
-		/* Return login credentials. */
-		return credentials;
-	}
-	
-	public static void showDialogNonBlocking(){
+	public static void showDialog(){
 		/* Show dialog. */
 		dialog.setVisible(true);
 		
@@ -93,47 +77,58 @@ public class JotifyLoginDialog extends JFrame implements MouseListener, MouseMot
 	}
 	
 	public static void showLoader(){
-		dialog.setSize(270, 340);
-		
 		dialog.loadLabel.setVisible(true);
 	}
 	
-	public static void hideLoader(){
-		dialog.setSize(270, 290);
-		
+	public static void hideLoader(){		
 		dialog.loadLabel.setVisible(false);
 	}
 	
-	public static void showError(String message){
-		dialog.setSize(270, 340);
-
+	public static void showErrorMessage(String message){
 		dialog.messageLabel.setForeground(new Color(255, 30, 0));
 		dialog.messageLabel.setIcon(new ImageIcon(JotifyApplication.class.getResource("images/error.png")));
 		dialog.messageLabel.setText("<html>" + message + "</html>");
-		
 		dialog.messageLabel.setVisible(true);
 	}
 	
-	public static void showInformation(String message){
-		dialog.setSize(270, 340);
-		
+	public static void showInformationMessage(String message){
 		dialog.messageLabel.setForeground(new Color(0, 50, 111));
 		dialog.messageLabel.setIcon(new ImageIcon(JotifyApplication.class.getResource("images/information.png")));
 		dialog.messageLabel.setText("<html>" + message + "</html>");
-		
 		dialog.messageLabel.setVisible(true);
 	}
 	
 	public static void hideMessage(){
-		dialog.setSize(270, 290);
-		
 		dialog.messageLabel.setVisible(false);
+	}
+	
+	public static void updateDialog(){
+		if(dialog.messageLabel.isVisible() || dialog.loadLabel.isVisible()){
+			dialog.setSize(270, 340);
+		}
+		else{
+			dialog.setSize(270, 290);
+		}
 	}
 	
 	public static void setLoginCredentials(JotifyLoginCredentials credentials){
 		dialog.usernameField.setText(credentials.getUsername());
 		dialog.passwordField.setText(credentials.getPassword());
 		dialog.rememberMeCheckBox.setSelected(credentials.getRemember());
+	}
+	
+	/* Retrieve login credentials from dialog, blocks until available. */
+	public static void getLoginCredentials(JotifyLoginCredentials credentials){
+		/* Enable "Sign in" button.*/
+		dialog.signInButton.setEnabled(true);
+		
+		/* Wait for user to click "Sign in". */
+		dialog.semaphore.acquireUninterruptibly();
+		
+		/* Set credentials. */
+		credentials.setUsername(dialog.usernameField.getText());
+		credentials.setPassword(dialog.passwordField.getPassword());
+		credentials.setRemember(dialog.rememberMeCheckBox.isSelected());
 	}
 	
 	/* Private constructor. To show a dialog use: showLoginDialog. */
@@ -158,12 +153,7 @@ public class JotifyLoginDialog extends JFrame implements MouseListener, MouseMot
 		this.setBounds(100, 100, 270, 290);
 		this.setUndecorated(true);
 		this.setResizable(false);
-		this.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-		this.addWindowListener(new WindowAdapter(){
-			public void windowClosing(WindowEvent e){
-				System.exit(0);
-			}
-		});
+		this.setDefaultCloseOperation(JDialog.EXIT_ON_CLOSE);
 		
 		/* Add mouse listeners for dragging. */
 		this.addMouseListener(this);
@@ -235,10 +225,13 @@ public class JotifyLoginDialog extends JFrame implements MouseListener, MouseMot
 		this.signInButton = new JotifyButton("Sign in");
 		this.signInButton.setBounds(160, 240, 80, 20);
 		this.signInButton.setFont(dialogBold12);
+		this.signInButton.setEnabled(false);
 		this.signInButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent e){
 				if(!usernameField.getText().isEmpty() && passwordField.getPassword().length != 0){
 					semaphore.release();
+					
+					signInButton.setEnabled(false);
 				}
 			}
 		});
@@ -260,18 +253,6 @@ public class JotifyLoginDialog extends JFrame implements MouseListener, MouseMot
 		/* Create semaphore and aquire a permit. */
 		this.semaphore = new Semaphore(1);
 		this.semaphore.acquireUninterruptibly();
-	}
-	
-	/* Retrieve login credentials from dialog, blocks until available. */
-	public JotifyLoginCredentials getLoginCredentials(){
-		/* Wait for user to click "Sign in". */
-		this.semaphore.acquireUninterruptibly();
-		
-		return new JotifyLoginCredentials(
-			this.usernameField.getText(),
-			this.passwordField.getPassword(),
-			this.rememberMeCheckBox.isSelected()
-		);
 	}
 	
 	public void mouseClicked(MouseEvent e){

@@ -21,7 +21,9 @@ import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
 @SuppressWarnings("serial")
 public class JotifyList extends JList implements PlaylistListener {
 	private ImageIcon searchIcon;
+	private ImageIcon searchIconSelected;
 	private ImageIcon playlistIcon;
+	private ImageIcon playlistIconSelected;
 	private Set<Playlist> playlists = new HashSet<Playlist>();
 	
 	public JotifyList(){
@@ -29,8 +31,10 @@ public class JotifyList extends JList implements PlaylistListener {
 		this.setModel(new DefaultListModel());
 		
 		/* Load icons. */
-		this.searchIcon   = new ImageIcon(JotifyList.class.getResource("images/search_icon.png"));
-		this.playlistIcon = new ImageIcon(JotifyList.class.getResource("images/playlist_icon.png"));
+		this.searchIcon           = new ImageIcon(JotifyList.class.getResource("images/search_icon.png"));
+		this.searchIconSelected   = new ImageIcon(JotifyList.class.getResource("images/search_icon_selected.png"));
+		this.playlistIcon         = new ImageIcon(JotifyList.class.getResource("images/playlist_icon.png"));
+		this.playlistIconSelected = new ImageIcon(JotifyList.class.getResource("images/playlist_icon_selected.png"));
 		
 		/* Only allow single selections. */
 		this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -57,13 +61,15 @@ public class JotifyList extends JList implements PlaylistListener {
 				
 				/* Set icon depending on value. */
 				if(value instanceof Result){
-					label.setIcon(searchIcon);
+					label.setIcon(isSelected ? searchIconSelected : searchIcon);
 				}
 				else if(value instanceof Playlist){
-					label.setIcon(playlistIcon);
+					label.setIcon(isSelected ? playlistIconSelected : playlistIcon);
 				}
 				else if(value instanceof JotifyListElement){
-					label.setIcon(((JotifyListElement)value).getIcon());
+					JotifyListElement element = (JotifyListElement)value;
+					
+					label.setIcon(isSelected ? element.getIconSelected() : element.getIcon());
 				}
 				
 				/* Set text depending on value. */
@@ -86,7 +92,13 @@ public class JotifyList extends JList implements PlaylistListener {
 				
 				/* Label also needs to be transparent! And we want an empty border. */
 				label.setOpaque(false);
-				label.setBorder(new EmptyBorder(2, 2, 2, 2));
+				label.setBorder(new EmptyBorder(2, 7, 2, 7));
+				
+				if(isSelected){
+					label.setOpaque(true);
+					label.setBackground(new Color(169, 217, 254));
+					label.setForeground(new Color(55, 55, 55));
+				}
 				
 				/* Return cell renderer component. */
 				return label;
@@ -142,8 +154,8 @@ public class JotifyList extends JList implements PlaylistListener {
 		}
 	}
 	
-	public void appendElement(ImageIcon icon, String text){
-		this.appendElement(new JotifyListElement(icon, text));
+	public void appendElement(ImageIcon icon, ImageIcon iconSelected, String text){
+		this.appendElement(new JotifyListElement(icon, iconSelected, text));
 	}
 	
 	public void playlistAdded(Playlist playlist) { }
@@ -158,15 +170,21 @@ public class JotifyList extends JList implements PlaylistListener {
 	
 	public class JotifyListElement {
 		private ImageIcon icon;
+		private ImageIcon iconSelected;
 		private String    text;
 		
-		public JotifyListElement(ImageIcon icon, String text){
-			this.icon = icon;
-			this.text = text;
+		public JotifyListElement(ImageIcon icon, ImageIcon iconSelected, String text){
+			this.icon         = icon;
+			this.iconSelected = iconSelected;
+			this.text         = text;
 		}
 		
 		public ImageIcon getIcon(){
 			return this.icon;
+		}
+
+		public ImageIcon getIconSelected(){
+			return this.iconSelected;
 		}
 		
 		public String getText(){
