@@ -40,8 +40,8 @@ public class Protocol {
 	
 	/* Create a new protocol object. */
 	public Protocol(Session session){
-		this.session   = session;
-		this.listeners = new ArrayList<CommandListener>();
+		this.session     = session;
+		this.listeners   = new ArrayList<CommandListener>();
 	}
 	
 	/* Connect to one of the spotify servers. */
@@ -120,6 +120,7 @@ public class Protocol {
 		buffer.putShort((short)0x0100); /* Unknown */
 		buffer.put(this.session.username);
 		buffer.put((byte)0x40); /* Unknown */
+		//buffer.put((byte)(0x00)); /* Unknown */
 		
 		/* Update length byte. */
 		buffer.putShort(2, (short)buffer.position());
@@ -153,7 +154,7 @@ public class Protocol {
 			/*
 			 * Substatuses:
 			 * 0x01    : Client upgrade required.
-			 * 0x03    : Non-existant user.
+			 * 0x03    : Nonexistent user.
 			 * 0x04    : Account has been disabled.
 			 * 0x06    : You need to complete your account details.
 			 * 0x09    : Your current country doesn't match that set in your profile.
@@ -167,7 +168,7 @@ public class Protocol {
 					message.append("Client upgrade required: ");
 					break;
 				case 0x03:
-					message.append("Non-existant user.");
+					message.append("Nonexistent user.");
 					break;
 				case 0x04:
 					message.append("Account has been disabled.");
