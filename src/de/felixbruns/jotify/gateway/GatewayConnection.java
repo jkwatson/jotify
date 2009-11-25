@@ -243,11 +243,11 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 			return null;
 		}
 		
-		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
+		/* Get data. */
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		/* Cut off that last 0xFF byte... */
-		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		//TODO: is this needed? data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
 		/* Return xml string. */
 		return new String(data, Charset.forName("UTF-8"));
@@ -272,11 +272,11 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 			return null;
 		}
 		
-		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
+		/* Get data. */
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		/* Cut off that last 0xFF byte... */
-		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		//TODO: is this needed? data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
 		/* Return xml string. */
 		return new String(data, Charset.forName("UTF-8"));
@@ -345,11 +345,11 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 			return null;
 		}
 		
-		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
+		/* Get data. */
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		/* Cut off that last 0xFF byte... */
-		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		//TODO: is this needed? data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
 		/* Load XML. */
 		return new String(data, Charset.forName("UTF-8"));
@@ -374,11 +374,11 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 			return null;
 		}
 		
-		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
+		/* Get data. */
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		/* Cut off that last 0xFF byte... */
-		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		//TODO: is this needed? data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
 		/* Load XML. */
 		return new String(data, Charset.forName("UTF-8"));

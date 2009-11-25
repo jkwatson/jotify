@@ -128,9 +128,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 	}
 	
 	/**
-	 *  Closes the connection to a Spotify server.
-	 *  
-	 *  @throws ConnectionException
+	 * Closes the connection to a Spotify server.
+	 * 
+	 * @throws ConnectionException
 	 */
 	public void close() throws ConnectionException {
 		/* This will make receivePacket return immediately. */
@@ -143,8 +143,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 	}
 	
 	/**
-	 *  Continuously receives packets in order to handle them.
-	 *  Use a {@link Thread} to run this.
+	 * Continuously receives packets in order to handle them.
+	 * Use a {@link Thread} to run this.
 	 */
 	public void run(){
 		/* Check if we're logged in. */
@@ -219,11 +219,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 			return null;
 		}
 		
-		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
-		
-		/* Cut off that last 0xFF byte... */
-		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		/* Get data. */
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		/* Create result from XML. */
 		return XMLMediaParser.parseResult(data, "UTF-8");
@@ -250,8 +247,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 			return null;
 		}
 		
-		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
+		/* Get data. */
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		/* Cut off that last 0xFF byte... */
 		data = Arrays.copyOfRange(data, 0, data.length - 1);
@@ -336,11 +333,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 			return null;
 		}
 		
-		/* Get data and inflate it. */
-		byte[] data = GZIP.inflate(callback.get(this.timeout, this.unit));
-		
-		/* Cut off that last 0xFF byte... */
-		data = Arrays.copyOfRange(data, 0, data.length - 1);
+		/* Get data. */
+		byte[] data = callback.get(this.timeout, this.unit);
 		
 		/* Create object from XML. */
 		return XMLMediaParser.parse(data, "UTF-8");
@@ -493,11 +487,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 				return null;
 			}
 			
-			/* Get data and inflate it. */
-			data = GZIP.inflate(callback.get(this.timeout, this.unit));
-			
-			/* Cut off that last 0xFF byte... */
-			data = Arrays.copyOfRange(data, 0, data.length - 1);
+			/* Get data. */
+			data = callback.get(this.timeout, this.unit);
 			
 			/* Save to cache. */
 			if(this.cache != null){
@@ -524,7 +515,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	public Result browse(List<Track> tracks){
 		/* Create id list. */
 		List<String> ids = new ArrayList<String>();
-			
+		
 		for(Track track : tracks){
 			ids.add(track.getId());
 		}
@@ -656,22 +647,23 @@ public class JotifyConnection implements Jotify, CommandListener {
 	}
 	
 	// TODO: playlistsAddPlaylists, playlistsRemovePlaylist(s), playlistsMovePlaylist(s)
+	// TODO: destroy playlist: http://despotify.pastebin.com/f7cb09c84
 	
 	/**
 	 * Get a playlist.
 	 * 
-	 * @param id       Id of the playlist to load.
-	 * @param useCache Whether to use a cached version if available or not.
+	 * @param id     Id of the playlist to load.
+	 * @param cached Whether to use a cached version if available or not.
 	 * 
 	 * @return A {@link Playlist} object or null on failure.
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlist(String id, boolean useCache){
+	public Playlist playlist(String id, boolean cached){
 		/* Data buffer. */
 		byte[] data;
 		
-		if(useCache && this.cache != null && this.cache.contains("playlist", id)){
+		if(cached && this.cache != null && this.cache.contains("playlist", id)){
 			data = this.cache.load("playlist", id);
 		}
 		else{
@@ -1339,15 +1331,6 @@ public class JotifyConnection implements Jotify, CommandListener {
 				/* Release 'prodinfo' permit. */
 				this.userSemaphore.release();
 				
-				/* Payload is uncompressed XML. */
-				if(!this.user.isPremium()){
-					System.err.println(
-						"Sorry, you need a premium account to use jotify (this is a restriction by Spotify)."
-					);
-					
-					System.exit(0);
-				}
-				
 				break;
 			}
 			case Command.COMMAND_WELCOME: {
@@ -1407,6 +1390,11 @@ public class JotifyConnection implements Jotify, CommandListener {
 		
 		/* Print user info. */
 		System.out.println(jotify.user());
+		
+		/* Check if user has a premium account. */
+		if(!jotify.user.isPremium()){
+			System.err.println("WARNING: You don't have a premium account! Jotify will NOT work!");
+		}
 		
 		/* Wait for commands. */
 		while(true){

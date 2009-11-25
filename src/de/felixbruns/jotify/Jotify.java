@@ -219,6 +219,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
+	public Playlist playlist(String id, boolean cached);
 	public Playlist playlist(String id);
 	
 	/**

@@ -293,14 +293,18 @@ public class JotifyPool implements Jotify, Player {
 		return success;
 	}
 	
-	public Playlist playlist(String id){
+	public Playlist playlist(String id, boolean cached){
 		Jotify connection = this.getConnection();
 		
-		Playlist playlist = connection.playlist(id);
+		Playlist playlist = connection.playlist(id, cached);
 		
 		this.releaseConnection(connection);
 		
 		return playlist;
+	}
+	
+	public Playlist playlist(String id){
+		return this.playlist(id, false);
 	}
 	
 	public Playlist playlistCreate(String name, boolean collaborative){
