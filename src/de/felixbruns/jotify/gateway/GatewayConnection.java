@@ -21,7 +21,7 @@ import de.felixbruns.jotify.exceptions.ConnectionException;
 import de.felixbruns.jotify.exceptions.ProtocolException;
 import de.felixbruns.jotify.gateway.stream.ChannelStreamer;
 import de.felixbruns.jotify.gateway.stream.HTTPStreamer;
-import de.felixbruns.jotify.media.Result;
+import de.felixbruns.jotify.media.File;
 import de.felixbruns.jotify.media.Track;
 import de.felixbruns.jotify.media.User;
 import de.felixbruns.jotify.player.PlaybackListener;
@@ -33,7 +33,6 @@ import de.felixbruns.jotify.protocol.Session;
 import de.felixbruns.jotify.protocol.channel.Channel;
 import de.felixbruns.jotify.protocol.channel.ChannelCallback;
 import de.felixbruns.jotify.protocol.channel.ChannelHeaderCallback;
-import de.felixbruns.jotify.util.GZIP;
 import de.felixbruns.jotify.util.XML;
 import de.felixbruns.jotify.util.XMLElement;
 
@@ -246,9 +245,6 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		/* Get data. */
 		byte[] data = callback.get(this.timeout, this.unit);
 		
-		/* Cut off that last 0xFF byte... */
-		//TODO: is this needed? data = Arrays.copyOfRange(data, 0, data.length - 1);
-		
 		/* Return xml string. */
 		return new String(data, Charset.forName("UTF-8"));
 	}
@@ -274,9 +270,6 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		
 		/* Get data. */
 		byte[] data = callback.get(this.timeout, this.unit);
-		
-		/* Cut off that last 0xFF byte... */
-		//TODO: is this needed? data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
 		/* Return xml string. */
 		return new String(data, Charset.forName("UTF-8"));
@@ -348,9 +341,6 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		/* Get data. */
 		byte[] data = callback.get(this.timeout, this.unit);
 		
-		/* Cut off that last 0xFF byte... */
-		//TODO: is this needed? data = Arrays.copyOfRange(data, 0, data.length - 1);
-		
 		/* Load XML. */
 		return new String(data, Charset.forName("UTF-8"));
 	}
@@ -376,9 +366,6 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		
 		/* Get data. */
 		byte[] data = callback.get(this.timeout, this.unit);
-		
-		/* Cut off that last 0xFF byte... */
-		//TODO: is this needed? data = Arrays.copyOfRange(data, 0, data.length - 1);
 		
 		/* Load XML. */
 		return new String(data, Charset.forName("UTF-8"));
@@ -443,8 +430,8 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	 */
 	public void stream(String id, String fileId, OutputStream stream){
 		/* Create track and set file id. */
-		Result result = Result.fromXMLElement(XML.load(browse(BrowseType.TRACK, id)));
-		Track  track  = result.getTracks().get(0);
+		Track track = new Track(id);
+		track.addFile(new File(fileId, null));
 		
 		/* Create channel callbacks. */
 		ChannelCallback       callback       = new ChannelCallback();
