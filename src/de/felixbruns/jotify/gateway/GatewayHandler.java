@@ -1,8 +1,12 @@
 package de.felixbruns.jotify.gateway;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.json.JSONException;
@@ -21,7 +25,28 @@ public abstract class GatewayHandler implements HttpHandler {
 		String requestQuery  = exchange.getRequestURI().getQuery();
 		
 		/* Get request parameters. */
-		Map<String, String> params = URIUtilities.parseQuery(requestQuery);
+		Map<String, String> params = new HashMap<String, String>();
+		
+		if(requestMethod.equalsIgnoreCase("GET")){
+			params = URIUtilities.parseQuery(requestQuery);
+		}
+		else if(requestMethod.equalsIgnoreCase("POST")){
+			InputStream    input   = exchange.getRequestBody();
+			BufferedReader reader  = new BufferedReader(new InputStreamReader(input));
+			StringBuilder  builder = new StringBuilder();
+			String         line;
+			
+			/* Convert input stream to string. */
+			while((line = reader.readLine()) != null){
+				builder.append(line);
+			}
+			
+			/* Close input stream. */
+			input.close();
+			
+			/* Parse query. */
+			params = URIUtilities.parseQuery(builder.toString());
+		}
 		
 		/* Get response body and headers. */
 		OutputStream responseBody    = exchange.getResponseBody();
@@ -31,7 +56,7 @@ public abstract class GatewayHandler implements HttpHandler {
 		
 		/* Set Access-Control headers.*/
 		responseHeaders.set("Access-Control-Allow-Origin", "*");
-		responseHeaders.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+		responseHeaders.set("Access-Control-Allow-Methods", "OPTIONS, GET, POST");
 		responseHeaders.set("Access-Control-Allow-Headers", "X-Requested-With");
 		responseHeaders.set("Access-Control-Max-Age", "1728000");
 		
@@ -40,6 +65,9 @@ public abstract class GatewayHandler implements HttpHandler {
 			responseString = "";
 		}
 		else if(requestMethod.equalsIgnoreCase("GET")){
+			responseString = this.handle(params);
+		}
+		else if(requestMethod.equalsIgnoreCase("POST")){
 			responseString = this.handle(params);
 		}
 		else{
