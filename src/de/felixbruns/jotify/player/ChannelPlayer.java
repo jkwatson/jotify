@@ -574,6 +574,7 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 		/* Write data to output stream. */
 		try{
 			this.output.write(ciphertext, 0, ciphertext.length - 1024);
+			this.output.flush();
 		}
 		catch(IOException e){
 			/* Just don't care... */
