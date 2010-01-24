@@ -103,13 +103,11 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param album A {@link Track} object identifying the track to browse.
 	 * 
-	 * @return A {@link Result} object holding more information about
-	 *         the track or null on failure.
+	 * @return A {@link Track} object or null on failure.
 	 * 
 	 * @see Track
-	 * @see Result
 	 */
-	public Result browse(Track track);
+	public Track browse(Track track);
 	
 	/**
 	 * Browse information for multiple tracks.
@@ -117,13 +115,11 @@ public interface Jotify extends Runnable, Player {
 	 * @param tracks A {@link List} of {@link Track} objects identifying
 	 *               the tracks to browse.
 	 * 
-	 * @return A {@link Result} object holding more information about
-	 *         the tracks or null on failure.
+	 * @return A list of {@link Track} objects or null on failure.
 	 * 
 	 * @see Track
-	 * @see Result
 	 */
-	public Result browse(List<Track> tracks);
+	public List<Track> browse(List<Track> tracks);
 	
 	/**
 	 * Browse artist info by id.
@@ -154,61 +150,101 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param id An id identifying the track to browse.
 	 * 
-	 * @return A {@link Result} object holding more information about
-	 *         the track or null on failure.
+	 * @return A {@link Track} object or null on failure.
 	 * 
 	 * @see Track
-	 * @see Result
 	 */
-	public Result browseTrack(String id);
+	public Track browseTrack(String id);
 	
 	/**
 	 * Browse information for multiple tracks by id.
 	 * 
-	 * @param tracks A {@link List} of ids identifying the tracks to browse.
+	 * @param ids A {@link List} of ids identifying the tracks to browse.
 	 * 
-	 * @return A {@link Result} object holding more information about
-	 *         the tracks or null on failure.
+	 * @return A list of {@link Track} objects or null on failure.
 	 * 
 	 * @see Track
-	 * @see Result
 	 */
-	public Result browseTracks(List<String> tracks);
+	public List<Track> browseTracks(List<String> ids);
 	
 	/**
-	 * Get a list of stored playlists.
+	 * Get stored user playlists.
 	 * 
-	 * @return A {@link List} of {@link Playlist} objects or null on failure.
-	 *         (Note: {@link Playlist} objects only hold id and author)
+	 * @return A {@link PlaylistContainer} holding {@link Playlist} objects
+	 *         or an empty {@link PlaylistContainer} on failure.
+	 *         Note: {@link Playlist} objects only hold id and author and need
+	 *         to be loaded using {@link #playlist(String)}.
+	 * 
+	 * @see PlaylistContainer
+	 */
+	public PlaylistContainer playlistContainer();
+	
+	/**
+	 * Add a playlist to a playlist container.
+	 * 
+	 * @param playlistContainer A {@link PlaylistContainer} to add the playlist to.
+	 * @param playlist          The {@link Playlist} to be added.
+	 * 
+	 * @return true on success and false on failure.
+	 * 
+	 * @see PlaylistContainer
+	 */
+	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist);
+	
+	/**
+	 * Add a playlist to a playlist container.
+	 * 
+	 * @param playlistContainer The playlist container.
+	 * @param playlist          The playlist to be added.
+	 * @param position          The target position of the added playlist.
+	 * 
+	 * @return true on success and false on failure.
+	 */
+	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist, int position);
+	
+	/**
+	 * Add multiple playlists to a playlist container.
+	 * 
+	 * @param playlistContainer The playlist container.
+	 * @param playlists         A {@link List} of playlists to be added.
+	 * @param position          The target position of the added playlists.
+	 * 
+	 * @return true on success and false on failure.
+	 */
+	public boolean playlistContainerAddPlaylists(PlaylistContainer playlistContainer, List<Playlist> playlists, int position);
+	
+	/**
+	 * Remove a playlist from a playlist container.
+	 * 
+	 * @param playlistContainer The playlist container.
+	 * @param position          The position of the playlist to remove.
+	 * 
+	 * @return true on success and false on failure.
+	 */
+	public boolean playlistContainerRemovePlaylist(PlaylistContainer playlistContainer, int position);
+	
+	/**
+	 * Remove multiple playlists from a playlist container.
+	 * 
+	 * @param playlistContainer The playlist container.
+	 * @param position          The position of the tracks to remove.
+	 * @param count             The number of track to remove.
+	 * 
+	 * @return true on success and false on failure.
+	 */
+	public boolean playlistContainerRemovePlaylists(PlaylistContainer playlistContainer, int position, int count);
+	
+	/**
+	 * Get a playlist.
+	 * 
+	 * @param id     Id of the playlist to load.
+	 * @param cached Whether to use a cached version if available or not.
+	 * 
+	 * @return A {@link Playlist} object or null on failure.
 	 * 
 	 * @see Playlist
 	 */
-	public PlaylistContainer playlists();
-	
-	/**
-	 * Add a playlist to the end of the list of stored playlists.
-	 * 
-	 * @param playlists A {@link PlaylistContainer} to add the playlist to.
-	 * @param playlist  The {@link Playlist} to be added.
-	 * 
-	 * @return true on success and false on failure.
-	 * 
-	 * @see PlaylistContainer
-	 */
-	public boolean playlistsAddPlaylist(PlaylistContainer playlists, Playlist playlist);
-	
-	/**
-	 * Add a playlist to the list of stored playlists.
-	 * 
-	 * @param playlists A {@link PlaylistContainer} to add the playlist to.
-	 * @param playlist  The {@link Playlist} to be added.
-	 * @param position  The target position of the playlist.
-	 * 
-	 * @return true on success and false on failure.
-	 * 
-	 * @see PlaylistContainer
-	 */
-	public boolean playlistsAddPlaylist(PlaylistContainer playlists, Playlist playlist, int position);
+	public Playlist playlist(String id, boolean cached);
 	
 	/**
 	 * Get a playlist.
@@ -219,7 +255,6 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlist(String id, boolean cached);
 	public Playlist playlist(String id);
 	
 	/**
@@ -227,12 +262,58 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @param name          The name of the playlist to create.
 	 * @param collaborative If the playlist shall be collaborative.
+	 * @param description   A description of the playlist.
+	 * @param picture       An image id to associate with this playlist.
 	 * 
 	 * @return A {@link Playlist} object or null on failure.
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlistCreate(String name, boolean collaborative);
+	public Playlist playlistCreate(String name, boolean collaborative, String description, String picture);
+	
+	/**
+	 * Create a playlist.
+	 * 
+	 * @param name The name of the playlist to create.
+	 * 
+	 * @return A {@link Playlist} object or null on failure.
+	 * 
+	 * @see Playlist
+	 */
+	public Playlist playlistCreate(String name);
+	
+	/**
+	 * Create a playlist from a given album.
+	 * 
+	 * @param sourceAlbum An {@link Album} object
+	 * 
+	 * @return A {@link Playlist} object or null on failure.
+	 * 
+	 * @see Playlist
+	 * @see Album
+	 */
+	public Playlist playlistCreate(Album sourceAlbum);
+	
+	/**
+	 * Destroy a playlist (Note: It will not be destroyed on the server immediately).
+	 * 
+	 * @param playlist The playlist to destroy.
+	 * 
+	 * @return true if the playlist was successfully destroyed, false otherwise.
+	 * 
+	 * @see Playlist
+	 */
+	public boolean playlistDestroy(Playlist playlist);
+	
+	/**
+	 * Add a track to a playlist.
+	 * 
+	 * @param playlist The playlist.
+	 * @param track    The track to be added.
+	 * 
+	 * @return true on success and false on failure.
+	 */
+	public boolean playlistAddTrack(Playlist playlist, Track track);
 	
 	/**
 	 * Add a track to a playlist.
@@ -300,4 +381,17 @@ public interface Jotify extends Runnable, Player {
 	 * @see Playlist
 	 */
 	public boolean playlistSetCollaborative(Playlist playlist, boolean collaborative);
+	
+	/**
+	 * Set playlist information.
+	 * 
+	 * @param playlist    The {@link Playlist} to change.
+	 * @param description The description to set.
+	 * @param picture     The picture to set.
+	 * 
+	 * @return true on success or false on failure.
+	 * 
+	 * @see Playlist
+	 */
+	public boolean playlistSetInformation(Playlist playlist, String description, String picture);
 }

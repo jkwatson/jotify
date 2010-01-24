@@ -39,7 +39,7 @@ public class JotifyPool implements Jotify, Player {
 	}
 	
 	public JotifyPool(){
-		this(4);
+		this(2);
 	}
 	
 	public JotifyPool(int poolSize){
@@ -203,20 +203,20 @@ public class JotifyPool implements Jotify, Player {
 		return album;
 	}
 	
-	public Result browse(Track track){
+	public Track browse(Track track){
 		Jotify connection = this.getConnection();
 		
-		Result result = connection.browse(track);
+		Track result = connection.browse(track);
 		
 		this.releaseConnection(connection);
 		
 		return result;
 	}
 	
-	public Result browse(List<Track> tracks){
+	public List<Track> browse(List<Track> tracks){
 		Jotify connection = this.getConnection();
 		
-		Result result = connection.browse(tracks);
+		List<Track> result = connection.browse(tracks);
 		
 		this.releaseConnection(connection);
 		
@@ -243,50 +243,80 @@ public class JotifyPool implements Jotify, Player {
 		return artist;
 	}
 	
-	public Result browseTrack(String id){
+	public Track browseTrack(String id){
 		Jotify connection = this.getConnection();
 		
-		Result result = connection.browseTrack(id);
+		Track result = connection.browseTrack(id);
 		
 		this.releaseConnection(connection);
 		
 		return result;
 	}
 	
-	public Result browseTracks(List<String> tracks){
+	public List<Track> browseTracks(List<String> ids){
 		Jotify connection = this.getConnection();
 		
-		Result result = connection.browseTracks(tracks);
+		List<Track> result = connection.browseTracks(ids);
 		
 		this.releaseConnection(connection);
 		
 		return result;
 	}
 	
-	public PlaylistContainer playlists(){
+	public PlaylistContainer playlistContainer(){
 		Jotify connection = this.getConnection();
 		
-		PlaylistContainer playlists = connection.playlists();
+		PlaylistContainer playlistContainer = connection.playlistContainer();
 		
 		this.releaseConnection(connection);
 		
-		return playlists;
+		return playlistContainer;
 	}
 	
-	public boolean playlistsAddPlaylist(PlaylistContainer playlists, Playlist playlist){
+	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist){
 		Jotify connection = this.getConnection();
 		
-		boolean success = connection.playlistsAddPlaylist(playlists, playlist);
+		boolean success = connection.playlistContainerAddPlaylist(playlistContainer, playlist);
 		
 		this.releaseConnection(connection);
 		
 		return success;
 	}
 	
-	public boolean playlistsAddPlaylist(PlaylistContainer playlists, Playlist playlist, int position){
+	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist, int position){
 		Jotify connection = this.getConnection();
 		
-		boolean success = connection.playlistsAddPlaylist(playlists, playlist, position);
+		boolean success = connection.playlistContainerAddPlaylist(playlistContainer, playlist, position);
+		
+		this.releaseConnection(connection);
+		
+		return success;
+	}
+	
+	public boolean playlistContainerAddPlaylists(PlaylistContainer playlistContainer, List<Playlist> playlists, int position){
+		Jotify connection = this.getConnection();
+		
+		boolean success = connection.playlistContainerAddPlaylists(playlistContainer, playlists, position);
+		
+		this.releaseConnection(connection);
+		
+		return success;
+	}
+	
+	public boolean playlistContainerRemovePlaylist(PlaylistContainer playlistContainer, int position){
+		Jotify connection = this.getConnection();
+		
+		boolean success = connection.playlistContainerRemovePlaylist(playlistContainer, position);
+		
+		this.releaseConnection(connection);
+		
+		return success;
+	}
+	
+	public boolean playlistContainerRemovePlaylists(PlaylistContainer playlistContainer, int position, int count){
+		Jotify connection = this.getConnection();
+		
+		boolean success = connection.playlistContainerRemovePlaylists(playlistContainer, position, count);
 		
 		this.releaseConnection(connection);
 		
@@ -307,14 +337,54 @@ public class JotifyPool implements Jotify, Player {
 		return this.playlist(id, false);
 	}
 	
-	public Playlist playlistCreate(String name, boolean collaborative){
+	public Playlist playlistCreate(String name, boolean collaborative, String description, String picture){
 		Jotify connection = this.getConnection();
 		
-		Playlist playlist = connection.playlistCreate(name, collaborative);
+		Playlist playlist = connection.playlistCreate(name, collaborative, description, picture);
 		
 		this.releaseConnection(connection);
 		
 		return playlist;
+	}
+	
+	public Playlist playlistCreate(String name){
+		Jotify connection = this.getConnection();
+		
+		Playlist playlist = connection.playlistCreate(name);
+		
+		this.releaseConnection(connection);
+		
+		return playlist;
+	}
+	
+	public Playlist playlistCreate(Album sourceAlbum){
+		Jotify connection = this.getConnection();
+		
+		Playlist playlist = connection.playlistCreate(sourceAlbum);
+		
+		this.releaseConnection(connection);
+		
+		return playlist;
+	}
+	
+	public boolean playlistDestroy(Playlist playlist){
+		Jotify connection = this.getConnection();
+		
+		boolean success = connection.playlistDestroy(playlist);
+		
+		this.releaseConnection(connection);
+		
+		return success;
+	}
+	
+	public boolean playlistAddTrack(Playlist playlist, Track track){
+		Jotify connection = this.getConnection();
+		
+		boolean success = connection.playlistAddTrack(playlist, track);
+		
+		this.releaseConnection(connection);
+		
+		return success;
 	}
 	
 	public boolean playlistAddTrack(Playlist playlist, Track track, int position){
@@ -371,6 +441,16 @@ public class JotifyPool implements Jotify, Player {
 		Jotify connection = this.getConnection();
 		
 		boolean success = connection.playlistSetCollaborative(playlist, collaborative);
+		
+		this.releaseConnection(connection);
+		
+		return success;
+	}
+	
+	public boolean playlistSetInformation(Playlist playlist, String description, String picture){
+		Jotify connection = this.getConnection();
+		
+		boolean success = connection.playlistSetInformation(playlist, description, picture);
 		
 		this.releaseConnection(connection);
 		
