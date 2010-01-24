@@ -1,6 +1,6 @@
 package de.felixbruns.jotify.gateway;
 
-import java.io.OutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
@@ -11,6 +11,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.sun.net.httpserver.HttpExchange;
+
 import de.felixbruns.jotify.JotifyPlayer;
 import de.felixbruns.jotify.cache.Cache;
 import de.felixbruns.jotify.cache.FileCache;
@@ -20,10 +22,10 @@ import de.felixbruns.jotify.exceptions.AuthenticationException;
 import de.felixbruns.jotify.exceptions.ConnectionException;
 import de.felixbruns.jotify.exceptions.ProtocolException;
 import de.felixbruns.jotify.gateway.stream.ChannelStreamer;
-import de.felixbruns.jotify.gateway.stream.HTTPStreamer;
 import de.felixbruns.jotify.media.File;
 import de.felixbruns.jotify.media.Track;
 import de.felixbruns.jotify.media.User;
+import de.felixbruns.jotify.media.parser.XMLUserParser;
 import de.felixbruns.jotify.player.PlaybackListener;
 import de.felixbruns.jotify.player.Player;
 import de.felixbruns.jotify.protocol.Command;
@@ -33,8 +35,6 @@ import de.felixbruns.jotify.protocol.Session;
 import de.felixbruns.jotify.protocol.channel.Channel;
 import de.felixbruns.jotify.protocol.channel.ChannelCallback;
 import de.felixbruns.jotify.protocol.channel.ChannelHeaderCallback;
-import de.felixbruns.jotify.util.XML;
-import de.felixbruns.jotify.util.XMLElement;
 
 public class GatewayConnection implements Runnable, CommandListener, Player {
 	private Session      session;
@@ -209,7 +209,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 			"<user>" + 
 				"<name>" + this.user.getName() + "</name>" +
 				"<country>" + this.user.getCountry() + "</country>" +
-				"<type>" + this.user.getType() + "</type>" +
+				"<type>" + this.user.getProperty("type") + "</type>" +
 			"</user>";
 		
 		return xml;
@@ -382,7 +382,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		
 		/* Send stored playlists request. */
 		try{
-			this.protocol.sendUserPlaylistsRequest(callback);
+			this.protocol.sendPlaylistRequest(callback, null);
 		}
 		catch(ProtocolException e){
 			return null;
@@ -427,11 +427,14 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	
 	/**
 	 * Stream a track to an output stream.
+	 * 
+	 * @throws IOException
 	 */
-	public void stream(String id, String fileId, OutputStream stream){
-		/* Create track and set file id. */
+	public void stream(String id, String fileId, HttpExchange exchange) throws IOException {
+		/* Browse track. */
 		Track track = new Track(id);
-		track.addFile(new File(fileId, null));
+		
+		track.addFile(new File(fileId, ""));
 		
 		/* Create channel callbacks. */
 		ChannelCallback       callback       = new ChannelCallback();
@@ -442,6 +445,8 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 			this.protocol.sendAesKeyRequest(callback, track);
 		}
 		catch(ProtocolException e){
+			exchange.sendResponseHeaders(404, -1);
+			
 			return;
 		}
 		
@@ -453,6 +458,8 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 			this.protocol.sendSubstreamRequest(headerCallback, track, 0, 0);
 		}
 		catch(ProtocolException e){
+			exchange.sendResponseHeaders(404, -1);
+			
 			return;
 		}
 		
@@ -461,10 +468,12 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		
 		/* If we got 4 HTTP stream URLs use them, otherwise use default channel streaming. */
 		if(urls.size() == 4){
-			new HTTPStreamer(urls, track, key, stream);
+			exchange.sendResponseHeaders(404, -1);
+			
+			//new HTTPStreamer(urls, track, key, stream);
 		}
 		else{
-			new ChannelStreamer(this.protocol, track, key, stream);
+			new ChannelStreamer(this.protocol, track, key, exchange);
 		}
 	}
 	
@@ -549,9 +558,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 				break;
 			}
 			case Command.COMMAND_PRODINFO: {
-				XMLElement prodinfoElement = XML.load(new String(payload, Charset.forName("UTF-8")));
-				
-				this.user = User.fromXMLElement(prodinfoElement, this.user);
+				this.user = XMLUserParser.parseUser(payload, "UTF-8", this.user);
 				
 				/* Release 'prodinfo' permit. */
 				this.wait.release();

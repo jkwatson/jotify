@@ -15,6 +15,8 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import com.sun.net.httpserver.HttpExchange;
+
 import de.felixbruns.jotify.cache.SubstreamCache;
 import de.felixbruns.jotify.exceptions.ProtocolException;
 import de.felixbruns.jotify.media.Track;
@@ -36,16 +38,20 @@ public class ChannelStreamer implements ChannelListener {
 	private int              channelLength;
 	private int              channelTotal;
 	private SpotifyOggHeader header;
+	private HttpExchange     exchange;
 	private OutputStream     output;
 	
 	/* Caching of substreams. */
 	private SubstreamCache cache;
 	private byte[]         cacheData;
 	
-	public ChannelStreamer(Protocol protocol, Track track, byte[] key, OutputStream output){
+	private int total = 0;
+	
+	public ChannelStreamer(Protocol protocol, Track track, byte[] key, HttpExchange exchange){
 		/* Set output stream and cache. */
-		this.output = output;
-		this.cache  = new SubstreamCache();
+		this.exchange = exchange;
+		this.output   = exchange.getResponseBody();
+		this.cache    = new SubstreamCache();
 		
 		/* Get AES cipher instance. */
 		try {
@@ -201,6 +207,11 @@ public class ChannelStreamer implements ChannelListener {
 				/* Decode header. */
 				this.header = new SpotifyOggHeader(bytes);
 				
+				/* Send response headers. */
+				System.out.format("Header: 0x%08x\n", (this.header.getLength() & 0xfffff000) - 167);
+				
+				this.exchange.sendResponseHeaders(200, (this.header.getLength() & 0xfffff000) - 167);
+				
 				off = 167;
 			}
 			
@@ -212,6 +223,8 @@ public class ChannelStreamer implements ChannelListener {
 			 * accidentially close the stream in channelEnd!
 			 */
 			this.channelTotal += data.length;
+			
+			this.total += data.length;
 		}
 		catch(Exception e){
 			/* Don't care. */
@@ -231,6 +244,8 @@ public class ChannelStreamer implements ChannelListener {
 		try{
 			if(this.channelTotal < this.channelLength){
 				this.output.close();
+				
+				System.out.format("Stream: 0x%08x\n", this.total - 167);
 				
 				return;
 			}

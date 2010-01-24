@@ -58,16 +58,16 @@ public class StreamHandler implements HttpHandler {
 					/* Set Content-Type for stream. */
 					responseHeaders.set("Content-Type", "audio/ogg");
 					
-					/* Start streaming OGG audio (chunked encoding). */
+					/* Start streaming OGG audio. */
 					try{
-						jotify.stream(id, file, responseBody);
+						jotify.stream(id, file, exchange);
 					}
 					catch(RuntimeException e){
 						responseString = "<error>" + e.getCause().getMessage() + "</error>";
 					}
-					
-					/* Send response code and headers. */
-					exchange.sendResponseHeaders(200, 0);
+					catch(Exception e){
+						responseString = "<error>" + e.getMessage() + "</error>";
+					}
 				}
 				else{
 					responseString = "<error>Session not found!</error>";
