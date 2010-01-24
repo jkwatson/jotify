@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.felixbruns.jotify.util.SpotifyURI;
-import de.felixbruns.jotify.util.XMLElement;
 
 /**
  * Holds information about an artist.
@@ -232,53 +231,6 @@ public class Artist extends Media {
 	 */
 	public void setSimilarArtists(List<Artist> similarArtists){
 		this.similarArtists = similarArtists;
-	}
-	
-	/**
-	 * Create an {@link Artist} object from an {@link XMLElement} holding artist information.
-	 * 
-	 * @param artistElement An {@link XMLElement} holding artist information.
-	 * 
-	 * @return An {@link Artist} object.
-	 */
-	public static Artist fromXMLElement(XMLElement artistElement){
-		/* Create an empty artist object. */
-		Artist artist = new Artist();
-		
-		/* Set identifier. */
-		if(artistElement.hasChild("id")){
-			artist.id = artistElement.getChildText("id");
-		}
-		
-		/* Set name. */
-		if(artistElement.hasChild("name")){
-			artist.name = artistElement.getChildText("name");
-		}
-		
-		/* Set portrait. */
-		if(artistElement.hasChild("portrait") && artistElement.getChild("portrait").hasChild("id")){
-			String id = artistElement.getChild("portrait").getChildText("id");
-			
-			if(!id.isEmpty()){
-				artist.portrait = new Image(id, -1, -1);
-			}
-		}
-		
-		/* Set popularity. */
-		if(artistElement.hasChild("popularity")){
-			artist.popularity = Float.parseFloat(artistElement.getChildText("popularity"));
-		}
-		
-		/* Set similar artists. */
-		if(artistElement.hasChild("similar-artists")){
-			for(XMLElement similarArtistElement : artistElement.getChild("similar-artists").getChildren()){
-				artist.similarArtists.add(Artist.fromXMLElement(similarArtistElement));
-			}
-		}
-		
-		/* TODO: bios, genres, years-active, albums, ... */
-		
-		return artist;
 	}
 	
 	/**

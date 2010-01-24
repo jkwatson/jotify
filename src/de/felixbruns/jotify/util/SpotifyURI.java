@@ -1,5 +1,7 @@
 package de.felixbruns.jotify.util;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,7 +13,7 @@ import java.util.regex.Pattern;
  */
 public class SpotifyURI {
 	public enum Type {
-		ARTIST, ALBUM, TRACK;
+		ARTIST, ALBUM, TRACK, PLAYLIST, SEARCH;
 		
 		public String toString(){
 			return this.name().toLowerCase();
@@ -22,17 +24,24 @@ public class SpotifyURI {
 		private static final long serialVersionUID = 1L;
 	}
 	
+	private static final Pattern mediaPattern    = Pattern.compile("spotify:(artist|album|track):([0-9A-Za-z]{22})");
+	private static final Pattern playlistPattern = Pattern.compile("spotify:user:([^:]+):playlist:([0-9A-Za-z]{22})");
+	private static final Pattern searchPattern   = Pattern.compile("spotify:search:([^\\s]+)");
+	
 	private Type   type;
+	private String user;
 	private String id;
+	private String query;
 	
 	public SpotifyURI(String uri) throws InvalidSpotifyURIException {
 		/* Regex for matching Spotify URIs. */
-		Pattern pattern = Pattern.compile("spotify:(artist|album|track):([0-9A-Za-z]{22})");
-		Matcher matcher = pattern.matcher(uri);
+		Matcher mediaMatcher    = mediaPattern.matcher(uri);
+		Matcher playlistMatcher = playlistPattern.matcher(uri);
+		Matcher searchMatcher   = searchPattern.matcher(uri);
 		
 		/* Check if URI matches. */
-		if(matcher.matches()){
-			String type = matcher.group(1);
+		if(mediaMatcher.matches()){
+			String type = mediaMatcher.group(1);
 			
 			if(type.equals("artist")){
 				this.type = Type.ARTIST;
@@ -47,7 +56,22 @@ public class SpotifyURI {
 				throw new InvalidSpotifyURIException();
 			}
 			
-			this.id = matcher.group(2);
+			this.id = mediaMatcher.group(2);
+		}
+		else if(playlistMatcher.matches()){
+			this.type = Type.PLAYLIST;
+			this.user = playlistMatcher.group(1);
+			this.id   = playlistMatcher.group(2);
+		}
+		else if(searchMatcher.matches()){
+			this.type = Type.SEARCH;
+			
+			try{
+				this.query = URLDecoder.decode(searchMatcher.group(1), "UTF-8");
+			}
+			catch(UnsupportedEncodingException e){
+				throw new InvalidSpotifyURIException();
+			}
 		}
 		else{
 			throw new InvalidSpotifyURIException();
@@ -70,12 +94,49 @@ public class SpotifyURI {
 		return this.type.equals(Type.TRACK);
 	}
 	
+	public boolean isPlaylistURI(){
+		return this.type.equals(Type.PLAYLIST);
+	}
+	
+	public boolean isSearchURI(){
+		return this.type.equals(Type.SEARCH);
+	}
+	
+	public String getUser(){
+		if(!this.isPlaylistURI()){
+			throw new IllegalStateException("Not a playlist URI!");
+		}
+		
+		return this.user;
+	}
+	
 	public String getId(){
 		return this.id;
 	}
 	
-	public String toString() {
-		return String.format("spotify:%s:%s", this.type, this.id);
+	public String getHexId(){
+		return toHex(this.id);
+	}
+	
+	public String getQuery(){
+		if(!this.isSearchURI()){
+			throw new IllegalStateException("Not a search URI!");
+		}
+		
+		return this.query;
+	}
+	
+	
+	public String toString(){
+		if(this.isPlaylistURI()){
+			return String.format("spotify:user:%s:playlist:%s", this.user, this.id);
+		}
+		else if(this.isSearchURI()){
+			return String.format("spotify:search:%s", this.query);
+		}
+		else{
+			return String.format("spotify:%s:%s", this.type, this.id);
+		}
 	}
 	
 	/**

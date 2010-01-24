@@ -1,12 +1,12 @@
 package de.felixbruns.jotify.media;
 
-import de.felixbruns.jotify.util.XMLElement;
+import java.util.Properties;
 
 public class User {
-	private String name;
-	private String country;
-	private String type;
-	private String notification;
+	private String     name;
+	private String     country;
+	private String     notification;
+	private Properties properties;
 	
 	public User(String name){
 		this(name, null, null);
@@ -15,8 +15,8 @@ public class User {
 	public User(String name, String country, String type){
 		this.name         = name;
 		this.country      = country;
-		this.type         = type;
 		this.notification = null;
+		this.properties   = new Properties();
 	}
 	
 	public String getName(){
@@ -35,16 +35,8 @@ public class User {
 		this.country = country;
 	}
 	
-	public String getType(){
-		return this.type;
-	}
-	
-	public void setType(String type){
-		this.type = type;
-	}
-	
 	public boolean isPremium(){
-		return this.type.equals("premium");
+		return this.properties.getProperty("type").equals("premium");
 	}
 	
 	public String getNotification(){
@@ -55,17 +47,15 @@ public class User {
 		this.notification = notification;
 	}
 	
-	public static User fromXMLElement(XMLElement prodinfoElement, User user){
-		/* Get "product" element. */
-		XMLElement productElement = prodinfoElement.getChild("product");
-		
-		/* Set type. */
-		user.type = productElement.getChildText("type");
-		
-		return user;
+	public String getProperty(String key){
+		return this.properties.getProperty(key);
+	}
+	
+	public void setProperty(String key, String value){
+		this.properties.setProperty(key, value);
 	}
 	
 	public String toString(){
-		return String.format("[User: %s, %s, %s]", this.name, this.country, this.type);
+		return String.format("[User: %s, %s, %s]", this.name, this.country, this.properties.getProperty("type"));
 	}
 }

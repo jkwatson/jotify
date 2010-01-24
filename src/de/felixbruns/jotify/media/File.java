@@ -73,7 +73,7 @@ public class File {
 	}
 	
 	/**
-	 * Set the files format.
+	 * Get the files format.
 	 * 
 	 * @return A format string including codec and bitrate.
 	 */
@@ -88,5 +88,14 @@ public class File {
 	 */
 	public void setFormat(String format){
 		this.format = format;
+	}
+	
+	/**
+	 * Get the files bitrate
+	 * 
+	 * @return An integer.
+	 */
+	public int getBitrate(){
+		return Integer.parseInt(this.format.split(",")[1]);
 	}
 }

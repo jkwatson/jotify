@@ -5,7 +5,6 @@ import java.util.List;
 
 import de.felixbruns.jotify.util.Hex;
 import de.felixbruns.jotify.util.SpotifyURI;
-import de.felixbruns.jotify.util.XMLElement;
 
 /**
  * Holds information about an album.
@@ -296,88 +295,6 @@ public class Album extends Media {
 	 */
 	public void setSimilarAlbums(List<Album> similarAlbums){
 		this.similarAlbums = similarAlbums;
-	}
-	
-	/**
-	 * Create an {@link Album} object from an {@link XMLElement} holding album information.
-	 * 
-	 * @param albumElement An {@link XMLElement} holding album information.
-	 * 
-	 * @return An {@link Album} object.
-	 */
-	public static Album fromXMLElement(XMLElement albumElement){
-		/* Create an empty album object. */
-		Album album = new Album();
-		
-		/* Set identifier. */
-		if(albumElement.hasChild("id")){
-			album.id = albumElement.getChildText("id");
-		}
-		
-		/* Set name. */
-		if(albumElement.hasChild("name")){
-			album.name = albumElement.getChildText("name");
-		}
-		
-		/* Set artist. */
-		if(albumElement.hasChild("artist-id") && (albumElement.hasChild("artist") || albumElement.hasChild("artist-name"))){
-			album.artist = new Artist(
-				albumElement.getChildText("artist-id"),
-				albumElement.hasChild("artist")?
-					albumElement.getChildText("artist"):
-					albumElement.getChildText("artist-name")
-			);
-		}
-		
-		/* Set cover. */
-		if(albumElement.hasChild("cover")){
-			String value = albumElement.getChildText("cover");
-			
-			if(!value.isEmpty()){
-				album.cover = value;
-			}
-		}
-		
-		/* Set year. */
-		if(albumElement.hasChild("year")){
-			album.year = Integer.parseInt(albumElement.getChildText("year"));
-		}
-		
-		/* Set popularity. */
-		if(albumElement.hasChild("popularity")){
-			album.popularity = Float.parseFloat(albumElement.getChildText("popularity"));
-		}
-		
-		/* Set tracks. */
-		if(albumElement.hasChild("discs")){
-			/* Loop over discs. */
-			for(XMLElement discElement : albumElement.getChild("discs").getChildren("disc")){
-				Disc disc = new Disc(
-					Integer.parseInt(discElement.getChildText("disc-number")),
-					discElement.getChildText("name")
-				);
-				
-				/* Loop over tracks of current disc. */
-				for(XMLElement trackElement : discElement.getChildren("track")){
-					/* Parse track element. */
-					Track track = Track.fromXMLElement(trackElement);
-					
-					/* Also add artist and album information to track. */
-					track.setArtist(album.artist);
-					track.setAlbum(album);
-					track.setCover(album.cover);
-					
-					/* Add track to list of tracks. */
-					disc.getTracks().add(track);
-				}
-				
-				album.discs.add(disc);
-			}
-		}		
-		
-		/* TODO: album-type, copyright, discs, ... */
-		
-		return album;
 	}
 	
 	/**

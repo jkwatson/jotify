@@ -81,26 +81,26 @@ public class SpotifyOggHeader {
 		return this.length;
 	}
 	
-	public float getGainScale() {
+	public float getGainScale(){
 		return this.gainScale;
 	}
 	
-	public float getGainDb() {
+	public float getGainDb(){
 		return this.gainDb;
 	}
 	
 	/* Swap short bytes. */
 	private short swap(short value){
-		return  (short)(((value & 0x00ff) << 8) |
-						((value & 0xff00) >> 8));
+		return (short)(((value & 0x00ffL) << 8) |
+					   ((value & 0xff00L) >> 8));
 	}
 	
 	/* Swap integer bytes. */
 	private int swap(int value){
-		return  ((value & 0x000000ff) << 24) |
-				((value & 0x0000ff00) <<  8) |
-				((value & 0x00ff0000) >>  8) |
-				((value & 0xff000000) >> 24);
+		return (int)(((value & 0x000000ffL) << 24) |
+					 ((value & 0x0000ff00L) <<  8) |
+					 ((value & 0x00ff0000L) >>  8) |
+					 ((value & 0xff000000L) >> 24));
 	}
 	
 	/* Decode Spotify OGG header. */

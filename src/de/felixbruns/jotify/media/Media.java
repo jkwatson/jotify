@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import de.felixbruns.jotify.util.Hex;
-import de.felixbruns.jotify.util.XMLElement;
 
 public class Media {
 	/**
@@ -55,6 +54,8 @@ public class Media {
 	protected Media(String id){
 		/* Check if id string is valid. */
 		if(id == null || id.length() != 32 || !Hex.isHex(id)){
+			System.out.println(id);
+			
 			throw new IllegalArgumentException("Expecting a 32-character hex string.");
 		}
 		
@@ -203,28 +204,5 @@ public class Media {
 	 */
 	public void setExternalIds(Map<String, String> externalIds){
 		this.externalIds = externalIds;
-	}
-	
-	/**
-	 * Create a {@link Media} object from an {@link XMLElement} holding media information.
-	 * 
-	 * @param mediaElement An {@link XMLElement} holding media information.
-	 * 
-	 * @return A {@link Media} object.
-	 */
-	public static Media fromXMLElement(XMLElement mediaElement){
-		Media media = new Media();
-		
-		/* Set id. */
-		if(mediaElement.hasChild("id")){
-			media.id = mediaElement.getChildText("id");
-		}
-		
-		/* Set popularity. */
-		if(mediaElement.hasChild("popularity")){
-			media.popularity = Float.parseFloat(mediaElement.getChildText("popularity"));
-		}
-		
-		return media;
 	}
 }

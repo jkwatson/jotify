@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.felixbruns.jotify.util.SpotifyURI;
-import de.felixbruns.jotify.util.XMLElement;
 
 /**
  * Holds information about a track.
@@ -309,94 +308,6 @@ public class Track extends Media {
 	 */
 	public void setSimilarTracks(List<Track> similarTracks){
 		this.similarTracks = similarTracks;
-	}
-	
-	/**
-	 * Create a {@link Track} object from an {@link XMLElement} holding track information.
-	 * 
-	 * @param trackElement An {@link XMLElement} holding track information.
-	 * 
-	 * @return A {@link Track} object.
-	 */
-	public static Track fromXMLElement(XMLElement trackElement){
-		Track track = new Track();
-		
-		/* Set id. */
-		if(trackElement.hasChild("id")){
-			track.id = trackElement.getChildText("id");
-		}
-		
-		/* Set title. */
-		if(trackElement.hasChild("title")){
-			track.title = trackElement.getChildText("title");
-		}
-		
-		/* Set artist. */
-		if(trackElement.hasChild("artist-id") && trackElement.hasChild("artist")){
-			track.artist = new Artist(
-				trackElement.getChildText("artist-id"),
-				trackElement.getChildText("artist")
-			);
-		}
-		
-		/* Set album. */
-		if(trackElement.hasChild("album-id") && trackElement.hasChild("album")){
-			track.album = new Album(
-				trackElement.getChildText("album-id"),
-				trackElement.getChildText("album"),
-				track.artist
-			);
-		}
-		
-		/* Set year. */
-		if(trackElement.hasChild("year")){
-			try{
-				track.year = Integer.parseInt(trackElement.getChildText("year"));
-			}
-			catch(NumberFormatException e){
-				track.year = -1;
-			}
-		}
-		
-		/* Set track number. */
-		if(trackElement.hasChild("track-number")){
-			track.trackNumber = Integer.parseInt(trackElement.getChildText("track-number"));
-		}
-		
-		/* Set length. */
-		if(trackElement.hasChild("length")){
-			track.length = Integer.parseInt(trackElement.getChildText("length"));
-		}
-		
-		/* Set files. */
-		if(trackElement.hasChild("files")){
-			for(XMLElement fileElement : trackElement.getChild("files").getChildren()){
-				File file = new File(
-					fileElement.getAttribute("id"),
-					fileElement.getAttribute("format")
-				);
-				
-				track.files.add(file);
-			}
-		}
-		
-		/* Set cover. */
-		if(trackElement.hasChild("cover")){
-			String value = trackElement.getChildText("cover");
-			
-			if(!value.isEmpty()){
-				track.cover = value;
-			}
-		}
-		
-		/* Set popularity. */
-		if(trackElement.hasChild("popularity")){
-			track.popularity = Float.parseFloat(trackElement.getChildText("popularity"));
-		}
-		
-		//TODO: similar-tracks
-		
-		return track;
 	}
 	
 	/**
