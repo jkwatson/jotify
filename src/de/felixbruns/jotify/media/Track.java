@@ -1,6 +1,7 @@
 package de.felixbruns.jotify.media;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import de.felixbruns.jotify.util.SpotifyURI;
@@ -272,6 +273,35 @@ public class Track extends Media {
 	 */
 	public void addFile(File file){
 		this.files.add(file);
+	}
+	
+	/**
+	 * Get a file of this track that matches the given bitrate best.
+	 * 
+	 * @param bitrate A bitrate to match files against (e.g. 160000,
+	 * 				  to choose a 160 kbps file).
+	 * 
+	 * @return A {@link File} object or null if no files are available.
+	 */
+	public File getFile(int bitrate){
+		File result = null;
+		int  min    = -1;
+		int  diff;
+		
+		/* Make sure files are sorted (highest bitrate last). */
+		Collections.sort(this.files);
+		
+		/* Pick the best-match. */
+		for(File file : this.files){
+			diff = Math.abs(file.getBitrate() - bitrate);
+			
+			if(min == -1 || diff <= min){
+				min    = diff;
+				result = file;
+			}
+		}
+		
+		return result;
 	}
 	
 	/**

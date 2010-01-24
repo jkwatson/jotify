@@ -9,7 +9,7 @@ import de.felixbruns.jotify.util.Hex;
  * 
  * @category Media
  */
-public class File {
+public class File implements Comparable<File> {
 	/**
 	 * The files 40-character hex identifier.
 	 */
@@ -97,5 +97,52 @@ public class File {
 	 */
 	public int getBitrate(){
 		return Integer.parseInt(this.format.split(",")[1]);
+	}
+	
+	/**
+	 * Determines if an object is equal to this {@link File} object.
+	 * If both objects are {@link File} objects, it will compare their identifiers.
+	 * 
+	 * @param o Another object to compare.
+	 * 
+	 * @return true of the objects are equal, false otherwise.
+	 */
+	public boolean equals(Object o){
+		if(o instanceof File){
+			File f = (File)o;
+			
+			if(this.id.equals(f.id)){
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Return the hash code of this {@link File} object. This will give the value returned
+	 * by the {@code hashCode} method of the identifier string.
+	 * 
+	 * @return The {@link File} objects hash code.
+	 */
+	public int hashCode(){
+		return (this.id != null) ? this.id.hashCode() : 0;
+	}
+	
+	/**
+	 * Compares two {@link File} objects. A file is considered greater than another file,
+	 * if its bitrate is higher.
+	 * 
+	 * @param f Another {@link File} to compare.
+	 * 
+	 * @return A negative integer, zero, or a positive integer as this file is less than,
+	 * 		   equal to, or greater than the specified file.
+	 */
+	public int compareTo(File f){
+		return this.getBitrate() - f.getBitrate();
+	}
+	
+	public String toString(){
+		return String.format("[File: %s]", this.format);
 	}
 }
