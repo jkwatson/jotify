@@ -41,7 +41,7 @@ public class SubstreamCache extends FileCache {
 	 * @return A hash for the specified parameters.
 	 */
 	public String hash(Track track, int offset, int length){
-		return track.getFiles().get(0) + "/" + track.getFiles().get(0) + "-" + offset + "-" + length;
+		return track.getFiles().get(0).getId() + "/" + track.getFiles().get(0).getId() + "-" + offset + "-" + length;
 	}
 	
 	/**
