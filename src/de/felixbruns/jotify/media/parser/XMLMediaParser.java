@@ -8,11 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.stream.StreamFilter;
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 
 import de.felixbruns.jotify.media.Album;
 import de.felixbruns.jotify.media.Artist;
@@ -20,15 +17,11 @@ import de.felixbruns.jotify.media.Biography;
 import de.felixbruns.jotify.media.Disc;
 import de.felixbruns.jotify.media.File;
 import de.felixbruns.jotify.media.Image;
-import de.felixbruns.jotify.media.Playlist;
-import de.felixbruns.jotify.media.PlaylistContainer;
 import de.felixbruns.jotify.media.Restriction;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
 
-public class XMLMediaParser implements XMLStreamConstants {
-	private XMLStreamReader reader;
-	
+public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 	private static final int SUPPORTED_RESULT_VERSION = 1;
 	private static final int SUPPORTED_ARTIST_VERSION = 1;
 	private static final int SUPPORTED_ALBUM_VERSION  = 1;
@@ -39,15 +32,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @param stream An {@link InputStream} stream to parse.
 	 */
 	private XMLMediaParser(InputStream stream, String encoding) throws XMLStreamException {
-		XMLInputFactory factory = XMLInputFactory.newInstance();
-		
-		this.reader = factory.createXMLStreamReader(stream, encoding);
-		this.reader = factory.createFilteredReader(this.reader, new StreamFilter(){
-			public boolean accept(XMLStreamReader reader){
-				return reader.isStartElement() || reader.isEndElement() ||
-					   (reader.isCharacters() && !reader.isWhiteSpace());
-			}
-		});
+		super(stream, encoding);
 	}
 	
 	/**
@@ -57,9 +42,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return An {@link Object} which can then be cast.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private Object parse() throws XMLStreamException, XMLMediaParseException {
+	private Object parse() throws XMLStreamException, XMLParserException {
 		String name;
 		
 		/* Check if reader is currently on a start element. */
@@ -82,14 +67,8 @@ public class XMLMediaParser implements XMLStreamConstants {
 			else if(name.equals("track")){
 				return this.parseTrack();
 			}
-			else if(name.equals("playlists")){
-				return this.parsePlaylistContainer();
-			}
-			else if(name.equals("playlist")){
-				return this.parsePlaylist();
-			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -104,9 +83,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return A {@link Result} object.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private Result parseResult() throws XMLStreamException, XMLMediaParseException {
+	private Result parseResult() throws XMLStreamException, XMLParserException {
 		Result result = new Result();
 		String name;
 		
@@ -120,7 +99,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				
 				/* Check version. */
 				if(version > SUPPORTED_RESULT_VERSION){
-					throw new XMLMediaParseException(
+					throw new XMLParserException(
 						"Unsupported <result> version " + version, this.reader.getLocation()
 					);
 				}
@@ -147,7 +126,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				result.setTracks(parseTracks());
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -162,9 +141,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return A {@link List} of {@link Artist} objects.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private List<Artist> parseArtists() throws XMLStreamException, XMLMediaParseException {
+	private List<Artist> parseArtists() throws XMLStreamException, XMLParserException {
 		List<Artist> artists = new ArrayList<Artist>();
 		String       name;
 		
@@ -177,7 +156,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				artists.add(parseArtist());
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -192,9 +171,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return A {@link List} of {@link Album} objects.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private List<Album> parseAlbums() throws XMLStreamException, XMLMediaParseException {
+	private List<Album> parseAlbums() throws XMLStreamException, XMLParserException {
 		List<Album> albums = new ArrayList<Album>();
 		String      name;
 				
@@ -207,7 +186,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				albums.add(parseAlbum());
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -222,9 +201,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return A {@link List} of {@link Track} objects.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private List<Track> parseTracks() throws XMLStreamException, XMLMediaParseException {
+	private List<Track> parseTracks() throws XMLStreamException, XMLParserException {
 		List<Track> tracks = new ArrayList<Track>();
 		String      name;
 		
@@ -237,7 +216,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				tracks.add(parseTrack());
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -252,9 +231,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return An {@link Artist} object.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private Artist parseArtist() throws XMLStreamException, XMLMediaParseException {
+	private Artist parseArtist() throws XMLStreamException, XMLParserException {
 		Artist artist = new Artist();
 		String name;
 		
@@ -268,7 +247,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				
 				/* Check version. */
 				if(version > SUPPORTED_ARTIST_VERSION){
-					throw new XMLMediaParseException(
+					throw new XMLParserException(
 						"Unsupported <album> version " + version, this.reader.getLocation()
 					);
 				}
@@ -317,7 +296,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				artist.setExternalIds(parseExternalIds());
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -332,9 +311,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return An {@link Album} object.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private Album parseAlbum() throws XMLStreamException, XMLMediaParseException {
+	private Album parseAlbum() throws XMLStreamException, XMLParserException {
 		Album  album = new Album();
 		String name;
 		
@@ -348,7 +327,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				
 				/* Check version. */
 				if(version > SUPPORTED_ALBUM_VERSION){
-					throw new XMLMediaParseException(
+					throw new XMLParserException(
 						"Unsupported <album> version " + version, this.reader.getLocation()
 					);
 				}
@@ -416,7 +395,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 						this.getElementString();
 					}
 					else{
-						throw new XMLMediaParseException(
+						throw new XMLParserException(
 							"Unexpected element '<" + name + ">'", this.reader.getLocation()
 						);
 					}
@@ -440,6 +419,10 @@ public class XMLMediaParser implements XMLStreamConstants {
 			}
 			/* Seems to be deprecated. */
 			else if(name.equals("forbidden")){
+				/* Skip text. */
+				this.getElementString();
+			}
+			else if(name.equals("genres")){
 				/* Skip text. */
 				this.getElementString();
 			}
@@ -473,7 +456,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 								tracks.add(track);
 							}
 							else{
-								throw new XMLMediaParseException(
+								throw new XMLParserException(
 									"Unexpected element '<" + name + ">'", this.reader.getLocation()
 								);
 							}
@@ -484,7 +467,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 						discs.add(disc);
 					}
 					else{
-						throw new XMLMediaParseException(
+						throw new XMLParserException(
 							"Unexpected element '<" + name + ">'", this.reader.getLocation()
 						);
 					}
@@ -504,7 +487,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 						similarAlbums.add(new Album(this.getElementString()));
 					}
 					else{
-						throw new XMLMediaParseException(
+						throw new XMLParserException(
 							"Unexpected element '<" + name + ">'", this.reader.getLocation()
 						);
 					}
@@ -517,7 +500,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				album.setExternalIds(parseExternalIds());
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -532,9 +515,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return A {@link Track} object.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private Track parseTrack() throws XMLStreamException, XMLMediaParseException {
+	private Track parseTrack() throws XMLStreamException, XMLParserException {
 		Track  track = new Track();
 		String name;
 		
@@ -667,7 +650,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 						similarTracks.add(new Track(this.getElementString()));
 					}
 					else{
-						throw new XMLMediaParseException(
+						throw new XMLParserException(
 							"Unexpected element '<" + name + ">'", this.reader.getLocation()
 						);
 					}
@@ -680,7 +663,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				track.setExternalIds(parseExternalIds());
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -694,25 +677,15 @@ public class XMLMediaParser implements XMLStreamConstants {
 		return track;
 	}
 	
-	/** TODO: Implement. */
-	private PlaylistContainer parsePlaylistContainer() throws XMLStreamException, XMLMediaParseException {
-		return null;
-	}
-	
-	/** TODO: Implement. */
-	private Playlist parsePlaylist() throws XMLStreamException, XMLMediaParseException {
-		return null;
-	}
-	
 	/**
 	 * Parse the input stream as an image.
 	 * 
 	 * @return An {@link Image} object.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private Image parseImage() throws XMLStreamException, XMLMediaParseException {
+	private Image parseImage() throws XMLStreamException, XMLParserException {
 		Image  image = new Image();
 		String name;
 		int    type;
@@ -732,7 +705,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				image.setHeight(this.getElementInteger());
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -756,9 +729,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return A {@link List} of {@link Biography} objects.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private List<Biography> parseBios() throws XMLStreamException, XMLMediaParseException {
+	private List<Biography> parseBios() throws XMLStreamException, XMLParserException {
 		List<Biography> bios = new ArrayList<Biography>();
 		String    name;
 		
@@ -790,7 +763,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 								portraits.add(parseImage());
 							}
 							else{
-								throw new XMLMediaParseException(
+								throw new XMLParserException(
 									"Unexpected element '<" + name + ">'", this.reader.getLocation()
 								);
 							}
@@ -800,7 +773,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 						bio.setPortraits(portraits);
 					}
 					else{
-						throw new XMLMediaParseException(
+						throw new XMLParserException(
 							"Unexpected element '<" + name + ">'", this.reader.getLocation()
 						);
 					}
@@ -810,7 +783,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				bios.add(bio);
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -825,9 +798,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return A {@link List} of {@link File} objects.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private List<File> parseFiles() throws XMLStreamException, XMLMediaParseException {
+	private List<File> parseFiles() throws XMLStreamException, XMLParserException {
 		List<File> files = new ArrayList<File>();
 		String     name;
 		
@@ -845,7 +818,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				this.reader.next();
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -860,9 +833,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return A {@link List} of {@link Restriction} objects.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private List<Restriction> parseRestrictions() throws XMLStreamException, XMLMediaParseException {
+	private List<Restriction> parseRestrictions() throws XMLStreamException, XMLParserException {
 		List<Restriction> restrictions = new ArrayList<Restriction>();
 		String            name;
 		
@@ -882,7 +855,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				this.reader.next();
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -897,9 +870,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * @return A {@link Map} containing external ids.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private Map<String, String> parseExternalIds() throws XMLStreamException, XMLMediaParseException {
+	private Map<String, String> parseExternalIds() throws XMLStreamException, XMLParserException {
 		Map<String, String> externalIds = new HashMap<String, String>();
 		String              name;
 		
@@ -917,7 +890,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 				this.reader.next();
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
@@ -930,9 +903,9 @@ public class XMLMediaParser implements XMLStreamConstants {
 	 * Skip any {@literal <link>} elements.
 	 * 
 	 * @throws XMLStreamException
-	 * @throws XMLMediaParseException
+	 * @throws XMLParserException
 	 */
-	private void skipLinks() throws XMLStreamException, XMLMediaParseException {
+	private void skipLinks() throws XMLStreamException, XMLParserException {
 		String name;
 		
 		/* Go to next element and check if it is a start element. */
@@ -945,14 +918,14 @@ public class XMLMediaParser implements XMLStreamConstants {
 				this.getElementString();
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
 		}
 	}
 	
-	private void skipAvailability() throws XMLStreamException, XMLMediaParseException {
+	private void skipAvailability() throws XMLStreamException, XMLParserException {
 		String name;
 		
 		/* Go to next element and check if it is a start element. */
@@ -965,64 +938,10 @@ public class XMLMediaParser implements XMLStreamConstants {
 				this.getElementString();
 			}
 			else{
-				throw new XMLMediaParseException(
+				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
 			}
-		}
-	}
-	
-	/**
-	 * Get an attributes value.
-	 * 
-	 * @param attribute An attribute name.
-	 * 
-	 * @return The value of the given attribute.
-	 */
-	private String getAttributeString(String attribute){
-		return this.reader.getAttributeValue(null, attribute);
-	}
-	
-	/**
-	 * Get the current elements contents as string.
-	 * 
-	 * @return A string.
-	 * 
-	 * @throws XMLStreamException
-	 */
-	private String getElementString() throws XMLStreamException {
-		return this.reader.getElementText();
-	}
-	
-	/**
-	 * Get the current elements contents an integer.
-	 * 
-	 * @return An integer.
-	 * 
-	 * @throws XMLStreamException
-	 */
-	private int getElementInteger() throws XMLStreamException {
-		try{
-			return Integer.parseInt(this.reader.getElementText());
-		}
-		catch(NumberFormatException e){
-			return 0;
-		}
-	}
-	
-	/**
-	 * Get the current elements contents a floating-point number.
-	 * 
-	 * @return A float.
-	 * 
-	 * @throws XMLStreamException
-	 */
-	private float getElementFloat() throws XMLStreamException {
-		try{
-			return Float.parseFloat(this.reader.getElementText());
-		}
-		catch(NumberFormatException e){
-			return Float.NaN;
 		}
 	}
 	
@@ -1045,7 +964,7 @@ public class XMLMediaParser implements XMLStreamConstants {
 			
 			return null;
 		}
-		catch(XMLMediaParseException e){
+		catch(XMLParserException e){
 			e.printStackTrace();
 			
 			return null;

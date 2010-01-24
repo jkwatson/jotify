@@ -9,20 +9,20 @@ import javax.xml.stream.Location;
  *
  * @category Exceptions
  */
-public class XMLMediaParseException extends Exception {
+public class XMLParserException extends Exception {
 	/**
 	 * Default serial version UID.
 	 */
 	private static final long serialVersionUID = 1L;
 	
 	/**
-	 * Construct a new {@link XMLMediaParseException} using a message string
+	 * Construct a new {@link XMLParserException} using a message string
 	 * and a {@link Location}.
 	 * 
 	 * @param message  The message.
 	 * @param location The location.
 	 */
-	public XMLMediaParseException(String message, Location location){
+	public XMLParserException(String message, Location location){
 		super(
 			message +
 			" @ line: " + location.getLineNumber() +
@@ -31,23 +31,23 @@ public class XMLMediaParseException extends Exception {
 	}
 	
 	/**
-	 * Construct a new {@link XMLMediaParseException} using a cause.
+	 * Construct a new {@link XMLParserException} using a cause.
 	 * 
 	 * @param cause The cause.
 	 */
-	public XMLMediaParseException(Throwable cause){
+	public XMLParserException(Throwable cause){
 		super(cause);
 	}
 	
 	/**
-	 * Construct a new {@link XMLMediaParseException} using a message string,
+	 * Construct a new {@link XMLParserException} using a message string,
 	 * a location and a cause.
 	 * 
 	 * @param message  The message.
 	 * @param location The location.
 	 * @param cause    The cause.
 	 */
-	public XMLMediaParseException(String message, Location location, Throwable cause){
+	public XMLParserException(String message, Location location, Throwable cause){
 		super(
 			message +
 			" @ line: " + location.getLineNumber() +
