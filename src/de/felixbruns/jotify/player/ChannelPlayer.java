@@ -316,7 +316,7 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 			
 			/* Fire playback position event about every 100 ms. */
 			if(this.listener != null && position - this.position > 100000){
-				this.listener.playbackPosition(this.track, (int)(position / 1000000));
+				this.listener.playbackPosition(this.track, (int)(position / 1000)); /* us -> ms */
 				
 				/* Update last postition. */
 				this.position = position;
