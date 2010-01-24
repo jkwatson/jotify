@@ -118,8 +118,10 @@ public class Protocol {
 		buffer.put((byte)0); /* Random length */
 		buffer.put((byte)this.session.username.length); /* Username length */
 		buffer.putShort((short)0x0100); /* Unknown */
+		/* Random bytes here. */
 		buffer.put(this.session.username);
 		buffer.put((byte)0x40); /* Unknown */
+		//buffer.put((byte)0x5c); /* Unknown */
 		//buffer.put((byte)(0x00)); /* Unknown */
 		
 		/* Update length byte. */
@@ -744,54 +746,6 @@ public class Protocol {
 		this.sendBrowseRequest(listener, type, list);
 	}
 	
-	/* Request user playlists. The response comes as plain XML. */
-	public void sendUserPlaylistsRequest(ChannelListener listener) throws ProtocolException {
-		/* Create channel and buffer. */
-		Channel    channel = new Channel("Playlists-Channel", Channel.Type.TYPE_PLAYLIST, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(2 + 16 + 1 + 4 + 4 + 4 + 1);
-		
-		/* Append channel id, playlist id and some bytes... */
-		buffer.putShort((short)channel.getId());
-		buffer.put(Hex.toBytes("00000000000000000000000000000000")); /* 16 bytes */
-		buffer.put((byte)0x00); /* Playlists identifier. */
-		buffer.putInt(-1); /* Playlist history. -1: current. 0: changes since version 0, 1: since version 1, etc. */
-		buffer.putInt(0);
-		buffer.putInt(-1);
-		buffer.put((byte)0x01);
-		buffer.flip();
-		
-		/* Register channel. */
-		Channel.register(channel);
-		
-		/* Send packet. */
-		this.sendPacket(Command.COMMAND_GETPLAYLIST, buffer);
-	}
-	
-	/* Change playlists. The response comes as plain XML. */
-	public void sendChangeUserPlaylists(ChannelListener listener, PlaylistContainer playlists, String xml) throws ProtocolException {
-		/* Create channel and buffer. */
-		Channel    channel = new Channel("Change-Playlists-Channel", Channel.Type.TYPE_PLAYLIST, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(2 + 16 + 1 + 4 + 4 + 4 + 1 + 1 + xml.getBytes().length);
-		
-		/* Append channel id, playlist id and some bytes... */
-		buffer.putShort((short)channel.getId());
-		buffer.put(Hex.toBytes("00000000000000000000000000000000")); /* 16 bytes */
-		buffer.put((byte)0x00); /* Playlists identifier. */
-		buffer.putInt((int)playlists.getRevision());
-		buffer.putInt(playlists.getPlaylists().size());
-		buffer.putInt((int)playlists.getChecksum());
-		buffer.put((byte)0x00); /* Collaborative */
-		buffer.put((byte)0x03); /* Unknown */
-		buffer.put(xml.getBytes());
-		buffer.flip();
-		
-		/* Register channel. */
-		Channel.register(channel);
-		
-		/* Send packet. */
-		this.sendPacket(Command.COMMAND_CHANGEPLAYLIST, buffer);
-	}
-	
 	/* Request playlist details. The response comes as plain XML. */
 	public void sendPlaylistRequest(ChannelListener listener, String id) throws ProtocolException {
 		/* Create channel and buffer. */
@@ -799,14 +753,24 @@ public class Protocol {
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 16 + 1 + 4 + 4 + 4 + 1);
 		
 		/* Check length of id. */
-		if(id.length() != 32){
+		if(id != null && id.length() != 32){
 			throw new IllegalArgumentException("Playlist id needs to have a length of 32.");
 		}
 		
 		/* Append channel id, playlist id and some bytes... */
 		buffer.putShort((short)channel.getId());
-		buffer.put(Hex.toBytes(id)); /* 16 bytes */
-		buffer.put((byte)0x02); /* Playlist identifier. */
+		
+		/* Playlist container. */
+		if(id == null){
+			buffer.put(Hex.toBytes("00000000000000000000000000000000")); /* 16 bytes */
+			buffer.put((byte)0x00); /* Playlist container identifier. */
+		}
+		/* Normal playlist. */
+		else{
+			buffer.put(Hex.toBytes(id)); /* 16 bytes */
+			buffer.put((byte)0x02); /* Playlist identifier. */
+		}
+		
 		buffer.putInt(-1); /* Playlist history. -1: current. 0: last change. */
 		buffer.putInt(0);
 		buffer.putInt(-1);
@@ -818,6 +782,31 @@ public class Protocol {
 		
 		/* Send packet. */
 		this.sendPacket(Command.COMMAND_GETPLAYLIST, buffer);
+	}
+	
+	/* Change playlist container. The response comes as plain XML. */
+	public void sendChangePlaylistContainer(ChannelListener listener, PlaylistContainer playlistContainer, String xml) throws ProtocolException {
+		/* Create channel and buffer. */
+		Channel    channel = new Channel("Change-Playlist-Container-Channel", Channel.Type.TYPE_PLAYLIST, listener);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 16 + 1 + 4 + 4 + 4 + 1 + 1 + xml.getBytes().length);
+		
+		/* Append channel id, playlist id and some bytes... */
+		buffer.putShort((short)channel.getId());
+		buffer.put(Hex.toBytes("00000000000000000000000000000000")); /* 16 bytes */
+		buffer.put((byte)0x00); /* Playlists identifier. */
+		buffer.putInt((int)playlistContainer.getRevision());
+		buffer.putInt(playlistContainer.getPlaylists().size());
+		buffer.putInt((int)playlistContainer.getChecksum());
+		buffer.put((byte)0x00); /* Collaborative */
+		buffer.put((byte)0x03); /* Unknown */
+		buffer.put(xml.getBytes());
+		buffer.flip();
+		
+		/* Register channel. */
+		Channel.register(channel);
+		
+		/* Send packet. */
+		this.sendPacket(Command.COMMAND_CHANGEPLAYLIST, buffer);
 	}
 	
 	/* Change playlist. The response comes as plain XML. */

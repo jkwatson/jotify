@@ -23,11 +23,12 @@ public class Command {
 	public static final int COMMAND_P2P_INITBLK = 0x21;
 	
 	/* Search and metadata. */
-	public static final int COMMAND_BROWSE         = 0x30;
-	public static final int COMMAND_SEARCH         = 0x31;
-	public static final int COMMAND_GETPLAYLIST    = 0x35;
-	public static final int COMMAND_CHANGEPLAYLIST = 0x36;
-	public static final int COMMAND_GETTOPLIST     = 0x38;
+	public static final int COMMAND_BROWSE          = 0x30;
+	public static final int COMMAND_SEARCH          = 0x31;
+	public static final int COMMAND_PLAYLISTCHANGED = 0x34;
+	public static final int COMMAND_GETPLAYLIST     = 0x35;
+	public static final int COMMAND_CHANGEPLAYLIST  = 0x36;
+	public static final int COMMAND_GETTOPLIST      = 0x38;
 	
 	/* Session management. */
 	public static final int COMMAND_NOTIFY      = 0x42;
