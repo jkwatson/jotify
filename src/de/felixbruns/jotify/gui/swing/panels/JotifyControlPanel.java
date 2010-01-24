@@ -214,16 +214,17 @@ public class JotifyControlPanel extends JPanel implements QueueListener, PlayerL
 		this.playButton.setPause(status.equals(Status.PLAY));
 	}
 	
-	public void playerPositionChanged(int position){
+	public void playerPositionChanged(int ms){
 		/* Return if nothing is playing. */
 		if(this.track == null){
 			return;
 		}
 		
 		/* Get playback position and calculate progress. */
-		int duration  = this.track.getLength() / 1000;
+		int position  = ms / 1000; /* ms -> s */
+		int duration  = this.track.getLength() / 1000; /* ms -> s */
 		int remaining = duration - position;
-		int progress  = (int)((float)position / (float)duration * 1000.0f);
+		int progress  = (int)((float)ms / (float)duration); /* slider range is 0 -> 1000. */
 		
 		/* Update labels and slider. */
 		this.positionLabel.setText(TimeFormatter.formatSeconds(position));

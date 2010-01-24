@@ -7,6 +7,7 @@ import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.List;
 
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
@@ -22,7 +23,6 @@ import de.felixbruns.jotify.gui.util.JotifyLoginCredentials;
 import de.felixbruns.jotify.gui.util.JotifyPreferences;
 import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.PlaylistContainer;
-import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
 import de.felixbruns.jotify.player.PlaybackListener;
 
@@ -188,8 +188,8 @@ public class JotifyApplication {
 				new Thread("Playlist-Loading-Thread"){
 					public void run(){
 						/* Get information about account playlists. */
-						PlaylistContainer playlists = jotify.playlists();
-						boolean           cached = true;
+						PlaylistContainer playlists = jotify.playlistContainer();
+						boolean           cached    = true;
 						
 						/* Fire playlist added events. */
 						for(Playlist playlist : playlists){
@@ -217,7 +217,7 @@ public class JotifyApplication {
 								
 								/* Browse for 200 tracks at a time tracks and add them to the playlist. */
 								for(int i = 0; i < numRequests; i++){
-									Result result = jotify.browse(
+									List<Track> tracks = jotify.browse(
 										playlist.getTracks().subList(
 											i * numTracks,
 											Math.min((i + 1) * numTracks, totalTracks)
@@ -225,7 +225,7 @@ public class JotifyApplication {
 									);
 									
 									/* Add track information to playlist (also works with duplicate tracks). */
-									for(Track track : result.getTracks()){
+									for(Track track : tracks){
 		  								for(int j = 0; j < playlist.getTracks().size(); j++){
 		  									if(track.equals(playlist.getTracks().get(j))){
 		  										playlist.getTracks().set(j, track);
