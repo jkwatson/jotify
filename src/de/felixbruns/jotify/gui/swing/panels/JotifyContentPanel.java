@@ -314,15 +314,15 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.imageLabel.setVisible(true);
 		
 		/* Load cover. */
-		new Thread("Image-Loading-Thread"){
-			public void run(){
-				if(album.getCover() != null){
+		if(album.getCover() != null){
+			new Thread("Image-Loading-Thread"){
+				public void run(){
 					imageLabel.setIcon(new ImageIcon(
 						jotify.image(album.getCover()).getScaledInstance(200, 200, Image.SCALE_SMOOTH))
 					);
 				}
-			}
-		}.start();
+			}.start();
+		}
 	}
 	
 	public void showResult(final Result result){
@@ -407,28 +407,18 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			this.infoPane.setText("");
 		}
 		
-		/* Check for picture. */
+		this.imageLabel.setIcon(this.coverImage);
+		this.imageLabel.setVisible(true);
+		
+		/* Load picture. */
 		if(playlist.getPicture() != null){
-			this.imageLabel.setIcon(this.coverImage);
-			this.imageLabel.setVisible(true);
-			
-			/* Load picture. */
 			new Thread("Image-Loading-Thread"){
 				public void run(){
-					Image image = jotify.image(playlist.getPicture());
-					float scale = 100 / image.getHeight(null);
-						
-					ImageIcon icon = new ImageIcon(image.getScaledInstance(
-						(int)(image.getWidth(null) * scale), (int)(image.getHeight(null) * scale), Image.SCALE_SMOOTH)
+					imageLabel.setIcon(new ImageIcon(
+						jotify.image(playlist.getPicture()).getScaledInstance(200, 200, Image.SCALE_SMOOTH))
 					);
-					
-					imageLabel.setIcon(icon);
 				}
 			}.start();
-		}
-		else{
-			this.imageLabel.setIcon(this.coverImage);
-			this.imageLabel.setVisible(false);
 		}
 		
 		this.isShowingQueue = false;
