@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import de.felixbruns.jotify.util.SpotifyURI;
 
 /**
  * Holds information about a track.
@@ -77,7 +76,7 @@ public class Track extends Media {
 	/**
 	 * Creates a {@link Track} object with the specified {@code id}.
 	 * 
-	 * @param id Id of the track.
+	 * @param id A 32-character hex string or a Spotify URI.
 	 */
 	public Track(String id){
 		this(id, null, null, null);
@@ -87,7 +86,7 @@ public class Track extends Media {
 	 * Creates a {@link Track} object with the specified {@code id},
 	 * {@code title},{@code artist} and {@code album}.
 	 * 
-	 * @param id     Id of the track.
+	 * @param id     A 32-character hex string or a Spotify URI.
 	 * @param title  Title of the track.
 	 * @param artist Artist of the track.
 	 * @param album  Album of the track.
@@ -108,21 +107,13 @@ public class Track extends Media {
 	}
 	
 	/**
-	 * Get the tracks Spotify URI.
+	 * Create a link from this track.
 	 * 
-	 * @return A Spotify URI (e.g. {@code spotify:track:<base62-encoded-id>})
+	 * @return A {@link Link} object which can then
+	 * 		   be used to retreive the Spotify URI.
 	 */
-	public String getURI(){
-		return "spotify:track:" + SpotifyURI.toBase62(this.id);
-	}
-	
-	/**
-	 * Get the tracks Spotify URI as a HTTP-link.
-	 * 
-	 * @return A link which redirects to a Spotify URI.
-	 */
-	public String getLink(){
-		return "http://open.spotify.com/track/" + SpotifyURI.toBase62(this.id);
+	public Link getLink(){
+		return Link.create(this);
 	}
 	
 	/**

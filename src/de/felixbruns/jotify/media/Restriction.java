@@ -145,4 +145,8 @@ public class Restriction {
 	public void setCatalogues(String catalogues){
 		this.catalogues = catalogues;
 	}
+	
+	public String toString(){
+		return String.format("[Restriction: %s, %s, %s]", this.catalogues, this.allowed, this.forbidden);
+	}
 }

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.felixbruns.jotify.util.Hex;
-import de.felixbruns.jotify.util.SpotifyURI;
 
 /**
  * Holds information about an album.
@@ -73,7 +72,7 @@ public class Album extends Media {
 	/**
 	 * Creates an {@link Album} object with the specified {@code id}.
 	 * 
-	 * @param id Id of the album.
+	 * @param id A 32-character hex string or a Spotify URI.
 	 */
 	public Album(String id){
 		this(id, null, null);
@@ -82,7 +81,7 @@ public class Album extends Media {
 	/**
 	 * Creates an {@link Album} object with the specified {@code id}, {@code name} and {@code artist}.
 	 * 
-	 * @param id     Id of the album.
+	 * @param id     A 32-character hex string or a Spotify URI.
 	 * @param name   Name of the album.
 	 * @param artist Artist of the album.
 	 */
@@ -101,21 +100,13 @@ public class Album extends Media {
 	}
 	
 	/**
-	 * Get the albums Spotify URI.
+	 * Create a link from this album.
 	 * 
-	 * @return A Spotify URI (e.g. {@code spotify:album:<base62-encoded-id>})
+	 * @return A {@link Link} object which can then
+	 * 		   be used to retreive the Spotify URI.
 	 */
-	public String getURI(){
-		return "spotify:album:" + SpotifyURI.toBase62(this.id);
-	}
-	
-	/**
-	 * Get the albums Spotify URI as a HTTP-link.
-	 * 
-	 * @return A link which redirects to a Spotify URI.
-	 */
-	public String getLink(){
-		return "http://open.spotify.com/album/" + SpotifyURI.toBase62(this.id);
+	public Link getLink(){
+		return Link.create(this);
 	}
 	
 	/**

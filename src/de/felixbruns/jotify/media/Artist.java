@@ -3,7 +3,6 @@ package de.felixbruns.jotify.media;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.felixbruns.jotify.util.SpotifyURI;
 
 /**
  * Holds information about an artist.
@@ -19,9 +18,9 @@ public class Artist extends Media {
 	private String name;
 	
 	/**
-	 * The identifier for this artists portrait image (32-character string).
+	 * The identifier for this artists portrait image (40-character string).
 	 */
-	private Image portrait;
+	private String portrait;
 	
 	/**
 	 * A {@link List} of genres.
@@ -64,7 +63,7 @@ public class Artist extends Media {
 	/**
 	 * Creates an {@link Artist} object with the specified {@code id}.
 	 * 
-	 * @param id Id of the artist.
+	 * @param id A 32-character hex string or a Spotify URI.
 	 */
 	public Artist(String id){
 		this(id, null);
@@ -73,7 +72,7 @@ public class Artist extends Media {
 	/**
 	 * Creates an {@link Artist} object with the specified {@code id} and {@code name}.
 	 * 
-	 * @param id   Id of the artist.
+	 * @param id   A 32-character hex string or a Spotify URI.
 	 * @param name Name of the artist or {@code null}.
 	 */
 	public Artist(String id, String name){
@@ -90,21 +89,13 @@ public class Artist extends Media {
 	}
 	
 	/**
-	 * Get the artists Spotify URI.
+	 * Create a link from this artist.
 	 * 
-	 * @return A Spotify URI (e.g. {@code spotify:artist:<base62-encoded-id>})
+	 * @return A {@link Link} object which can then
+	 * 		   be used to retreive the Spotify URI.
 	 */
-	public String getURI(){
-		return "spotify:artist:" + SpotifyURI.toBase62(this.id);
-	}
-	
-	/**
-	 * Get the artists Spotify URI as a HTTP-link.
-	 * 
-	 * @return A link which redirects to a Spotify URI.
-	 */
-	public String getLink(){
-		return "http://open.spotify.com/artist/" + SpotifyURI.toBase62(this.id);
+	public Link getLink(){
+		return Link.create(this);
 	}
 	
 	/**
@@ -128,18 +119,18 @@ public class Artist extends Media {
 	/**
 	 * Get the artists portrait image identifier.
 	 * 
-	 * @return An {@link Image} object.
+	 * @return A 40-character hex string.
 	 */
-	public Image getPortrait(){
+	public String getPortrait(){
 		return this.portrait;
 	}
 	
 	/**
 	 * Set the artists portrait image identifier.
 	 * 
-	 * @param portrait An {@link Image} object.
+	 * @param portrait A 40-character hex string.
 	 */
-	public void setPortrait(Image portrait){
+	public void setPortrait(String portrait){
 		this.portrait = portrait;
 	}
 	

@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import de.felixbruns.jotify.util.SpotifyChecksum;
-import de.felixbruns.jotify.util.SpotifyURI;
+import de.felixbruns.jotify.media.Link.InvalidSpotifyURIException;
+import de.felixbruns.jotify.util.Hex;
 
 /**
  * Holds information about a playlist.
@@ -26,7 +26,15 @@ public class Playlist implements Iterable<Track> {
 	private String      picture;
 	
 	public Playlist(){
-		this(null, null, null, false);
+		this.id            = null;
+		this.name          = null;
+		this.author        = null;
+		this.tracks        = new ArrayList<Track>();
+		this.revision      = -1;
+		this.checksum      = -1;
+		this.collaborative = false;
+		this.description   = null;
+		this.picture       = null;
 	}
 	
 	public Playlist(String id){
@@ -34,7 +42,24 @@ public class Playlist implements Iterable<Track> {
 	}
 	
 	public Playlist(String id, String name, String author, boolean collaborative){
-		this.id            = id;
+		/* Check if id is a 32-character hex string. */
+		if(id.length() == 32 && Hex.isHex(id)){
+			this.id = id;
+		}
+		/* Otherwise try to parse it as a Spotify URI. */
+		else{
+			try{
+				this.id = Link.create(id).getId();
+			}
+			catch(InvalidSpotifyURIException e){
+				throw new IllegalArgumentException(
+					"Given id is neither a 32-character" +
+					"hex string nor a valid Spotify URI.", e
+				);
+			}
+		}
+		
+		/* Set other playlist properties. */
 		this.name          = name;
 		this.author        = author;
 		this.tracks        = new ArrayList<Track>();
@@ -42,7 +67,7 @@ public class Playlist implements Iterable<Track> {
 		this.checksum      = -1;
 		this.collaborative = collaborative;
 		this.description   = null;
-		this.picture         = null;
+		this.picture       = null;
 	}
 	
 	public String getId(){
@@ -119,7 +144,7 @@ public class Playlist implements Iterable<Track> {
 	 * @return The checksum.
 	 */
 	public long getChecksum(){
-		SpotifyChecksum checksum = new SpotifyChecksum(); 
+		Checksum checksum = new Checksum(); 
 		
 		for(Track track : this.tracks){
 			checksum.update(track);
@@ -140,23 +165,14 @@ public class Playlist implements Iterable<Track> {
 	}
 	
 	/**
-	 * Get the playlists Spotify URI.
+	 * Create a link from this playlist.
 	 * 
-	 * @return A Spotify URI (e.g. {@code spotify:user:username:playlist:<base62-encoded-id>})
+	 * @return A {@link Link} object which can then
+	 * 		   be used to retreive the Spotify URI.
 	 */
-	public String getURI(){
-		return "spotify:user:" + getAuthor() + ":playlist:" + SpotifyURI.toBase62(this.id);
+	public Link getLink(){
+		return Link.create(this);
 	}
-	
-	/**
-	 * Get the playlists Spotify URI as a HTTP-link.
-	 * 
-	 * @return A link which redirects to a Spotify URI.
-	 */
-	public String getLink(){
-		return "http://open.spotify.com/user/" + getAuthor() + "/playlist/" + SpotifyURI.toBase62(this.id);
-	}
-	
 	
 	public Iterator<Track> iterator(){
 		return this.tracks.iterator();

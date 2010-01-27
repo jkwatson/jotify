@@ -17,16 +17,15 @@ public class Biography {
 	private String text;
 	
 	/**
-	 * A list of portrait images.
+	 * A list of portrait image ids.
 	 */
-	private List<Image> portraits;
+	private List<String> portraits;
 	
 	/**
 	 * Creates an empty {@link Biography} object.
 	 */
 	public Biography(){
-		this.text      = null;
-		this.portraits = new ArrayList<Image>();
+		this(null);
 	}
 	
 	/**
@@ -36,7 +35,7 @@ public class Biography {
 	 */
 	public Biography(String text){
 		this.text      = text;
-		this.portraits = new ArrayList<Image>();
+		this.portraits = new ArrayList<String>();
 	}
 	
 	/**
@@ -49,7 +48,7 @@ public class Biography {
 	}
 	
 	/**
-	 * Get the biographical text.
+	 * Set the biographical text.
 	 * 
 	 * @param text A Biographical text.
 	 */
@@ -58,20 +57,20 @@ public class Biography {
 	}
 	
 	/**
-	 * Get a list of portraits.
+	 * Get a list of portrait image ids.
 	 * 
-	 * @return A {@link List} of {@link Image} objects.
+	 * @return A {@link List} of image ids.
 	 */
-	public List<Image> getPortraits(){
+	public List<String> getPortraits(){
 		return this.portraits;
 	}
 	
 	/**
 	 * Set portraits for this biography.
 	 * 
-	 * @param portraits A {@link List} of {@link Image} objects.
+	 * @param portraits A {@link List} of image ids.
 	 */
-	public void setPortraits(List<Image> portraits){
+	public void setPortraits(List<String> portraits){
 		this.portraits = portraits;
 	}
 }

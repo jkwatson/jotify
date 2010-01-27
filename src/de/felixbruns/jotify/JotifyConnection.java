@@ -10,7 +10,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -21,6 +20,7 @@ import de.felixbruns.jotify.cache.*;
 import de.felixbruns.jotify.crypto.*;
 import de.felixbruns.jotify.exceptions.*;
 import de.felixbruns.jotify.media.*;
+import de.felixbruns.jotify.media.Link.InvalidSpotifyURIException;
 import de.felixbruns.jotify.media.parser.XMLMediaParser;
 import de.felixbruns.jotify.media.parser.XMLPlaylistParser;
 import de.felixbruns.jotify.media.parser.XMLUserParser;
@@ -317,7 +317,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * Browse artist, album or track info.
 	 * 
 	 * @param type Type of media to browse for.
-	 * @param id   Id of media to browse.
+	 * @param id   A 32-character hex string or a Spotify URI.
 	 * 
 	 * @return An {@link XMLElement} object holding the data or null
 	 *         on failure.
@@ -325,6 +325,32 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @see BrowseType
 	 */
 	private Object browse(BrowseType type, String id){
+		/*
+		 * Check if id is a 32-character hex string,
+		 * if not try to parse it as a Spotify URI.
+		 */
+		if(id.length() != 32 && !Hex.isHex(id)){
+			try{
+				Link link = Link.create(id);
+				
+				if((type.equals(BrowseType.ARTIST) && !link.isArtistLink()) ||
+				   (type.equals(BrowseType.ALBUM)  && !link.isAlbumLink())  ||
+				   (type.equals(BrowseType.TRACK)  && !link.isTrackLink())){
+					throw new IllegalArgumentException(
+						"Browse type doesn't match given Spotify URI."
+					);
+				}
+				
+				id = link.getId();
+			}
+			catch(InvalidSpotifyURIException e){
+				throw new IllegalArgumentException(
+					"Given id is neither a 32-character " +
+					"hex string nor a valid Spotify URI."
+				);
+			}
+		}
+		
 		/* Create channel callback. */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -345,7 +371,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	/**
 	 * Browse artist info by id.
 	 * 
-	 * @param id An id identifying the artist to browse.
+	 * @param id A 32-character hex string or a Spotify URI.
 	 * 
 	 * @retrun An {@link Artist} object holding more information about
 	 *         the artist or null on failure.
@@ -380,7 +406,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	/**
 	 * Browse album info by id.
 	 * 
-	 * @param id An id identifying the album to browse.
+	 * @param id A 32-character hex string or a Spotify URI.
 	 * 
 	 * @retrun An {@link Album} object holding more information about
 	 *         the album or null on failure.
@@ -415,7 +441,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	/**
 	 * Browse track info by id.
 	 * 
-	 * @param id An id identifying the track to browse.
+	 * @param id A 32-character hex string or a Spotify URI.
 	 * 
 	 * @return A {@link Track} object or null on failure.
 	 * 
@@ -764,6 +790,30 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @see Playlist
 	 */
 	public Playlist playlist(String id, boolean cached){
+		/*
+		 * Check if id is a 32-character hex string,
+		 * if not try to parse it as a Spotify URI.
+		 */
+		if(id.length() != 32 && !Hex.isHex(id)){
+			try{
+				Link link = Link.create(id);
+				
+				if(!link.isPlaylistLink()){
+					throw new IllegalArgumentException(
+						"Given Spotify URI is not a playlist URI."
+					);
+				}
+				
+				id = link.getId();
+			}
+			catch(InvalidSpotifyURIException e){
+				throw new IllegalArgumentException(
+					"Given id is neither a 32-character " +
+					"hex string nor a valid Spotify URI."
+				);
+			}
+		}
+		
 		/* Data buffer. */
 		byte[] data;
 		
@@ -1614,15 +1664,10 @@ public class JotifyConnection implements Jotify, CommandListener {
 				break;
 			}
 			case Command.COMMAND_WELCOME: {
-				/* Request ads. */
-				//this.protocol.sendAdRequest(new ChannelAdapter(), 0);
-				//this.protocol.sendAdRequest(new ChannelAdapter(), 1);
-				
 				break;
 			}
 			case Command.COMMAND_PAUSE: {
 				/* TODO: Show notification and pause. */
-				
 				break;
 			}
 			case Command.COMMAND_PLAYLISTCHANGED: {
@@ -1635,168 +1680,6 @@ public class JotifyConnection implements Jotify, CommandListener {
 				System.out.println("Data: " + new String(payload) + " " + Hex.toHex(payload));
 				
 				break;
-			}
-		}
-	}
-	
-	/**
-	 * Main method for testing purposes.
-	 * 
-	 * @param args Commandline arguments.
-	 * 
-	 * @throws Exception
-	 */
-	public static void main(String[] args) throws Exception {
-		/* Create a spotify object. */
-		JotifyConnection jotify = new JotifyConnection();
-		jotify.setTimeout(1, TimeUnit.SECONDS);
-		
-		/* Create a scanner. */
-		Scanner scanner = new Scanner(System.in);
-		
-		/* Current playlist. */
-		Playlist playlist = new Playlist();
-		
-		/* Login. */
-		while(true){
-			System.out.print("Username: ");
-			String username = scanner.nextLine();
-			
-			System.out.print("Password: ");
-			String password = scanner.nextLine();
-			
-			try{
-				jotify.login(username, password);
-				
-				System.out.println("Logged in! Type 'help' to see available commands.");
-				
-				break;
-			}
-			catch(AuthenticationException e){
-				System.out.println("Invalid username and/or password! Try again.");
-			}
-		}
-		
-		/* Start packet IO in the background. */
-		new Thread(jotify, "JotifyConnection-Thread").start();
-		
-		/* Print user info. */
-		System.out.println(jotify.user());
-		
-		/* Check if user has a premium account. */
-		if(!jotify.user.isPremium()){
-			System.err.println("WARNING: You don't have a premium account! Jotify will NOT work!");
-		}
-		
-		/* Wait for commands. */
-		while(true){
-			String   line     = scanner.nextLine();
-			String[] parts    = line.split(" ", 2);
-			String   command  = parts[0];
-			String   argument = (parts.length > 1)?parts[1]:null;
-			
-			if(command.equals("search")){
-				Result result = jotify.search(argument);
-
-				playlist = Playlist.fromResult(result.getQuery(), "jotify", result);
-				
-				int i = 0;
-				
-				for(Track track : result.getTracks()){
-					System.out.format(
-						"%2d | %20s - %45s | %32s\n",
-						i++,
-						track.getArtist().getName(),
-						track.getTitle(),
-						track.getId()
-					);
-					
-					if(i == 15){
-						break;
-					}
-				}
-			}
-			else if(command.equals("toplist")){
-				Result result = jotify.toplist(argument, null, null);
-				
-				playlist = Playlist.fromResult("toplist", "jotify", result);
-				
-				int i = 0;
-				
-				for(Artist artist : result.getArtists()){
-					System.out.format(
-						"%2d | %20s | %32s\n",
-						i++,
-						artist.getName(),
-						artist.getId()
-					);
-					
-					if(i == 15){
-						break;
-					}
-				}
-				
-				for(Album album : result.getAlbums()){
-					System.out.format(
-						"%2d | %20s - %45s | %32s\n",
-						i++,
-						album.getArtist().getName(),
-						album.getName(),
-						album.getId()
-					);
-					
-					if(i == 15){
-						break;
-					}
-				}
-				
-				for(Track track : result.getTracks()){
-					System.out.format(
-						"%2d | %20s - %45s | %32s\n",
-						i++,
-						track.getArtist().getName(),
-						track.getTitle(),
-						track.getId()
-					);
-					
-					if(i == 15){
-						break;
-					}
-				}
-			}
-			else if(command.equals("play")){
-				int position = Integer.parseInt(argument);
-				
-				if(position >= 0 && position < playlist.getTracks().size()){
-					Track track = jotify.browse(playlist.getTracks().get(position));		
-					
-					System.out.format("Playing: %s - %s\n", track.getArtist().getName(), track.getTitle());
-					
-					jotify.stop();
-					jotify.play(track, null);
-				}
-				else{
-					System.out.format("Position %d not available!\n", position);
-				}
-			}
-			else if(command.equals("help")){
-				System.out.println("Available commands:");
-				System.out.println("	search <query>");
-				System.out.println("	toplist <type>");
-				System.out.println("	play   <id>");
-				System.out.println("	quit");
-			}
-			else if(command.equals("quit")){
-				/* Stop playing. */
-				jotify.stop();
-				
-				/* Close connection. */
-				jotify.close();
-				
-				break;
-			}
-			else{
-				System.out.println("Unrecognized command!");
 			}
 		}
 	}

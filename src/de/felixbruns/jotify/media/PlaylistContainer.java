@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import de.felixbruns.jotify.util.SpotifyChecksum;
 
 public class PlaylistContainer implements Iterable<Playlist> {
 	public static final PlaylistContainer EMPTY = new PlaylistContainer();
@@ -51,7 +50,7 @@ public class PlaylistContainer implements Iterable<Playlist> {
 	 * @return The current checksum.
 	 */
 	public long getChecksum(){
-		SpotifyChecksum checksum = new SpotifyChecksum(); 
+		Checksum checksum = new Checksum(); 
 		
 		for(Playlist playlist : this.playlists){
 			checksum.update(playlist);

@@ -5,16 +5,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import de.felixbruns.jotify.media.Link.InvalidSpotifyURIException;
 import de.felixbruns.jotify.util.Hex;
 
+/**
+ * Holds basic information about media.
+ * 
+ * @author Felix Bruns <felixbruns@web.de>
+ * 
+ * @category Media
+ */
 public class Media {
 	/**
-	 * Identifier for this media (32-character string).
+	 * Identifier for this media object (32-character hex string).
 	 */
 	protected String id;
 	
 	/**
-	 * Redirects (other identifiers) for this media (32-character strings).
+	 * Redirects (other identifiers) for this media (32-character hex strings).
 	 */
 	protected List<String> redirects;
 	
@@ -47,19 +55,29 @@ public class Media {
 	/**
 	 * Creates a {@link Media} object with the specified {@code id}.
 	 * 
-	 * @param id Id of the track.
+	 * @param id A 32-character hex string or a Spotify URI.
 	 * 
 	 * @throws IllegalArgumentException If the given id is invalid.
 	 */
 	protected Media(String id){
-		/* Check if id string is valid. */
-		if(id == null || id.length() != 32 || !Hex.isHex(id)){
-			System.out.println(id);
-			
-			throw new IllegalArgumentException("Expecting a 32-character hex string.");
+		/* Check if id is a 32-character hex string. */
+		if(id.length() == 32 && Hex.isHex(id)){
+			this.id = id;
+		}
+		/* Otherwise try to parse it as a Spotify URI. */
+		else{
+			try{
+				this.id = Link.create(id).getId();
+			}
+			catch(InvalidSpotifyURIException e){
+				throw new IllegalArgumentException(
+					"Given id is neither a 32-character " +
+					"hex string nor a valid Spotify URI.", e
+				);
+			}
 		}
 		
-		this.id           = id;
+		/* Set other media properties. */
 		this.popularity   = Float.NaN;
 		this.restrictions = new ArrayList<Restriction>();
 		this.externalIds  = new HashMap<String, String>();

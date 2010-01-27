@@ -24,6 +24,16 @@ public class Result {
 		this.tracks       = new ArrayList<Track>();
 	}
 	
+	/**
+	 * Create a link from this search result.
+	 * 
+	 * @return A {@link Link} object which can then
+	 * 		   be used to retreive the Spotify URI.
+	 */
+	public Link getLink(){
+		return Link.create(this);
+	}
+	
 	public String getQuery(){
 		return this.query;
 	}

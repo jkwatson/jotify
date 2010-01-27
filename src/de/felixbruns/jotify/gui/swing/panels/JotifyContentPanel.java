@@ -45,11 +45,11 @@ import de.felixbruns.jotify.gui.swing.components.JotifyTableModel;
 import de.felixbruns.jotify.gui.swing.dnd.TrackListTransferable;
 import de.felixbruns.jotify.media.Album;
 import de.felixbruns.jotify.media.Artist;
+import de.felixbruns.jotify.media.Link;
 import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
-import de.felixbruns.jotify.util.SpotifyURI;
-import de.felixbruns.jotify.util.SpotifyURI.InvalidSpotifyURIException;
+import de.felixbruns.jotify.media.Link.InvalidSpotifyURIException;
 
 @SuppressWarnings("serial")
 public class JotifyContentPanel extends JPanel implements HyperlinkListener, PlaylistListener, QueueListener, SearchListener, BrowseListener {
@@ -182,7 +182,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 						public void actionPerformed(ActionEvent e){
 							Track track = tableModel.get(table.getSelectedRow());
 							
-							StringSelection uri = new StringSelection(track.getURI());
+							StringSelection uri = new StringSelection(track.getLink().asString());
 							
 							Toolkit.getDefaultToolkit().getSystemClipboard().setContents(uri, uri);
 						}
@@ -192,7 +192,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 						public void actionPerformed(ActionEvent e){
 							Track track = tableModel.get(table.getSelectedRow());
 							
-							StringSelection uri = new StringSelection(track.getLink());
+							StringSelection uri = new StringSelection(track.getLink().asHTTPLink());
 							
 							Toolkit.getDefaultToolkit().getSystemClipboard().setContents(uri, uri);
 						}
@@ -283,7 +283,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			public void run(){
 				if(artist.getPortrait() != null){
 					imageLabel.setIcon(new ImageIcon(
-						jotify.image(artist.getPortrait().getId()))
+						jotify.image(artist.getPortrait()))
 					);
 				}
 			}
@@ -461,22 +461,22 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 	public void hyperlinkUpdate(final HyperlinkEvent e){
 		if(e.getEventType() == EventType.ACTIVATED){
 			try{
-				SpotifyURI uri = new SpotifyURI(e.getDescription());
+				Link link = Link.create(e.getDescription());
 				
-				if(uri.isArtistURI()){
-					Artist artist = this.jotify.browseArtist(uri.getHexId());
+				if(link.isArtistLink()){
+					Artist artist = this.jotify.browseArtist(link.getId());
 					
 					broadcast.fireClearSelection();
 					broadcast.fireBrowsedArtist(artist);
 				}
-				else if(uri.isAlbumURI()){
-					Album album = this.jotify.browseAlbum(uri.getHexId());
+				else if(link.isAlbumLink()){
+					Album album = this.jotify.browseAlbum(link.getId());
 					
 					broadcast.fireClearSelection();
 					broadcast.fireBrowsedAlbum(album);
 				}
-				else if(uri.isTrackURI()){
-					Track track = this.jotify.browseTrack(uri.getHexId());
+				else if(link.isTrackLink()){
+					Track track = this.jotify.browseTrack(link.getId());
 					
 					broadcast.fireControlSelect(track);
 					broadcast.fireControlPlay();
