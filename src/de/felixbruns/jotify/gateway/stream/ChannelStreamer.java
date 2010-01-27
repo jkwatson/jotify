@@ -20,10 +20,10 @@ import com.sun.net.httpserver.HttpExchange;
 import de.felixbruns.jotify.cache.SubstreamCache;
 import de.felixbruns.jotify.exceptions.ProtocolException;
 import de.felixbruns.jotify.media.Track;
+import de.felixbruns.jotify.player.SpotifyOggHeader;
 import de.felixbruns.jotify.protocol.Protocol;
 import de.felixbruns.jotify.protocol.channel.Channel;
 import de.felixbruns.jotify.protocol.channel.ChannelListener;
-import de.felixbruns.jotify.util.SpotifyOggHeader;
 
 public class ChannelStreamer implements ChannelListener {
 	/* Decryption stuff. */

@@ -13,7 +13,6 @@ import java.util.concurrent.TimeoutException;
 
 import com.sun.net.httpserver.HttpExchange;
 
-import de.felixbruns.jotify.JotifyPlayer;
 import de.felixbruns.jotify.cache.Cache;
 import de.felixbruns.jotify.cache.FileCache;
 import de.felixbruns.jotify.cache.MemoryCache;
@@ -44,7 +43,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	private Cache        cache;
 	private long         timeout;
 	private TimeUnit     unit;
-	private JotifyPlayer player;
+	private GatewayPlayer player;
 	
 	/**
 	 * Enum for browsing media.
@@ -140,7 +139,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		this.user = new User(username);
 		
 		/* Create player. */
-		this.player = new JotifyPlayer(this.protocol);
+		this.player = new GatewayPlayer(this.protocol);
 		
 		/* Add command handler. */
 		this.protocol.addListener(this);
