@@ -16,7 +16,6 @@ import de.felixbruns.jotify.media.Artist;
 import de.felixbruns.jotify.media.Biography;
 import de.felixbruns.jotify.media.Disc;
 import de.felixbruns.jotify.media.File;
-import de.felixbruns.jotify.media.Image;
 import de.felixbruns.jotify.media.Restriction;
 import de.felixbruns.jotify.media.Result;
 import de.felixbruns.jotify.media.Track;
@@ -680,13 +679,13 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 	/**
 	 * Parse the input stream as an image.
 	 * 
-	 * @return An {@link Image} object.
+	 * @return The image id.
 	 * 
 	 * @throws XMLStreamException
 	 * @throws XMLParserException
 	 */
-	private Image parseImage() throws XMLStreamException, XMLParserException {
-		Image  image = new Image();
+	private String parseImage() throws XMLStreamException, XMLParserException {
+		String id = null;
 		String name;
 		int    type;
 		
@@ -696,13 +695,13 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 			
 			/* Process depending on element name. */
 			if(name.equals("id")){
-				image.setId(this.getElementString());
+				id = this.getElementString();
 			}
 			else if(name.equals("width")){
-				image.setWidth(this.getElementInteger());
+				this.getElementString(); /* Skip. */
 			}
 			else if(name.equals("height")){
-				image.setHeight(this.getElementInteger());
+				this.getElementString(); /* Skip. */
 			}
 			else{
 				throw new XMLParserException(
@@ -714,13 +713,13 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 		/* If the reader is not at an end element, it is at some character event. */
 		if(type != END_ELEMENT){
 			/* Read image id from element text (special case). */
-			image.setId(this.reader.getText());
+			id = this.reader.getText().trim();
 			
 			/* Skip to end element. */
 			this.reader.next();
 		}
 		
-		return image;
+		return id;
 	}
 	
 	/**
@@ -752,7 +751,7 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 						bio.setText(this.getElementString());
 					}
 					else if(name.equals("portraits")){
-						List<Image> portraits = new ArrayList<Image>();
+						List<String> portraits = new ArrayList<String>();
 						
 						/* Go to next element and check if it is a start element. */
 						while(this.reader.next() == START_ELEMENT){
