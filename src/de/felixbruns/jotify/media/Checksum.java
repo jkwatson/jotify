@@ -1,17 +1,16 @@
-package de.felixbruns.jotify.util;
+package de.felixbruns.jotify.media;
 
 import java.util.zip.Adler32;
 
-import de.felixbruns.jotify.media.Playlist;
-import de.felixbruns.jotify.media.Track;
+import de.felixbruns.jotify.util.Hex;
 
 /**
- * Subclass of {@link Adler32}, supplying methods to update the
- * checksum with different media objects.
+ * Subclass of {@link Adler32}, supplying methods to calculate
+ * a checksum of different media objects.
  * 
  * @author Felix Bruns <felixbruns@web.de>
  */
-public class SpotifyChecksum extends Adler32 {
+public class Checksum extends Adler32 {
 	/**
 	 * Update the checksum with a {@link Playlist}.
 	 * 
