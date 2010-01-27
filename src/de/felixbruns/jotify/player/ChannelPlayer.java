@@ -10,9 +10,7 @@ import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.Semaphore;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -32,7 +30,6 @@ import de.felixbruns.jotify.protocol.Protocol;
 import de.felixbruns.jotify.protocol.channel.Channel;
 import de.felixbruns.jotify.protocol.channel.ChannelListener;
 import de.felixbruns.jotify.util.MathUtilities;
-import de.felixbruns.jotify.util.SpotifyOggHeader;
 
 public class ChannelPlayer implements Runnable, Player, ChannelListener {
 	/* 
@@ -173,8 +170,11 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 		}
 		
 		/* Open input stream for playing. */
-		if(!this.open(this.input)){
-			throw new RuntimeException("Can't open input stream for playing!");
+		try{
+			this.open(this.input);
+		}
+		catch(Exception e){
+			throw new RuntimeException("Can't open input stream for playing!", e);
 		}
 	}
 	
@@ -182,7 +182,7 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 	 * set up audio stuff when AudioInputStream
 	 * was sucessfully created.
 	 */
-	private boolean open(InputStream stream){
+	private void open(InputStream stream) throws IOException, UnsupportedAudioFileException, LineUnavailableException {
 		/* Audio streams and formats. */
 		AudioInputStream sourceStream;
 		AudioFormat      sourceFormat;
@@ -191,54 +191,40 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 		/* Spotify specific ogg header. */
 		byte[] header = new byte[167];
 		
-		try{
-			/* Read and decode header. */
-			stream.read(header);
-			
-			this.spotifyOggHeader = new SpotifyOggHeader(header);
-			
-			/* Get audio source stream */
-			sourceStream = AudioSystem.getAudioInputStream(stream);
-			
-			/* Get source format and set target format. */
-			sourceFormat = sourceStream.getFormat();
-			targetFormat = new AudioFormat(
-				sourceFormat.getSampleRate(), 16,
-				sourceFormat.getChannels(), true, false
-			);
-			
-			this.audioFormat = targetFormat;
-			
-			/* Get target audio stream */
-			this.audioStream = AudioSystem.getAudioInputStream(targetFormat, sourceStream);
-			
-			/* Get line info for target format. */
-			DataLine.Info info = new DataLine.Info(SourceDataLine.class, targetFormat);
-			
-			/* Get line for obtained line info. */
-			this.audioLine = (SourceDataLine)AudioSystem.getLine(info);
-			
-			/* Finally open line for playback. */
-			this.audioLine.open();
-		}
-		catch(UnsupportedAudioFileException e){
-			return false;
-		}
-		catch(IOException e){
-			return false;
-		}
-		catch(LineUnavailableException e){
-			return false;
-		}
+		/* Read and decode header. */
+		stream.read(header);
+		
+		this.spotifyOggHeader = new SpotifyOggHeader(header);
+		
+		/* Get audio source stream */
+		sourceStream = AudioSystem.getAudioInputStream(stream);
+		
+		/* Get source format and set target format. */
+		sourceFormat = sourceStream.getFormat();
+		targetFormat = new AudioFormat(
+			sourceFormat.getSampleRate(), 16,
+			sourceFormat.getChannels(), true, false
+		);
+		
+		this.audioFormat = targetFormat;
+		
+		/* Get target audio stream */
+		this.audioStream = AudioSystem.getAudioInputStream(targetFormat, sourceStream);
+		
+		/* Get line info for target format. */
+		DataLine.Info info = new DataLine.Info(SourceDataLine.class, targetFormat);
+		
+		/* Get line for obtained line info. */
+		this.audioLine = (SourceDataLine)AudioSystem.getLine(info);
+		
+		/* Finally open line for playback. */
+		this.audioLine.open();
 		
 		/* Set player status. */
 		this.active = true;
 		
 		/* Start thread which writes data to the line. */
 		new Thread(this, "ChannelPlayer-Thread").start();
-		
-		/* Success. */
-		return true;
 	}
 	
 	public void run(){
@@ -507,12 +493,10 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 		}
 		
 		/* Allocate space for ciphertext. */
-		byte[] ciphertext = new byte[data.length + 1024];
-		byte[] keystream  = new byte[16];
+		byte[] ciphertext = new byte[data.length];
 		
-		/* Decrypt each 1024 byte block. */
+		/* Deinterleave the 4x256 byte blocks. */
 		for(int block = 0; block < data.length / 1024; block++){
-			/* Deinterleave the 4x256 byte blocks. */
 			off = block * 1024;
 			w	= block * 1024 + 0 * 256;
 			x	= block * 1024 + 1 * 256;
@@ -525,55 +509,13 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 				ciphertext[off++] = data[y++];
 				ciphertext[off++] = data[z++];
 			}
-			
-			/* Decrypt 1024 bytes block. This will fail for the last block. */
-			for(int i = 0; i < 1024 && (block * 1024 + i) < data.length; i += 16){
-				/* Produce 16 bytes of keystream from the IV. */
-				try{
-					keystream = this.cipher.doFinal(this.iv);
-				}
-				catch(IllegalBlockSizeException e){
-					e.printStackTrace();
-				}
-				catch(BadPaddingException e){
-					e.printStackTrace();
-				}
-				
-				/* 
-				 * Produce plaintext by XORing ciphertext with keystream.
-				 * And somehow I also need to XOR with the IV... Please
-				 * somebody tell me what I'm doing wrong, or is it the
-				 * Java implementation of AES? At least it works like this.
-				 */
-				for(int j = 0; j < 16; j++){
-					ciphertext[block * 1024 + i + j] ^= keystream[j] ^ this.iv[j];
-				}
-
-				/* Update IV counter. */
-				for(int j = 15; j >= 0; j--){
-					this.iv[j] += 1;
-					
-					if((int)(this.iv[j] & 0xFF) != 0){
-						break;
-					}
-				}
-				
-				/* Set new IV. */
-				try{
-					this.cipher.init(Cipher.ENCRYPT_MODE, this.key, new IvParameterSpec(this.iv));
-				}
-				catch(InvalidKeyException e){
-					e.printStackTrace();
-				}
-				catch(InvalidAlgorithmParameterException e){
-					e.printStackTrace();
-				}
-			}
 		}
+		
+		ciphertext = this.cipher.update(ciphertext);
 		
 		/* Write data to output stream. */
 		try{
-			this.output.write(ciphertext, 0, ciphertext.length - 1024);
+			this.output.write(ciphertext, 0, ciphertext.length);
 			this.output.flush();
 		}
 		catch(IOException e){
