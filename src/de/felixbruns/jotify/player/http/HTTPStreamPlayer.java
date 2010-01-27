@@ -22,8 +22,8 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import de.felixbruns.jotify.media.Track;
 import de.felixbruns.jotify.player.PlaybackListener;
 import de.felixbruns.jotify.player.Player;
+import de.felixbruns.jotify.player.SpotifyOggHeader;
 import de.felixbruns.jotify.util.MathUtilities;
-import de.felixbruns.jotify.util.SpotifyOggHeader;
 
 public class HTTPStreamPlayer implements Runnable, Player {
 	/* Streams, audio decoding and output. */
