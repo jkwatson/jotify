@@ -1,4 +1,4 @@
-package de.felixbruns.jotify;
+package de.felixbruns.jotify.gateway;
 
 import de.felixbruns.jotify.exceptions.ProtocolException;
 import de.felixbruns.jotify.media.Track;
@@ -8,12 +8,12 @@ import de.felixbruns.jotify.player.Player;
 import de.felixbruns.jotify.protocol.Protocol;
 import de.felixbruns.jotify.protocol.channel.ChannelCallback;
 
-public class JotifyPlayer implements Player {
+public class GatewayPlayer implements Player {
 	private Protocol      protocol;
 	private ChannelPlayer player;
 	private float         volume;
 	
-	public JotifyPlayer(Protocol protocol){
+	public GatewayPlayer(Protocol protocol){
 		if(protocol == null){
 			throw new IllegalArgumentException("Protocol can't be 'null'.");
 		}
