@@ -10,6 +10,7 @@ public class Command {
 	public static final int COMMAND_CHANNELABRT  = 0x0b;
 	public static final int COMMAND_REQKEY       = 0x0c;
 	public static final int COMMAND_AESKEY       = 0x0d;
+	public static final int COMMAND_AESKEYERR    = 0x0e;
 	public static final int COMMAND_CACHEHASH    = 0x0f;
 	public static final int COMMAND_SHAHASH      = 0x10;
 	public static final int COMMAND_IMAGE        = 0x19;

@@ -485,7 +485,7 @@ public class Protocol {
 		
 		/* Append channel id and ad type. */
 		buffer.putShort((short)channel.getId());
-		buffer.put((byte)type);
+		buffer.put((byte)type); /* 0: audio, 1: banner */
 		buffer.flip();
 		
 		/* Register channel. */
