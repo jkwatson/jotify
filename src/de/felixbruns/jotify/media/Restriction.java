@@ -70,7 +70,11 @@ public class Restriction {
 			throw new IllegalArgumentException("Expecting a 2-letter country code!");
 		}
 		
-		return this.allowed != null && this.allowed.toLowerCase().contains(country.toLowerCase());
+		if(this.allowed == null){
+			return true;
+		}
+		
+		return this.allowed.toLowerCase().contains(country.toLowerCase());
 	}
 	
 	/**
@@ -105,7 +109,11 @@ public class Restriction {
 			throw new IllegalArgumentException("Expecting a 2-letter country code!");
 		}
 		
-		return this.forbidden != null && this.forbidden.toLowerCase().contains(country.toLowerCase());
+		if(this.forbidden == null){
+			return false;
+		}
+		
+		return this.forbidden.toLowerCase().contains(country.toLowerCase());
 	}
 	
 	/**
