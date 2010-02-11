@@ -11,6 +11,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.concurrent.TimeoutException;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -64,10 +65,15 @@ public class JotifySearchPanel extends JPanel implements SearchListener {
 					/* Searching will be done in a thread, so the UI doesn't block. */
 					new Thread("Searching-Thread"){
 						public void run(){
-							/* Do search via jotify API. */
-							Result result = jotify.search(query);
-							
-							broadcast.fireSearchResultReceived(result);
+							try{
+								/* Do search via jotify API. */
+								Result result = jotify.search(query);
+								
+								broadcast.fireSearchResultReceived(result);
+							}
+							catch (TimeoutException e){
+								e.printStackTrace();
+							}
 						}
 					}.start();
 				}

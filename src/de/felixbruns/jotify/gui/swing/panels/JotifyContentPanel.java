@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
@@ -160,21 +161,31 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 					
 					browseArtistItem.addActionListener(new ActionListener(){
 						public void actionPerformed(ActionEvent e){
-							Track track   = tableModel.get(table.getSelectedRow());
-							Artist artist = jotify.browse(track.getArtist());
-							
-							broadcast.fireClearSelection();
-							broadcast.fireBrowsedArtist(artist);
+							try{
+								Track track   = tableModel.get(table.getSelectedRow());
+								Artist artist = jotify.browse(track.getArtist());
+								
+								broadcast.fireClearSelection();
+								broadcast.fireBrowsedArtist(artist);
+							}
+							catch(TimeoutException ex){
+								ex.printStackTrace();
+							}
 						}
 					});
 					
 					browseAlbumItem.addActionListener(new ActionListener(){
 						public void actionPerformed(ActionEvent e){
-							Track track = tableModel.get(table.getSelectedRow());
-							Album album = jotify.browse(track.getAlbum());
-							
-							broadcast.fireClearSelection();
-							broadcast.fireBrowsedAlbum(album);
+							try{
+								Track track = tableModel.get(table.getSelectedRow());
+								Album album = jotify.browse(track.getAlbum());
+								
+								broadcast.fireClearSelection();
+								broadcast.fireBrowsedAlbum(album);
+							}
+							catch(TimeoutException ex){
+								ex.printStackTrace();
+							}
 						}
 					});
 					
@@ -282,9 +293,14 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		new Thread("Image-Loading-Thread"){
 			public void run(){
 				if(artist.getPortrait() != null){
-					imageLabel.setIcon(new ImageIcon(
-						jotify.image(artist.getPortrait()))
-					);
+					try{
+						imageLabel.setIcon(new ImageIcon(
+							jotify.image(artist.getPortrait()))
+						);
+					}
+					catch(TimeoutException ex){
+						ex.printStackTrace();
+					}
 				}
 			}
 		}.start();
@@ -317,9 +333,14 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		if(album.getCover() != null){
 			new Thread("Image-Loading-Thread"){
 				public void run(){
-					imageLabel.setIcon(new ImageIcon(
-						jotify.image(album.getCover()).getScaledInstance(200, 200, Image.SCALE_SMOOTH))
-					);
+					try{
+						imageLabel.setIcon(new ImageIcon(
+							jotify.image(album.getCover()).getScaledInstance(200, 200, Image.SCALE_SMOOTH))
+						);
+					}
+					catch(TimeoutException ex){
+						ex.printStackTrace();
+					}
 				}
 			}.start();
 		}
@@ -414,9 +435,14 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		if(playlist.getPicture() != null){
 			new Thread("Image-Loading-Thread"){
 				public void run(){
-					imageLabel.setIcon(new ImageIcon(
-						jotify.image(playlist.getPicture()).getScaledInstance(200, 200, Image.SCALE_SMOOTH))
-					);
+					try{
+						imageLabel.setIcon(new ImageIcon(
+							jotify.image(playlist.getPicture()).getScaledInstance(200, 200, Image.SCALE_SMOOTH))
+						);
+					}
+					catch(TimeoutException ex){
+						ex.printStackTrace();
+					}
 				}
 			}.start();
 		}
@@ -483,6 +509,9 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 				}
 			}
 			catch(InvalidSpotifyURIException ex){
+				/* Ignore. */
+			}
+			catch(TimeoutException ex){
 				/* Ignore. */
 			}
 		}

@@ -1,6 +1,7 @@
 package de.felixbruns.jotify.gateway.handlers;
 
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import de.felixbruns.jotify.gateway.GatewayConnection;
 import de.felixbruns.jotify.gateway.GatewayApplication;
@@ -21,8 +22,8 @@ public class PlaylistHandler extends GatewayHandler {
 				try{
 					return jotify.playlist(id);
 				}
-				catch(RuntimeException e){
-					return "<error>" + e.getCause().getMessage() + "</error>";
+				catch(TimeoutException e){
+					return "<error>" + e.getMessage() + "</error>";
 				}
 			}
 			else{

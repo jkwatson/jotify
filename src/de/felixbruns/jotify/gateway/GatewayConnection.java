@@ -2,38 +2,20 @@ package de.felixbruns.jotify.gateway;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 
 import com.sun.net.httpserver.HttpExchange;
 
-import de.felixbruns.jotify.cache.Cache;
-import de.felixbruns.jotify.cache.FileCache;
-import de.felixbruns.jotify.cache.MemoryCache;
+import de.felixbruns.jotify.cache.*;
 import de.felixbruns.jotify.crypto.RSA;
-import de.felixbruns.jotify.exceptions.AuthenticationException;
-import de.felixbruns.jotify.exceptions.ConnectionException;
-import de.felixbruns.jotify.exceptions.ProtocolException;
+import de.felixbruns.jotify.exceptions.*;
 import de.felixbruns.jotify.gateway.stream.ChannelStreamer;
-import de.felixbruns.jotify.media.File;
-import de.felixbruns.jotify.media.Track;
-import de.felixbruns.jotify.media.User;
-import de.felixbruns.jotify.media.parser.XMLUserParser;
-import de.felixbruns.jotify.player.PlaybackListener;
-import de.felixbruns.jotify.player.Player;
-import de.felixbruns.jotify.protocol.Command;
-import de.felixbruns.jotify.protocol.CommandListener;
-import de.felixbruns.jotify.protocol.Protocol;
-import de.felixbruns.jotify.protocol.Session;
-import de.felixbruns.jotify.protocol.channel.Channel;
-import de.felixbruns.jotify.protocol.channel.ChannelCallback;
-import de.felixbruns.jotify.protocol.channel.ChannelHeaderCallback;
+import de.felixbruns.jotify.media.*;
+import de.felixbruns.jotify.media.parser.*;
+import de.felixbruns.jotify.player.*;
+import de.felixbruns.jotify.protocol.*;
+import de.felixbruns.jotify.protocol.channel.*;
 
 public class GatewayConnection implements Runnable, CommandListener, Player {
 	private Session      session;
@@ -223,7 +205,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	 * 
 	 * @return A xml string.
 	 */
-	public String toplist(String type, String region, String username){
+	public String toplist(String type, String region, String username) throws TimeoutException {
 		/* Create channel callback and parameter map. */
 		ChannelCallback callback   = new ChannelCallback();
 		Map<String, String> params = new HashMap<String, String>();
@@ -255,7 +237,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	 * 
 	 * @return A xml string.
 	 */
-	public String search(String query){
+	public String search(String query) throws TimeoutException {
 		/* Create channel callback */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -282,7 +264,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	 * 
 	 * @return An array of bytes.
 	 */
-	public byte[] image(String id){
+	public byte[] image(String id) throws TimeoutException {
 		/* Data buffer. */
 		byte[] data;
 		
@@ -325,7 +307,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	 * 
 	 * @see BrowseType
 	 */
-	public String browse(BrowseType type, String id){
+	public String browse(BrowseType type, String id) throws TimeoutException {
 		/* Create channel callback */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -351,7 +333,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	 * 
 	 * @return A xml string.
 	 */
-	public String browse(Collection<String> ids){
+	public String browse(Collection<String> ids) throws TimeoutException {
 		/* Create channel callback */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -375,7 +357,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	 * 
 	 * @return A xml string.
 	 */
-	public String playlists(){
+	public String playlistContainer() throws TimeoutException {
 		/* Create channel callback. */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -403,7 +385,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	 * 
 	 * @return A xml string.
 	 */
-	public String playlist(String id){
+	public String playlist(String id) throws TimeoutException {
 		/* Create channel callback */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -429,15 +411,14 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	 * 
 	 * @throws IOException
 	 */
-	public void stream(String id, String fileId, HttpExchange exchange) throws IOException {
+	public void stream(String id, String fileId, HttpExchange exchange) throws IOException, TimeoutException  {
 		/* Browse track. */
 		Track track = new Track(id);
 		
 		track.addFile(new File(fileId, ""));
 		
 		/* Create channel callbacks. */
-		ChannelCallback       callback       = new ChannelCallback();
-		ChannelHeaderCallback headerCallback = new ChannelHeaderCallback();
+		ChannelCallback callback = new ChannelCallback();
 		
 		/* Send play request (token notify + AES key). */
 		try{
@@ -452,28 +433,8 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		/* Get AES key. */
 		byte[] key = callback.get(this.timeout, this.unit);
 		
-		/* Send header request to check for HTTP stream. */
-		try{
-			this.protocol.sendSubstreamRequest(headerCallback, track, 0, 0);
-		}
-		catch(ProtocolException e){
-			exchange.sendResponseHeaders(404, -1);
-			
-			return;
-		}
-		
-		/* Get list of HTTP stream URLs. */
-		List<String> urls = headerCallback.get(this.timeout, this.unit);
-		
-		/* If we got 4 HTTP stream URLs use them, otherwise use default channel streaming. */
-		if(urls.size() == 4){
-			exchange.sendResponseHeaders(404, -1);
-			
-			//new HTTPStreamer(urls, track, key, stream);
-		}
-		else{
-			new ChannelStreamer(this.protocol, track, key, exchange);
-		}
+		/* Stream channel. */
+		new ChannelStreamer(this.protocol, track, key, exchange);
 	}
 	
 	/**

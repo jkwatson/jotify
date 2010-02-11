@@ -72,22 +72,18 @@ public class ChannelCallback implements ChannelListener {
 		return this.getData();
 	}
 	
-	public byte[] get(long timeout, TimeUnit unit){
+	public byte[] get(long timeout, TimeUnit unit) throws TimeoutException {
 		/* Wait for data to become available. */
 		try{
 			if(!this.done.tryAcquire(timeout, unit)){
 				throw new TimeoutException("Timeout while waiting for data.");
 			}
+			
+			return this.getData();
 		}
 		catch(InterruptedException e){
-			throw new RuntimeException(e);
+			return null;
 		}
-		catch(TimeoutException e){
-			throw new RuntimeException(e);
-		}
-		
-		/* Return data array. */
-		return this.getData();
 	}
 	
 	public boolean isDone(){

@@ -2,6 +2,7 @@ package de.felixbruns.jotify.gui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.exceptions.AuthenticationException;
@@ -57,10 +58,16 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 			Track track = this.queue.previous();
 			
 			this.jotify.stop();
-			this.jotify.play(track, this);
 			
-			this.broadcast.firePlayerTrackChanged(track);
-			this.broadcast.fireQueueUpdated(this.queue);
+			try{
+				this.jotify.play(track, this);
+				
+				this.broadcast.firePlayerTrackChanged(track);
+				this.broadcast.fireQueueUpdated(this.queue);
+			}
+			catch(TimeoutException e){
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -69,11 +76,17 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 			Track track = this.queue.next();
 			
 			this.jotify.stop();
-			this.jotify.play(track, this);
 			
-			this.broadcast.firePlayerTrackChanged(track);
-			this.broadcast.firePlayerStatusChanged(Status.PLAY);
-			this.broadcast.fireQueueUpdated(this.queue);
+			try{
+				this.jotify.play(track, this);
+				
+				this.broadcast.firePlayerTrackChanged(track);
+				this.broadcast.firePlayerStatusChanged(Status.PLAY);
+				this.broadcast.fireQueueUpdated(this.queue);
+			}
+			catch(TimeoutException e){
+				e.printStackTrace();
+			}
 		}
 	}
 	

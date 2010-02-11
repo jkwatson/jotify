@@ -2,6 +2,7 @@ package de.felixbruns.jotify;
 
 import java.awt.Image;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import de.felixbruns.jotify.exceptions.*;
 import de.felixbruns.jotify.media.*;
@@ -35,7 +36,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see User
 	 */
-	public User user();
+	public User user() throws TimeoutException;
 	
 	/**
 	 * Fetch a toplist.
@@ -48,7 +49,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Result
 	 */
-	public Result toplist(String type, String region, String username);
+	public Result toplist(String type, String region, String username) throws TimeoutException;
 	
 	/**
 	 * Search for an artist, album or track.
@@ -59,7 +60,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Result
 	 */
-	public Result search(String query);
+	public Result search(String query) throws TimeoutException;
 	
 	/**
 	 * Get an image (e.g. artist portrait or cover) by requesting
@@ -72,7 +73,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Image
 	 */
-	public Image image(String id);
+	public Image image(String id) throws TimeoutException;
 	
 	/**
 	 * Browse artist info.
@@ -84,7 +85,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Artist
 	 */
-	public Artist browse(Artist artist);
+	public Artist browse(Artist artist) throws TimeoutException;
 	
 	/**
 	 * Browse album info.
@@ -96,7 +97,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Album
 	 */
-	public Album browse(Album album);
+	public Album browse(Album album) throws TimeoutException;
 	
 	/**
 	 * Browse track info.
@@ -107,7 +108,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Track
 	 */
-	public Track browse(Track track);
+	public Track browse(Track track) throws TimeoutException;
 	
 	/**
 	 * Browse information for multiple tracks.
@@ -119,7 +120,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Track
 	 */
-	public List<Track> browse(List<Track> tracks);
+	public List<Track> browse(List<Track> tracks) throws TimeoutException;
 	
 	/**
 	 * Browse artist info by id.
@@ -131,7 +132,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Artist
 	 */
-	public Artist browseArtist(String id);
+	public Artist browseArtist(String id) throws TimeoutException;
 	
 	/**
 	 * Browse album info by id.
@@ -143,7 +144,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Album
 	 */
-	public Album browseAlbum(String id);
+	public Album browseAlbum(String id) throws TimeoutException;
 	
 	/**
 	 * Browse track info by id.
@@ -154,7 +155,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Track
 	 */
-	public Track browseTrack(String id);
+	public Track browseTrack(String id) throws TimeoutException;
 	
 	/**
 	 * Browse information for multiple tracks by id.
@@ -165,7 +166,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Track
 	 */
-	public List<Track> browseTracks(List<String> ids);
+	public List<Track> browseTracks(List<String> ids) throws TimeoutException;
 	
 	/**
 	 * Get stored user playlists.
@@ -177,7 +178,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see PlaylistContainer
 	 */
-	public PlaylistContainer playlistContainer();
+	public PlaylistContainer playlistContainer() throws TimeoutException;
 	
 	/**
 	 * Add a playlist to a playlist container.
@@ -189,7 +190,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see PlaylistContainer
 	 */
-	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist);
+	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist) throws TimeoutException;
 	
 	/**
 	 * Add a playlist to a playlist container.
@@ -200,7 +201,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist, int position);
+	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist, int position) throws TimeoutException;
 	
 	/**
 	 * Add multiple playlists to a playlist container.
@@ -211,7 +212,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistContainerAddPlaylists(PlaylistContainer playlistContainer, List<Playlist> playlists, int position);
+	public boolean playlistContainerAddPlaylists(PlaylistContainer playlistContainer, List<Playlist> playlists, int position) throws TimeoutException;
 	
 	/**
 	 * Remove a playlist from a playlist container.
@@ -221,7 +222,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistContainerRemovePlaylist(PlaylistContainer playlistContainer, int position);
+	public boolean playlistContainerRemovePlaylist(PlaylistContainer playlistContainer, int position) throws TimeoutException;
 	
 	/**
 	 * Remove multiple playlists from a playlist container.
@@ -232,7 +233,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistContainerRemovePlaylists(PlaylistContainer playlistContainer, int position, int count);
+	public boolean playlistContainerRemovePlaylists(PlaylistContainer playlistContainer, int position, int count) throws TimeoutException;
 	
 	/**
 	 * Get a playlist.
@@ -244,7 +245,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlist(String id, boolean cached);
+	public Playlist playlist(String id, boolean cached) throws TimeoutException;
 	
 	/**
 	 * Get a playlist.
@@ -255,7 +256,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlist(String id);
+	public Playlist playlist(String id) throws TimeoutException;
 	
 	/**
 	 * Create a playlist.
@@ -269,7 +270,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlistCreate(String name, boolean collaborative, String description, String picture);
+	public Playlist playlistCreate(String name, boolean collaborative, String description, String picture) throws TimeoutException;
 	
 	/**
 	 * Create a playlist.
@@ -280,7 +281,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlistCreate(String name);
+	public Playlist playlistCreate(String name) throws TimeoutException;
 	
 	/**
 	 * Create a playlist from a given album.
@@ -292,7 +293,7 @@ public interface Jotify extends Runnable, Player {
 	 * @see Playlist
 	 * @see Album
 	 */
-	public Playlist playlistCreate(Album sourceAlbum);
+	public Playlist playlistCreate(Album sourceAlbum) throws TimeoutException;
 	
 	/**
 	 * Destroy a playlist (Note: It will not be destroyed on the server immediately).
@@ -303,7 +304,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
-	public boolean playlistDestroy(Playlist playlist);
+	public boolean playlistDestroy(Playlist playlist) throws TimeoutException;
 	
 	/**
 	 * Add a track to a playlist.
@@ -313,7 +314,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistAddTrack(Playlist playlist, Track track);
+	public boolean playlistAddTrack(Playlist playlist, Track track) throws TimeoutException;
 	
 	/**
 	 * Add a track to a playlist.
@@ -324,7 +325,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistAddTrack(Playlist playlist, Track track, int position);
+	public boolean playlistAddTrack(Playlist playlist, Track track, int position) throws TimeoutException;
 	
 	/**
 	 * Add multiple tracks to a playlist.
@@ -335,7 +336,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistAddTracks(Playlist playlist, List<Track> tracks, int position);
+	public boolean playlistAddTracks(Playlist playlist, List<Track> tracks, int position) throws TimeoutException;
 	
 	/**
 	 * Remove a track from a playlist.
@@ -345,7 +346,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistRemoveTrack(Playlist playlist, int position);
+	public boolean playlistRemoveTrack(Playlist playlist, int position) throws TimeoutException;
 	
 	/**
 	 * Remove multiple tracks from a playlist.
@@ -356,7 +357,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistRemoveTracks(Playlist playlist, int position, int count);
+	public boolean playlistRemoveTracks(Playlist playlist, int position, int count) throws TimeoutException;
 	
 	/**
 	 * Rename a playlist.
@@ -368,7 +369,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
-	public boolean playlistRename(Playlist playlist, String name);
+	public boolean playlistRename(Playlist playlist, String name) throws TimeoutException;
 	
 	/**
 	 * Set playlist collaboration.
@@ -380,7 +381,7 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
-	public boolean playlistSetCollaborative(Playlist playlist, boolean collaborative);
+	public boolean playlistSetCollaborative(Playlist playlist, boolean collaborative) throws TimeoutException;
 	
 	/**
 	 * Set playlist information.
@@ -393,5 +394,5 @@ public interface Jotify extends Runnable, Player {
 	 * 
 	 * @see Playlist
 	 */
-	public boolean playlistSetInformation(Playlist playlist, String description, String picture);
+	public boolean playlistSetInformation(Playlist playlist, String description, String picture) throws TimeoutException;
 }

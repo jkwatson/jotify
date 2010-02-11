@@ -8,6 +8,7 @@ import java.awt.TrayIcon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
@@ -188,8 +189,19 @@ public class JotifyApplication {
 				new Thread("Playlist-Loading-Thread"){
 					public void run(){
 						/* Get information about account playlists. */
-						PlaylistContainer playlists = jotify.playlistContainer();
+						PlaylistContainer playlists = null;
 						boolean           cached    = true;
+						
+						while(true){
+							try{
+								playlists = jotify.playlistContainer();
+								
+								break;
+							}
+							catch(TimeoutException e){
+								continue;
+							}
+						}
 						
 						/* Fire playlist added events. */
 						for(Playlist playlist : playlists){
@@ -207,7 +219,16 @@ public class JotifyApplication {
 						/* Get details for each playlist. */
 						for(Playlist playlist : playlists){
 							/* Get playlist details. */
-							playlist = jotify.playlist(playlist.getId(), cached);
+							while(true){
+								try{
+									playlist = jotify.playlist(playlist.getId(), cached);
+									
+									break;
+								}
+								catch(TimeoutException e){
+									continue;
+								}
+							}
 							
 							/* If playlist contains tracks, browse for track information. */
 							if(!playlist.getTracks().isEmpty()){
@@ -217,12 +238,23 @@ public class JotifyApplication {
 								
 								/* Browse for 200 tracks at a time tracks and add them to the playlist. */
 								for(int i = 0; i < numRequests; i++){
-									List<Track> tracks = jotify.browse(
-										playlist.getTracks().subList(
-											i * numTracks,
-											Math.min((i + 1) * numTracks, totalTracks)
-										)
-									);
+									List<Track> tracks = null;
+									
+									while(true){
+										try{
+											tracks = jotify.browse(
+												playlist.getTracks().subList(
+													i * numTracks,
+													Math.min((i + 1) * numTracks, totalTracks)
+												)
+											);
+											
+											break;
+										}
+										catch(TimeoutException e){
+											continue;
+										}
+									}
 									
 									/* Add track information to playlist (also works with duplicate tracks). */
 									for(Track track : tracks){
@@ -270,6 +302,13 @@ public class JotifyApplication {
 				
 				/* Don't check "Remember me", if login failed. */
 				credentials.setRemember(false);
+			}
+			/* If we got a timeout. */
+			catch(TimeoutException e){
+				JotifyLoginDialog.showErrorMessage(e.getMessage());
+				
+				JotifyLoginDialog.hideLoader();
+				JotifyLoginDialog.updateDialog();
 			}
 		}
 		

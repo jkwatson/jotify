@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.concurrent.TimeoutException;
 
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -54,9 +55,14 @@ public class JotifyCurrentlyPlayingPanel extends JPanel {
 				String cover = track.getCover();
 				
 				if(cover != null){
-					Image image = jotify.image(cover);
-					
-					coverLabel.setIcon(new ImageIcon(image.getScaledInstance(180, 180, Image.SCALE_SMOOTH)));
+					try{
+						Image image = jotify.image(cover);
+						
+						coverLabel.setIcon(new ImageIcon(image.getScaledInstance(180, 180, Image.SCALE_SMOOTH)));
+					}
+					catch (TimeoutException e){
+						e.printStackTrace();
+					}
 				}
 				else{
 					coverLabel.setIcon(null);

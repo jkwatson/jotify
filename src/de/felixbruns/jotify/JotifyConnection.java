@@ -4,15 +4,8 @@ import java.awt.Image;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 
 import javax.imageio.ImageIO;
 
@@ -21,11 +14,8 @@ import de.felixbruns.jotify.crypto.*;
 import de.felixbruns.jotify.exceptions.*;
 import de.felixbruns.jotify.media.*;
 import de.felixbruns.jotify.media.Link.InvalidSpotifyURIException;
-import de.felixbruns.jotify.media.parser.XMLMediaParser;
-import de.felixbruns.jotify.media.parser.XMLPlaylistParser;
-import de.felixbruns.jotify.media.parser.XMLUserParser;
+import de.felixbruns.jotify.media.parser.*;
 import de.felixbruns.jotify.player.*;
-import de.felixbruns.jotify.player.http.HTTPStreamPlayer;
 import de.felixbruns.jotify.protocol.*;
 import de.felixbruns.jotify.protocol.channel.*;
 import de.felixbruns.jotify.util.*;
@@ -33,6 +23,7 @@ import de.felixbruns.jotify.util.*;
 public class JotifyConnection implements Jotify, CommandListener {
 	private Session   session;
 	private Protocol  protocol;
+	private boolean   running;
 	private User      user;
 	private Semaphore userSemaphore;
 	private Player    player;
@@ -81,6 +72,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	public JotifyConnection(Cache cache, long timeout, TimeUnit unit){
 		this.session       = new Session();
 		this.protocol      = null;
+		this.running       = false;
 		this.user          = null;
 		this.userSemaphore = new Semaphore(2);
 		this.player        = null;
@@ -127,6 +119,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 		
 		/* Add command handler. */
 		this.protocol.addListener(this);
+		
+		/* Start I/O thread. */
+		new Thread(this).start();
 	}
 	
 	/**
@@ -146,13 +141,19 @@ public class JotifyConnection implements Jotify, CommandListener {
 	
 	/**
 	 * Continuously receives packets in order to handle them.
-	 * Use a {@link Thread} to run this.
 	 */
 	public void run(){
+		/* Fail quietly. */
+		if(this.running){
+			return;
+		}
+		
 		/* Check if we're logged in. */
 		if(this.protocol == null){
 			throw new IllegalStateException("You need to login first!");
 		}
+		
+		this.running = true;
 		
 		/* Continuously receive packets until connection is closed. */
 		try{
@@ -167,6 +168,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 		catch(ProtocolException e){
 			/* Connection was closed. */
 		}
+		finally{
+			this.running = false;
+		}
 	}
 	
 	/**
@@ -176,24 +180,22 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see User
 	 */
-	public User user(){
+	public User user() throws TimeoutException {
 		/* Wait for data to become available (country, prodinfo). */
 		try{
 			if(!this.userSemaphore.tryAcquire(2, this.timeout, this.unit)){
 				throw new TimeoutException("Timeout while waiting for user data.");
 			}
+			
+			return this.user;
 		}
 		catch(InterruptedException e){
-			throw new RuntimeException(e);
+			return null;
 		}
-		catch(TimeoutException e){
-			throw new RuntimeException(e);
+		finally{
+			/* Release so this can be called again. */
+			this.userSemaphore.release(2);
 		}
-		
-		/* Release so this can be called again. */
-		this.userSemaphore.release(2);
-		
-		return this.user;
 	}
 	
 	/**
@@ -207,7 +209,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Result
 	 */
-	public Result toplist(String type, String region, String username){
+	public Result toplist(String type, String region, String username) throws TimeoutException {
 		/* Create channel callback and parameter map. */
 		ChannelCallback callback   = new ChannelCallback();
 		Map<String, String> params = new HashMap<String, String>();
@@ -241,7 +243,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Result
 	 */
-	public Result search(String query){
+	public Result search(String query) throws TimeoutException {
 		/* Create channel callback. */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -275,7 +277,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Image
 	 */
-	public Image image(String id){
+	public Image image(String id) throws TimeoutException {
 		/* Data buffer. */
 		byte[] data;
 		
@@ -324,7 +326,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see BrowseType
 	 */
-	private Object browse(BrowseType type, String id){
+	private Object browse(BrowseType type, String id) throws TimeoutException {
 		/*
 		 * Check if id is a 32-character hex string,
 		 * if not try to parse it as a Spotify URI.
@@ -378,7 +380,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Artist
 	 */
-	public Artist browseArtist(String id){
+	public Artist browseArtist(String id) throws TimeoutException {
 		/* Browse. */
 		Object artist = this.browse(BrowseType.ARTIST, id);
 		
@@ -399,7 +401,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Artist
 	 */
-	public Artist browse(Artist artist){
+	public Artist browse(Artist artist) throws TimeoutException {
 		return this.browseArtist(artist.getId());
 	}
 	
@@ -413,7 +415,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Album
 	 */
-	public Album browseAlbum(String id){
+	public Album browseAlbum(String id) throws TimeoutException {
 		/* Browse. */
 		Object album = this.browse(BrowseType.ALBUM, id);
 		
@@ -434,7 +436,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Album
 	 */
-	public Album browse(Album album){
+	public Album browse(Album album) throws TimeoutException {
 		return this.browseAlbum(album.getId());
 	}
 	
@@ -447,7 +449,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Track
 	 */
-	public Track browseTrack(String id){
+	public Track browseTrack(String id) throws TimeoutException {
 		/* Browse. */
 		Object object = this.browse(BrowseType.TRACK, id);
 		
@@ -473,7 +475,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Track
 	 */
-	public Track browse(Track track){
+	public Track browse(Track track) throws TimeoutException {
 		return this.browseTrack(track.getId());
 	}
 	
@@ -486,7 +488,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Track
 	 */
-	public List<Track> browseTracks(List<String> ids){
+	public List<Track> browseTracks(List<String> ids) throws TimeoutException {
 		/* Data buffer. */
 		byte[] data;
 		
@@ -539,7 +541,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Track
 	 */
-	public List<Track> browse(List<Track> tracks){
+	public List<Track> browse(List<Track> tracks) throws TimeoutException {
 		/* Create id list. */
 		List<String> ids = new ArrayList<String>();
 		
@@ -562,7 +564,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see PlaylistContainer
 	 */
-	public PlaylistContainer playlistContainer(){
+	public PlaylistContainer playlistContainer() throws TimeoutException {
 		/* Create channel callback. */
 		ChannelCallback callback = new ChannelCallback();
 		
@@ -590,7 +592,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see PlaylistContainer
 	 */
-	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist){
+	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist) throws TimeoutException {
 		return this.playlistContainerAddPlaylist(playlistContainer, playlist, playlistContainer.getPlaylists().size());
 	}
 	
@@ -603,7 +605,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist, int position){
+	public boolean playlistContainerAddPlaylist(PlaylistContainer playlistContainer, Playlist playlist, int position) throws TimeoutException {
 		List<Playlist> playlists = new ArrayList<Playlist>();
 		
 		playlists.add(playlist);
@@ -620,7 +622,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistContainerAddPlaylists(PlaylistContainer playlistContainer, List<Playlist> playlists, int position){
+	public boolean playlistContainerAddPlaylists(PlaylistContainer playlistContainer, List<Playlist> playlists, int position) throws TimeoutException {
 		String  user      = this.session.getUsername();
 		long    timestamp = new Date().getTime() / 1000;
 		
@@ -698,7 +700,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistContainerRemovePlaylist(PlaylistContainer playlistContainer, int position){
+	public boolean playlistContainerRemovePlaylist(PlaylistContainer playlistContainer, int position) throws TimeoutException {
 		return this.playlistContainerRemovePlaylists(playlistContainer, position, 1);
 	}
 	
@@ -711,7 +713,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistContainerRemovePlaylists(PlaylistContainer playlistContainer, int position, int count){
+	public boolean playlistContainerRemovePlaylists(PlaylistContainer playlistContainer, int position, int count) throws TimeoutException {
 		String user      = this.session.getUsername();
 		long   timestamp = new Date().getTime() / 1000;
 		
@@ -789,7 +791,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlist(String id, boolean cached){
+	public Playlist playlist(String id, boolean cached) throws TimeoutException {
 		/*
 		 * Check if id is a 32-character hex string,
 		 * if not try to parse it as a Spotify URI.
@@ -854,12 +856,15 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlist(String id){
+	public Playlist playlist(String id) throws TimeoutException {
 		return this.playlist(id, false);
 	}
 	
 	/**
 	 * Create a playlist.
+	 * <br><br>
+	 * <font color="red"><b>Note:</b> This just creates a playlist,
+	 * but doesn't add it to the playlist container!</font>
 	 * 
 	 * @param name          The name of the playlist to create.
 	 * @param collaborative If the playlist shall be collaborative.
@@ -869,8 +874,11 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @return A {@link Playlist} object or null on failure.
 	 * 
 	 * @see Playlist
+	 * @see #playlistContainerAddPlaylist(PlaylistContainer, Playlist)
+	 * @see #playlistContainerAddPlaylist(PlaylistContainer, Playlist, int)
+	 * @see #playlistContainerAddPlaylists(PlaylistContainer, List, int)
 	 */
-	public Playlist playlistCreate(String name, boolean collaborative, String description, String picture){
+	public Playlist playlistCreate(String name, boolean collaborative, String description, String picture) throws TimeoutException {
 		String     id        = Hex.toHex(RandomBytes.randomBytes(16));
 		String     user      = this.session.getUsername();
 		long       timestamp = new Date().getTime() / 1000;
@@ -931,7 +939,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Playlist
 	 */
-	public Playlist playlistCreate(String name){
+	public Playlist playlistCreate(String name) throws TimeoutException {
 		return this.playlistCreate(name, false, null, null);
 	}
 	
@@ -945,7 +953,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @see Playlist
 	 * @see Album
 	 */
-	public Playlist playlistCreate(Album sourceAlbum){
+	public Playlist playlistCreate(Album sourceAlbum) throws TimeoutException {
 		/* Browse album. */
 		Album  album       = this.browse(sourceAlbum);
 		String name        = String.format("%s - %s", album.getArtist().getName(), album.getName());
@@ -973,7 +981,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Playlist
 	 */
-	public boolean playlistDestroy(Playlist playlist){
+	public boolean playlistDestroy(Playlist playlist) throws TimeoutException {
 		String     user      = this.session.getUsername();
 		long       timestamp = new Date().getTime() / 1000;
 		
@@ -1026,7 +1034,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistAddTrack(Playlist playlist, Track track){
+	public boolean playlistAddTrack(Playlist playlist, Track track) throws TimeoutException {
 		return this.playlistAddTrack(playlist, track, playlist.getTracks().size());
 	}
 	
@@ -1039,7 +1047,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistAddTrack(Playlist playlist, Track track, int position){
+	public boolean playlistAddTrack(Playlist playlist, Track track, int position) throws TimeoutException {
 		List<Track> tracks = new ArrayList<Track>();
 		
 		tracks.add(track);
@@ -1056,7 +1064,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistAddTracks(Playlist playlist, List<Track> tracks, int position){
+	public boolean playlistAddTracks(Playlist playlist, List<Track> tracks, int position) throws TimeoutException {
 		String  user      = this.session.getUsername();
 		long    timestamp = new Date().getTime() / 1000;
 		
@@ -1139,7 +1147,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistRemoveTrack(Playlist playlist, int position){
+	public boolean playlistRemoveTrack(Playlist playlist, int position) throws TimeoutException {
 		return this.playlistRemoveTracks(playlist, position, 1);
 	}
 	
@@ -1152,7 +1160,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @return true on success and false on failure.
 	 */
-	public boolean playlistRemoveTracks(Playlist playlist, int position, int count){
+	public boolean playlistRemoveTracks(Playlist playlist, int position, int count) throws TimeoutException {
 		String user      = this.session.getUsername();
 		long   timestamp = new Date().getTime() / 1000;
 		
@@ -1239,7 +1247,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Playlist
 	 */
-	public boolean playlistRename(Playlist playlist, String name){
+	public boolean playlistRename(Playlist playlist, String name) throws TimeoutException {
 		String user      = this.session.getUsername();
 		long   timestamp = new Date().getTime() / 1000;
 		
@@ -1306,9 +1314,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Playlist
 	 */
-	public boolean playlistSetCollaborative(Playlist playlist, boolean collaborative){
+	public boolean playlistSetCollaborative(Playlist playlist, boolean collaborative) throws TimeoutException {
 		String user      = this.session.getUsername();
-		long   timestamp = new Date().getTime();
+		long   timestamp = new Date().getTime() / 1000;
 		
 		/* Check if user is allowed to set playlist collaboration. */
 		if(!playlist.getAuthor().equals(user)){
@@ -1371,9 +1379,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see Playlist
 	 */
-	public boolean playlistSetInformation(Playlist playlist, String description, String picture){
+	public boolean playlistSetInformation(Playlist playlist, String description, String picture) throws TimeoutException {
 		String user      = this.session.getUsername();
-		long   timestamp = new Date().getTime();
+		long   timestamp = new Date().getTime() / 1000;
 		
 		/* Check if user is allowed to change playlist details. */
 		if(!playlist.getAuthor().equals(user)){
@@ -1436,10 +1444,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @param track    A {@link Track} object identifying the track to be played.
 	 * @param listener A {@link PlaybackListener} receiving playback status updates.
 	 */
-	public void play(Track track, PlaybackListener listener){
+	public void play(Track track, PlaybackListener listener) throws TimeoutException {
 		/* Create channel callbacks. */
-		ChannelCallback       callback       = new ChannelCallback();
-		ChannelHeaderCallback headerCallback = new ChannelHeaderCallback();
+		ChannelCallback callback = new ChannelCallback();
 		
 		/* Send play request (token notify + AES key). */
 		try{
@@ -1452,26 +1459,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 		/* Get AES key. */
 		byte[] key = callback.get(this.timeout, this.unit);
 		
-		/* Send header request to check for HTTP stream. */
-		try{
-			this.protocol.sendSubstreamRequest(headerCallback, track, 0, 0);
-		}
-		catch(ProtocolException e){
-			return;
-		}
-		
-		/* Get list of HTTP stream URLs. */
-		List<String> urls = headerCallback.get(this.timeout, this.unit);
-		
-		/* If we got 4 HTTP stream URLs use them, otherwise use default channel streaming. */
-		if(urls.size() == 4){
-			this.player = new HTTPStreamPlayer(urls, track, key, listener);
-			this.player.volume(this.volume);
-		}
-		else{
-			this.player = new ChannelPlayer(this.protocol, track, key, listener);
-			this.player.volume(this.volume);
-		}
+		/* Stream channel. */
+		this.player = new ChannelPlayer(this.protocol, track, key, listener);
+		this.player.volume(this.volume);
 		
 		/* Start playing. */
 		this.play();

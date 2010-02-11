@@ -62,9 +62,6 @@ public class JotifyExample {
 			}
 		}
 		
-		/* Start packet I/O thread. */
-		new Thread(jotify).start();
-		
 		/* Get and print some user info. */
 		User user = jotify.user();
 		

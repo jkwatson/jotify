@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import org.json.JSONException;
 import org.json.XML;
@@ -73,8 +74,8 @@ public class ImageHandler implements HttpHandler {
 					try{
 						responseBytes = jotify.image(id);
 					}
-					catch(RuntimeException e){
-						responseString = "<error>" + e.getCause().getMessage() + "</error>";
+					catch(TimeoutException e){
+						responseString = "<error>" + e.getMessage() + "</error>";
 					}
 				}
 				else{

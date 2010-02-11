@@ -495,7 +495,7 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 		/* Allocate space for ciphertext. */
 		byte[] ciphertext = new byte[data.length];
 		
-		/* Deinterleave the 4x256 byte blocks. */
+		/* Deinterleave 4x256 byte blocks. */
 		for(int block = 0; block < data.length / 1024; block++){
 			off = block * 1024;
 			w	= block * 1024 + 0 * 256;
@@ -511,11 +511,12 @@ public class ChannelPlayer implements Runnable, Player, ChannelListener {
 			}
 		}
 		
-		ciphertext = this.cipher.update(ciphertext);
+		/* Decrypt data. */
+		byte[] plaintext = this.cipher.update(ciphertext);
 		
 		/* Write data to output stream. */
 		try{
-			this.output.write(ciphertext, 0, ciphertext.length);
+			this.output.write(plaintext, 0, plaintext.length);
 			this.output.flush();
 		}
 		catch(IOException e){

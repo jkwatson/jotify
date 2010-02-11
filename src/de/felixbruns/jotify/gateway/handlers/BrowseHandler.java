@@ -2,6 +2,7 @@ package de.felixbruns.jotify.gateway.handlers;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import de.felixbruns.jotify.gateway.GatewayConnection;
 import de.felixbruns.jotify.gateway.GatewayApplication;
@@ -26,8 +27,8 @@ public class BrowseHandler extends GatewayHandler {
 				try{
 					return jotify.browse(BrowseType.valueOf(type), id);
 				}
-				catch(RuntimeException e){
-					return "<error>" + e.getCause().getMessage() + "</error>";
+				catch(TimeoutException e){
+					return "<error>" + e.getMessage() + "</error>";
 				}
 			}
 			else{
@@ -44,7 +45,12 @@ public class BrowseHandler extends GatewayHandler {
 				GatewayConnection jotify = GatewayApplication.sessions.get(session);
 				
 				/* Browse. */
-				return jotify.browse(Arrays.asList(ids));
+				try{
+					return jotify.browse(Arrays.asList(ids));
+				}
+				catch(TimeoutException e){
+					return "<error>" + e.getMessage() + "</error>";
+				}
 			}
 			else{
 				return "<error>Session not found!</error>";
