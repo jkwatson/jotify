@@ -295,7 +295,7 @@ public class Protocol {
 		/* Save username to session. */
 		this.session.username = Arrays.copyOfRange(buffer, 0, usernameLength);
 		
-		/* Receive puzzle challenge and unknown bytes. */
+		/* Receive puzzle challenge and unknown bytes (more puzzle lengths, seem to be always zero). */
 		this.receive(buffer,                                                       0, puzzleChallengeLength);
 		this.receive(buffer,                                   puzzleChallengeLength, unknownLength1);
 		this.receive(buffer,                  puzzleChallengeLength + unknownLength1, unknownLength2);
@@ -314,7 +314,7 @@ public class Protocol {
 		dataBuffer = ByteBuffer.wrap(buffer, 0, puzzleChallengeLength + unknownLength1 + unknownLength2 + unknownLength3);
 		
 		/* Get puzzle denominator and magic. */
-		if(dataBuffer.get() == 0x01){
+		if(dataBuffer.get() == 0x01){ /* 0x01: SHA-1 puzzle, 0x00: no puzzle. */
 			this.session.puzzleDenominator = dataBuffer.get();
 			this.session.puzzleMagic       = dataBuffer.getInt();
 		}

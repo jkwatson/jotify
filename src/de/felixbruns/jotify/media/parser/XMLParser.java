@@ -80,4 +80,15 @@ public class XMLParser {
 			return Float.NaN;
 		}
 	}
+	
+	/**
+	 * Get the current elements contents an integer.
+	 * 
+	 * @return An integer.
+	 * 
+	 * @throws XMLStreamException
+	 */
+	protected boolean getElementBoolean() throws XMLStreamException {
+		return Boolean.parseBoolean(this.reader.getElementText());
+	}
 }

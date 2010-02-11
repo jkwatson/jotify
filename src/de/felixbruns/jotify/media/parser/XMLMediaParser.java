@@ -625,7 +625,10 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 				track.setPopularity(this.getElementFloat());
 			}
 			else if(name.equals("restrictions")){
-				track.setRestrictions(parseRestrictions());
+				track.setRestrictions(this.parseRestrictions());
+			}
+			else if(name.equals("explicit")){
+				track.setExplicit(this.getElementBoolean());
 			}
 			/* Seems to be deprecated. */
 			else if(name.equals("allowed")){

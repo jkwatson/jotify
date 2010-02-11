@@ -59,6 +59,11 @@ public class Track extends Media {
 	private List<Track> similarTracks;
 	
 	/**
+	 * If this track is explicit.
+	 */
+	private boolean explicit;
+	
+	/**
 	 * Creates an empty {@link Track} object.
 	 */
 	public Track(){
@@ -330,6 +335,25 @@ public class Track extends Media {
 	public void setSimilarTracks(List<Track> similarTracks){
 		this.similarTracks = similarTracks;
 	}
+	
+	/**
+	 * Return if this track is explicit.
+	 * 
+	 * @return A boolean value.
+	 */
+	public boolean isExplicit(){
+		return this.explicit;
+	}
+	
+	/**
+	 * Set if this track is explicit.
+	 * 
+	 * @param explicit A boolean value.
+	 */
+	public void setExplicit(boolean explicit){
+		this.explicit = explicit;
+	}
+		
 	
 	/**
 	 * Determines if an object is equal to this {@link Track} object.

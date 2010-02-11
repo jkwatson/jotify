@@ -78,6 +78,7 @@ public class Media {
 		}
 		
 		/* Set other media properties. */
+		this.redirects    = new ArrayList<String>();
 		this.popularity   = Float.NaN;
 		this.restrictions = new ArrayList<Restriction>();
 		this.externalIds  = new HashMap<String, String>();
