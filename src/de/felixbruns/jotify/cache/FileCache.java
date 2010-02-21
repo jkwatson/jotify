@@ -17,10 +17,14 @@ public class FileCache implements Cache {
 	
 	/**
 	 * Create a new {@link FileCache} with a default directory.
-	 * The directory will be '$HOME/.jotify-cache'.
+	 * The directory will be the value of the jotify.cache system
+	 * property or '$HOME/.jotify-cache' if that property is
+	 * undefined.
 	 */
 	public FileCache(){
-		this(new File(System.getProperty("user.home") + "/.jotify-cache"));
+		this(new File(
+			System.getProperty("jotify.cache", 
+			System.getProperty("user.home") + "/.jotify-cache")));
 	}
 	
 	/**
