@@ -182,7 +182,7 @@ public class Artist extends Media {
 	/**
 	 * Set biographies for this artist.
 	 * 
-	 * @param biographies A {@link List} of {@link Biography} objects.
+	 * @param bios A {@link List} of {@link Biography} objects.
 	 */
 	public void setBios(List<Biography> bios){
 		this.bios = bios;

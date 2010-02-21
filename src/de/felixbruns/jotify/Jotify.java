@@ -102,7 +102,7 @@ public interface Jotify extends Runnable, Player {
 	/**
 	 * Browse track info.
 	 * 
-	 * @param album A {@link Track} object identifying the track to browse.
+	 * @param track A {@link Track} object identifying the track to browse.
 	 * 
 	 * @return A {@link Track} object or null on failure.
 	 * 

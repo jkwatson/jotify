@@ -81,7 +81,7 @@ public class XMLUserParser extends XMLParser implements XMLStreamConstants {
 	/**
 	 * Parse {@code xml} into an object using the specified {@code encoding}.
 	 * 
-	 * @param xml      The xml as bytes.
+	 * @param data     The xml as bytes.
 	 * @param encoding The encoding to use.
 	 * 
 	 * @return An object if successful, null if not.
@@ -103,7 +103,7 @@ public class XMLUserParser extends XMLParser implements XMLStreamConstants {
 	/**
 	 * Parse {@code xml} into a {@link User} object using the specified {@code encoding}.
 	 * 
-	 * @param xml      The xml as bytes.
+	 * @param data     The xml as bytes.
 	 * @param encoding The encoding to use.
 	 * 
 	 * @return A {@link User} object if successful, null if not.

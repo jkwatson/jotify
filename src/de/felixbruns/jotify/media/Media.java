@@ -121,7 +121,7 @@ public class Media {
 	/**
 	 * Add a media redirect.
 	 * 
-	 * @param id A 32-character identifier.
+	 * @param redirect A 32-character identifier.
 	 */
 	public void addRedirect(String redirect){
 		this.redirects.add(redirect);
@@ -130,7 +130,7 @@ public class Media {
 	/**
 	 * Get the media popularity.
 	 * 
-	 * @return A decimal value between 0.0 and 1.0 or {@link Float.NAN} if not available.
+	 * @return A decimal value between 0.0 and 1.0 or {@link Float#NaN} if not available.
 	 */
 	public float getPopularity(){
 		return this.popularity;
@@ -139,7 +139,7 @@ public class Media {
 	/**
 	 * Set the media popularity.
 	 * 
-	 * @param popularity A decimal value between 0.0 and 1.0 or {@link Float.NAN}.
+	 * @param popularity A decimal value between 0.0 and 1.0 or {@link Float#NaN}.
 	 * 
 	 * @throws IllegalArgumentException If the given popularity value is invalid.
 	 */

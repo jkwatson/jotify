@@ -375,7 +375,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @param id A 32-character hex string or a Spotify URI.
 	 * 
-	 * @retrun An {@link Artist} object holding more information about
+	 * @return An {@link Artist} object holding more information about
 	 *         the artist or null on failure.
 	 * 
 	 * @see Artist
@@ -396,7 +396,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @param artist An {@link Artist} object identifying the artist to browse.
 	 * 
-	 * @retrun A new {@link Artist} object holding more information about
+	 * @return A new {@link Artist} object holding more information about
 	 *         the artist or null on failure.
 	 * 
 	 * @see Artist
@@ -410,7 +410,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @param id A 32-character hex string or a Spotify URI.
 	 * 
-	 * @retrun An {@link Album} object holding more information about
+	 * @return An {@link Album} object holding more information about
 	 *         the album or null on failure.
 	 * 
 	 * @see Album
@@ -431,7 +431,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @param album An {@link Album} object identifying the album to browse.
 	 * 
-	 * @retrun A new {@link Album} object holding more information about
+	 * @return A new {@link Album} object holding more information about
 	 *         the album or null on failure.
 	 * 
 	 * @see Album
@@ -469,7 +469,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	/**
 	 * Browse track info.
 	 * 
-	 * @param album A {@link Track} object identifying the track to browse.
+	 * @param track A {@link Track} object identifying the track to browse.
 	 * 
 	 * @return A {@link Track} object or null on failure.
 	 * 
@@ -536,7 +536,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @param tracks A {@link List} of {@link Track} objects identifying
 	 *               the tracks to browse.
 	 * 
-	 * @retrun A {@link Result} object holding more information about
+	 * @return A {@link Result} object holding more information about
 	 *         the tracks or null on failure.
 	 * 
 	 * @see Track

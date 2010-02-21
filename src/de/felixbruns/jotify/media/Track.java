@@ -133,7 +133,7 @@ public class Track extends Media {
 	/**
 	 * Set the tracks title.
 	 * 
-	 * @param name The desired name of this track.
+	 * @param title The desired name of this track.
 	 */
 	public void setTitle(String title){
 		this.title = title;
@@ -232,8 +232,6 @@ public class Track extends Media {
 	
 	/**
 	 * Set the tracks length in milliseconds.
-	 * 
-	 * @return length A positive integer greater than zero representing the length in milliseconds.
 	 */
 	public void setLength(int length){
 		/* Check if length is valid. */
@@ -265,7 +263,7 @@ public class Track extends Media {
 	/**
 	 * Add a {@link File} to the list of files.
 	 * 
-	 * @param id The {@link File} to add.
+	 * @param file The {@link File} to add.
 	 */
 	public void addFile(File file){
 		this.files.add(file);

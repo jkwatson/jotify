@@ -314,7 +314,7 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
 	/**
 	 * Parse {@code xml} into an object using the specified {@code encoding}.
 	 * 
-	 * @param xml      The xml as bytes.
+	 * @param data     The xml as bytes.
 	 * @param encoding The encoding to use.
 	 * 
 	 * @return An object if successful, null if not.
@@ -336,7 +336,7 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
 	/**
 	 * Parse {@code xml} into a {@link PlaylistContainer} object using the specified {@code encoding}.
 	 * 
-	 * @param xml      The xml as bytes.
+	 * @param data     The xml as bytes.
 	 * @param encoding The encoding to use.
 	 * 
 	 * @return A {@link PlaylistContainer} object if successful, null if not.
@@ -360,7 +360,7 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
 	/**
 	 * Parse {@code xml} into a {@link Playlist} object using the specified {@code encoding}.
 	 * 
-	 * @param xml      The xml as bytes.
+	 * @param data     The xml as bytes.
 	 * @param encoding The encoding to use.
 	 * 
 	 * @return A {@link Playlist} object if successful, null if not.
@@ -384,7 +384,7 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
 	/**
 	 * Parse {@code xml} into a {@link PlaylistConfirmation} object using the specified {@code encoding}.
 	 * 
-	 * @param xml      The xml as bytes.
+	 * @param data     The xml as bytes.
 	 * @param encoding The encoding to use.
 	 * 
 	 * @return A {@link PlaylistConfirmation} object if successful, null if not.
