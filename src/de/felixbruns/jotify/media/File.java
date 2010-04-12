@@ -10,6 +10,10 @@ import de.felixbruns.jotify.util.Hex;
  * @category Media
  */
 public class File implements Comparable<File> {
+	public static final int BITRATE_96  =  96000;
+	public static final int BITRATE_160 = 160000;
+	public static final int BITRATE_320 = 320000;
+	
 	/**
 	 * The files 40-character hex identifier.
 	 */
@@ -43,8 +47,8 @@ public class File implements Comparable<File> {
 		}
 		
 		/* Set object properties. */
-		this.id         = id;
-		this.format     = format;
+		this.id     = id;
+		this.format = format;
 	}
 	
 	/**
