@@ -56,7 +56,7 @@ public class ChannelCallback implements ChannelListener {
 		byte[] bytes = data.array();
 		
 		/* Detect GZIP magic and return inflated data. */
-		if(bytes[0] == (byte)0x1f && bytes[1] == (byte)0x8b){
+		if(bytes.length >= 2 && bytes[0] == (byte)0x1f && bytes[1] == (byte)0x8b){
 			return GZIP.inflate(bytes);
 		}
 		

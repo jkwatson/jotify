@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 import de.felixbruns.jotify.crypto.DH;
 import de.felixbruns.jotify.exceptions.ConnectionException;
 import de.felixbruns.jotify.exceptions.ProtocolException;
+import de.felixbruns.jotify.media.File;
 import de.felixbruns.jotify.media.Playlist;
 import de.felixbruns.jotify.media.PlaylistContainer;
 import de.felixbruns.jotify.media.Track;
@@ -606,19 +607,14 @@ public class Protocol {
 		this.sendSearchQuery(listener, query, 0, -1);
 	}
 	
-	/* Notify server we're going to play. */
-	public void sendTokenNotify() throws ProtocolException {
-		this.sendPacket(Command.COMMAND_TOKENNOTIFY);
-	}
-	
 	/* Request AES key for a track. */
-	public void sendAesKeyRequest(ChannelListener listener, Track track) throws ProtocolException {
+	public void sendAesKeyRequest(ChannelListener listener, Track track, File file) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("AES-Key-Channel", Channel.Type.TYPE_AESKEY, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(20 + 16 + 2 + 2);
 		
 		/* Request the AES key for this file by sending the file id and track id. */
-		buffer.put(Hex.toBytes(track.getFiles().get(0).getId())); /* 20 bytes */
+		buffer.put(Hex.toBytes(file.getId())); /* 20 bytes */
 		buffer.put(Hex.toBytes(track.getId())); /* 16 bytes */
 		buffer.putShort((short)0x0000);
 		buffer.putShort((short)channel.getId());
@@ -631,8 +627,8 @@ public class Protocol {
 		this.sendPacket(Command.COMMAND_REQKEY, buffer);
 	}
 	
-	/* A demo wrapper for playing a track. */
-	public void sendPlayRequest(ChannelListener listener, Track track) throws ProtocolException {
+	/* Notify server we're going to play. */
+	public void sendPlayRequest() throws ProtocolException {
 		/* 
 		 * Notify the server about our intention to play music, there by allowing
 		 * it to request other players on the same account to pause.
@@ -642,7 +638,6 @@ public class Protocol {
 		 * play commercials and waste bandwidth in vain.
 		 */
 		this.sendPacket(Command.COMMAND_REQUESTPLAY);
-		this.sendAesKeyRequest(listener, track);
 	}
 	
 	/*
@@ -652,7 +647,7 @@ public class Protocol {
 	 * with AES key provided and a static IV, incremented for
 	 * each 16 byte data processed.
 	 */
-	public void sendSubstreamRequest(ChannelListener listener, Track track, int offset, int length) throws ProtocolException {
+	public void sendSubstreamRequest(ChannelListener listener, Track track, File file, int offset, int length) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Substream-Channel", Channel.Type.TYPE_SUBSTREAM, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 2 + 2 + 2 + 2 + 2 + 4 + 20 + 4 + 4);
@@ -671,7 +666,7 @@ public class Protocol {
 		buffer.putInt(200 * 1000);
 		
 		/* 20 bytes file id. */
-		buffer.put(Hex.toBytes(track.getFiles().get(0).getId()));
+		buffer.put(Hex.toBytes(file.getId()));
 		
 		if(offset % 4096 != 0 || length % 4096 != 0){
 			throw new IllegalArgumentException("Offset and length need to be a multiple of 4096.");
@@ -690,6 +685,18 @@ public class Protocol {
 		
 		/* Send packet. */
 		this.sendPacket(Command.COMMAND_GETSUBSTREAM, buffer);
+	}
+	
+	/* TODO: untested. */
+	public void sendChannelAbort(int id) throws ProtocolException {
+		/* Create channel and buffer. */
+		ByteBuffer buffer  = ByteBuffer.allocate(2);
+		
+		/* Append channel id. */
+		buffer.putShort((short)id);
+		
+		/* Send packet. */
+		this.sendPacket(Command.COMMAND_CHANNELABRT, buffer);
 	}
 	
 	/*

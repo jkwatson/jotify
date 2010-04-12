@@ -9,7 +9,7 @@ public class Hex {
 	/**
 	 * Convert a hexadecimal string into a byte array.
 	 * <ul>
-	 * 	<li>Safe with leading zeroes (unlike {@link java.math.BigInteger}).</li>
+	 * 	<li>Safe with leading zeroes (unlike {@link BigInteger}).</li>
 	 * 	<li>Safe with negative byte values (unlike {@link Byte}.parseByte).</li>
 	 * </ul>
 	 * 

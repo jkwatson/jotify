@@ -14,7 +14,6 @@ public class Command {
 	public static final int COMMAND_CACHEHASH    = 0x0f;
 	public static final int COMMAND_SHAHASH      = 0x10;
 	public static final int COMMAND_IMAGE        = 0x19;
-	public static final int COMMAND_TOKENNOTIFY  = 0x4f;
 	
 	/* Rights management. */
 	public static final int COMMAND_COUNTRYCODE = 0x1b;

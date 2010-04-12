@@ -20,6 +20,7 @@
 package de.felixbruns.jotify.util;
 
 import java.io.StringWriter;
+import java.nio.charset.Charset;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -139,6 +140,10 @@ public class XMLBuilder {
 		return create("xml-builder");
 	}
 	
+	private static String toUTF8(String s){
+		return new String(s.getBytes(Charset.forName("UTF-8")));
+	}
+	
 	/**
 	 * Returns the {@link XMLBuilder} representing the root element of the XML document.
 	 * 
@@ -164,7 +169,7 @@ public class XMLBuilder {
 	public XMLBuilder element(String name, String value){
 		NodeList children = this.element.getChildNodes();
 		Element  element  = this.document.createElement(name);
-		
+			
 		for(int i = 0; i < children.getLength(); i++){
 			if(Element.TEXT_NODE == children.item(i).getNodeType()){
 				throw new IllegalStateException(
@@ -176,7 +181,7 @@ public class XMLBuilder {
 		}
 		
 		if(value != null){
-			element.appendChild(this.document.createTextNode(value));
+			element.appendChild(this.document.createTextNode(XMLBuilder.toUTF8(value)));
 		}
 		
 		this.element.appendChild(element);
@@ -228,7 +233,7 @@ public class XMLBuilder {
 	 * the attribute was added.
 	 */
 	public XMLBuilder attribute(String name, String value){
-		this.element.setAttribute(name, value);
+		this.element.setAttribute(name, XMLBuilder.toUTF8(value));
 		
 		return this;
 	}
@@ -256,7 +261,7 @@ public class XMLBuilder {
 	 * @return The {@link XMLBuilder} representing the element to which the text was added.
 	 */
 	public XMLBuilder text(String value){
-		this.element.appendChild(this.document.createTextNode(value));
+		this.element.appendChild(this.document.createTextNode(XMLBuilder.toUTF8(value)));
 		
 		return this;
 	}
@@ -283,9 +288,7 @@ public class XMLBuilder {
 	 * @return The {@link XMLBuilder} representing the element to which the numeric value was added.
 	 */
 	public XMLBuilder format(String format, Object... args){
-		this.element.appendChild(this.document.createTextNode(String.format(format, args)));
-		
-		return this;
+		return this.text(String.format(format, args));
 	}
 	
 	/**
@@ -347,6 +350,8 @@ public class XMLBuilder {
 			StreamResult  result     = new StreamResult(writer);
 			Transformer   serializer = TransformerFactory.newInstance().newTransformer();
 			Element       element    = this.document.getDocumentElement();
+			
+			serializer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
 			
 			if(element.getNodeName().equals("xml-builder")){
 				NodeList nodeList = element.getChildNodes();

@@ -80,8 +80,7 @@ public class Channel {
 		
 		/* Get Channel by id from payload. */
 		if((channel = Channel.channels.get(ShortUtilities.bytesToUnsignedShort(payload))) == null){
-			System.err.println("Channel not found!");
-			
+			/* Just return if channel is not registered. */
 			return;
 		};
 		
