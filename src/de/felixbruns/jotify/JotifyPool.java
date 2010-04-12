@@ -1,12 +1,15 @@
 package de.felixbruns.jotify;
 
 import java.awt.Image;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import javax.sound.sampled.LineUnavailableException;
 
 import de.felixbruns.jotify.exceptions.AuthenticationException;
 import de.felixbruns.jotify.exceptions.ConnectionException;
@@ -457,7 +460,7 @@ public class JotifyPool implements Jotify, Player {
 		return success;
 	}
 	
-	public void play(Track track, PlaybackListener listener) throws TimeoutException {
+	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException {
 		if(this.playConnection != null){
 			this.playConnection.stop();
 			
@@ -468,7 +471,7 @@ public class JotifyPool implements Jotify, Player {
 		
 		this.playConnection = this.getConnection();
 		
-		this.playConnection.play(track, listener);
+		this.playConnection.play(track, bitrate, listener);
 	}
 	
 	public void play(){
@@ -507,6 +510,12 @@ public class JotifyPool implements Jotify, Player {
 		}
 		
 		return -1;
+	}
+	
+	public void seek(int position) throws IOException {
+		if(this.playConnection != null){
+			this.playConnection.seek(position);
+		}
 	}
 	
 	public float volume(){
