@@ -29,9 +29,10 @@ public class PlayHandler extends GatewayHandler {
 					
 					try{
 						jotify.stop();
-						jotify.play(track, null);
+						
+						jotify.play(track, File.BITRATE_160, null);
 					}
-					catch(RuntimeException e){
+					catch(Exception e){
 						return "<error>" + e.getMessage() + "</error>";
 					}
 				}

@@ -1,17 +1,21 @@
 package de.felixbruns.jotify.gateway;
 
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
+
+import javax.sound.sampled.LineUnavailableException;
+
 import de.felixbruns.jotify.exceptions.ProtocolException;
 import de.felixbruns.jotify.media.Track;
-import de.felixbruns.jotify.player.ChannelPlayer;
 import de.felixbruns.jotify.player.PlaybackListener;
 import de.felixbruns.jotify.player.Player;
+import de.felixbruns.jotify.player.SpotifyOggPlayer;
 import de.felixbruns.jotify.protocol.Protocol;
-import de.felixbruns.jotify.protocol.channel.ChannelCallback;
 
 public class GatewayPlayer implements Player {
-	private Protocol      protocol;
-	private ChannelPlayer player;
-	private float         volume;
+	private Protocol         protocol;
+	private SpotifyOggPlayer player;
+	private float            volume;
 	
 	public GatewayPlayer(Protocol protocol){
 		if(protocol == null){
@@ -23,27 +27,20 @@ public class GatewayPlayer implements Player {
 		this.volume   = 1.0f;
 	}
 	
-	public void play(Track track, PlaybackListener listener){
-		/* Create channel callback */
-		ChannelCallback callback = new ChannelCallback();
-		
-		/* Send play request (token notify + AES key). */
+	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException {
+		/* Send play request. */
 		try{
-			this.protocol.sendPlayRequest(callback, track);
+			this.protocol.sendPlayRequest();
 		}
 		catch(ProtocolException e){
-			return;
+			throw new IOException(e);
 		}
 		
-		/* Get AES key. */
-		byte[] key = callback.get();
-		
 		/* Create channel player. */
-		this.player = new ChannelPlayer(this.protocol, track, key, listener);
-		this.player.volume(this.volume);
+		this.player = new SpotifyOggPlayer(this.protocol);
 		
 		/* Start playing. */
-		this.play();
+		this.player.play(track, bitrate, listener);
 	}
 	
 	public void play(){
@@ -80,6 +77,12 @@ public class GatewayPlayer implements Player {
 		}
 		
 		return -1;
+	}
+	
+	public void seek(int ms) throws IOException {
+		if(this.player != null){
+			this.player.seek(ms);
+		}
 	}
 	
 	public float volume(){

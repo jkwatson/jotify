@@ -19,6 +19,7 @@ import com.sun.net.httpserver.HttpExchange;
 
 import de.felixbruns.jotify.cache.SubstreamCache;
 import de.felixbruns.jotify.exceptions.ProtocolException;
+import de.felixbruns.jotify.media.File;
 import de.felixbruns.jotify.media.Track;
 import de.felixbruns.jotify.player.SpotifyOggHeader;
 import de.felixbruns.jotify.protocol.Protocol;
@@ -107,7 +108,7 @@ public class ChannelStreamer implements ChannelListener {
 		}
 		else{
 			try{
-				this.protocol.sendSubstreamRequest(this, this.track, this.channelOffset, this.channelLength);
+				this.protocol.sendSubstreamRequest(this, this.track, this.track.getFile(File.BITRATE_160), this.channelOffset, this.channelLength);
 			}
 			catch(ProtocolException e){
 				return;
@@ -205,12 +206,12 @@ public class ChannelStreamer implements ChannelListener {
 				byte[] bytes = Arrays.copyOfRange(ciphertext, 0, 167);
 				
 				/* Decode header. */
-				this.header = new SpotifyOggHeader(bytes);
+				this.header = SpotifyOggHeader.decode(bytes);
 				
 				/* Send response headers. */
-				System.out.format("Header: 0x%08x\n", (this.header.getLength() & 0xfffff000) - 167);
+				System.out.format("Header: 0x%08x\n", (this.header.getBytes() & ~4095) - 167);
 				
-				this.exchange.sendResponseHeaders(200, (this.header.getLength() & 0xfffff000) - 167);
+				this.exchange.sendResponseHeaders(200, (this.header.getBytes() & ~4095) - 167);
 				
 				off = 167;
 			}
@@ -258,7 +259,7 @@ public class ChannelStreamer implements ChannelListener {
 				this.cache.load("substream", hash, this);
 			}
 			else{
-				this.protocol.sendSubstreamRequest(this, this.track, this.channelOffset, this.channelLength);
+				this.protocol.sendSubstreamRequest(this, this.track, this.track.getFile(File.BITRATE_160), this.channelOffset, this.channelLength);
 			}
 		}
 		catch(IOException e){

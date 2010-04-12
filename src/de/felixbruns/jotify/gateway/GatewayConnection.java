@@ -5,6 +5,8 @@ import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.*;
 
+import javax.sound.sampled.LineUnavailableException;
+
 import com.sun.net.httpserver.HttpExchange;
 
 import de.felixbruns.jotify.cache.*;
@@ -422,7 +424,7 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		
 		/* Send play request (token notify + AES key). */
 		try{
-			this.protocol.sendAesKeyRequest(callback, track);
+			this.protocol.sendAesKeyRequest(callback, track, track.getFile(File.BITRATE_160));
 		}
 		catch(ProtocolException e){
 			exchange.sendResponseHeaders(404, -1);
@@ -546,8 +548,8 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 		this.player.pause();
 	}
 	
-	public void play(Track track, PlaybackListener listener){
-		this.player.play(track, listener);
+	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException {
+		this.player.play(track, bitrate, listener);
 	}
 	
 	public void play(){
@@ -556,6 +558,10 @@ public class GatewayConnection implements Runnable, CommandListener, Player {
 	
 	public int position(){
 		return this.player.position();
+	}
+	
+	public void seek(int position) throws IOException {
+		this.player.seek(position);
 	}
 	
 	public void stop(){
