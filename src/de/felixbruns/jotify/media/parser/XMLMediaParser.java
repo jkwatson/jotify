@@ -957,7 +957,7 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 	 */
 	public static Object parse(byte[] xml, String encoding){
 		try{
-			XMLMediaParser parser = new XMLMediaParser(new ByteArrayInputStream(xml), encoding);
+			XMLMediaParser parser = new XMLMediaParser(new ByteArrayInputStream(xml, 0, xml.length - 1), encoding);
 			
 			return parser.parse();
 		}
