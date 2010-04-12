@@ -1,8 +1,8 @@
 package de.felixbruns.jotify.gui;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.exceptions.AuthenticationException;
@@ -10,6 +10,7 @@ import de.felixbruns.jotify.exceptions.ConnectionException;
 import de.felixbruns.jotify.gui.listeners.ControlListener;
 import de.felixbruns.jotify.gui.listeners.JotifyBroadcast;
 import de.felixbruns.jotify.gui.listeners.PlayerListener.Status;
+import de.felixbruns.jotify.media.File;
 import de.felixbruns.jotify.media.Track;
 import de.felixbruns.jotify.player.PlaybackListener;
 
@@ -22,6 +23,7 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 	private JotifyBroadcast        broadcast;
 	private JotifyPlaybackQueue    queue;
 	private List<PlaybackListener> listeners;
+	private float                  volume;
 	
 	private final Jotify jotify;
 	
@@ -30,6 +32,7 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 		this.queue     = new JotifyPlaybackQueue();
 		this.listeners = new ArrayList<PlaybackListener>();
 		this.jotify    = jotify;
+		this.volume    = 1.0f;
 	}
 	
 	public void addPlaybackListener(PlaybackListener listener){
@@ -60,12 +63,13 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 			this.jotify.stop();
 			
 			try{
-				this.jotify.play(track, this);
+				this.jotify.play(track, File.BITRATE_160, this);
+				this.jotify.volume(this.volume);
 				
 				this.broadcast.firePlayerTrackChanged(track);
 				this.broadcast.fireQueueUpdated(this.queue);
 			}
-			catch(TimeoutException e){
+			catch(Exception e){
 				e.printStackTrace();
 			}
 		}
@@ -78,20 +82,32 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 			this.jotify.stop();
 			
 			try{
-				this.jotify.play(track, this);
+				this.jotify.play(track, File.BITRATE_160, this);
+				this.jotify.volume(this.volume);
 				
 				this.broadcast.firePlayerTrackChanged(track);
 				this.broadcast.firePlayerStatusChanged(Status.PLAY);
 				this.broadcast.fireQueueUpdated(this.queue);
 			}
-			catch(TimeoutException e){
+			catch(Exception e){
 				e.printStackTrace();
 			}
 		}
 	}
 	
-	public void controlVolume(float volume) {
+	public void controlVolume(float volume){
+		this.volume = volume;
+		
 		this.jotify.volume(volume);
+	}
+	
+	public void controlSeek(float percent){
+		try{
+			this.jotify.seek((int)(percent * this.jotify.length()));
+		}
+		catch(IOException e){
+			e.printStackTrace();
+		}
 	}
 	
 	public void controlSelect(Track track){

@@ -87,6 +87,7 @@ public class JotifyApplication {
 				
 				/* Create player. */
 				this.player = new JotifyPlayer(this.jotify);
+				
 				this.broadcast.addControlListener(this.player);
 				
 				/* Create scrobbler if enabled. */

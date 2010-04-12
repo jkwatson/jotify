@@ -49,6 +49,8 @@ public class JotifyControlPanel extends JPanel implements QueueListener, PlayerL
 	private JSeparator            separator;
 	private Track                 track;
 	
+	private boolean wasAdjusting = false;
+	
 	public JotifyControlPanel(){
 		this.broadcast = JotifyBroadcast.getInstance();
 		
@@ -161,6 +163,15 @@ public class JotifyControlPanel extends JPanel implements QueueListener, PlayerL
 		this.positionSlider.setMinimum(0);
 		this.positionSlider.setMaximum(1000);
 		this.positionSlider.setValue(0);
+		this.positionSlider.addChangeListener(new ChangeListener(){
+			public void stateChanged(ChangeEvent e){
+				if(wasAdjusting && !positionSlider.getValueIsAdjusting()){
+					JotifyBroadcast.getInstance().fireControlSeek(positionSlider.getValue() / 1000.0f);
+				}
+				
+				wasAdjusting = positionSlider.getValueIsAdjusting();
+			}
+		});
 		this.add(this.positionSlider, BorderLayout.CENTER);
 		
 		/* Add remaining label. */
@@ -216,7 +227,7 @@ public class JotifyControlPanel extends JPanel implements QueueListener, PlayerL
 	
 	public void playerPositionChanged(int ms){
 		/* Return if nothing is playing. */
-		if(this.track == null){
+		if(this.track == null || this.positionSlider.getValueIsAdjusting()){
 			return;
 		}
 		
@@ -229,6 +240,8 @@ public class JotifyControlPanel extends JPanel implements QueueListener, PlayerL
 		/* Update labels and slider. */
 		this.positionLabel.setText(TimeFormatter.formatSeconds(position));
 		this.remainingLabel.setText(TimeFormatter.formatRemainingSeconds(remaining));
+		
+		/* Update slider. */
 		this.positionSlider.setValue(progress);
 	}
 }

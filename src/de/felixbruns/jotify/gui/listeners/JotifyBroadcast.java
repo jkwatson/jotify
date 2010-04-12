@@ -166,6 +166,12 @@ public class JotifyBroadcast {
 		}
 	}
 	
+	public void fireControlSeek(float percent){
+		for(ControlListener listener : this.controlListeners){
+			listener.controlSeek(percent);
+		}
+	}
+	
 	public void fireControlSelect(Track track){
 		for(ControlListener listener : this.controlListeners){
 			listener.controlSelect(track);

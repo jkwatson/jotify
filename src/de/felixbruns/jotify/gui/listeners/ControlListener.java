@@ -10,6 +10,7 @@ public interface ControlListener {
 	public void controlPrevious();
 	public void controlNext();
 	public void controlVolume(float volume);
+	public void controlSeek(float percent);
 	public void controlSelect(Track track);
 	public void controlSelect(List<Track> tracks);
 	public void controlQueue(Track track);
