@@ -16,7 +16,8 @@ public class SpotifyOggHeader {
 	private int[] table;
 	private float gainScale;
 	private float gainDb;
-	private int[] headerTableDec = new int[]{
+	
+	private static int[] headerTableDec = new int[]{
 		    0,    112,    197,    327,    374,    394,    407,    417,
 		  425,    433,    439,    444,    449,    454,    458,    462,
 		  466,    470,    473,    477,    480,    483,    486,    489,
@@ -51,19 +52,13 @@ public class SpotifyOggHeader {
 		 1039,   1067,   1108,   1183,   1520,   2658,   4666,   8191
 	};
 	
-	public SpotifyOggHeader(byte[] header){
-		/* Try to parse header. If it fails, just set default values. */
-		try{
-			this.decode(header);
-		}
-		catch(IOException e){
-			this.samples   = 0;
-			this.length    = 0;
-			this.unknown   = 0;
-			this.table     = new int[0];
-			this.gainScale = 1.0f;
-			this.gainDb    = 0.0f;
-		}
+	private SpotifyOggHeader(){
+		this.samples   = 0;
+		this.length    = 0;
+		this.unknown   = 0;
+		this.table     = new int[0];
+		this.gainScale = 1.0f;
+		this.gainDb    = 0.0f;
 	}
 	
 	/* Total number of samples. */
@@ -71,13 +66,21 @@ public class SpotifyOggHeader {
 		return this.samples;
 	}
 	
-	/* Length in seconds. */
-	public int getSeconds(int sampleRate){
-		return this.samples / sampleRate;
+	/**
+	 * Return the length in milliseconds contained in this header.
+	 * 
+	 * @return The length in milliseconds contained in this header.
+	 */
+	public int getLength(int sampleRate){
+		return this.samples / (sampleRate / 1000);
 	}
 	
-	/* Length in bytes. */
-	public int getLength(){
+	/**
+	 * Return the length in bytes contained in this header.
+	 * 
+	 * @return The length in bytes contained in this header.
+	 */
+	public int getBytes(){
 		return this.length;
 	}
 	
@@ -90,13 +93,13 @@ public class SpotifyOggHeader {
 	}
 	
 	/* Swap short bytes. */
-	private short swap(short value){
+	private static short swap(short value){
 		return (short)(((value & 0x00ffL) << 8) |
 					   ((value & 0xff00L) >> 8));
 	}
 	
 	/* Swap integer bytes. */
-	private int swap(int value){
+	private static int swap(int value){
 		return (int)(((value & 0x000000ffL) << 24) |
 					 ((value & 0x0000ff00L) <<  8) |
 					 ((value & 0x00ff0000L) >>  8) |
@@ -104,8 +107,11 @@ public class SpotifyOggHeader {
 	}
 	
 	/* Decode Spotify OGG header. */
-	private void decode(byte[] header) throws IOException {
-		/* Get input steam of bytes. */
+	public static SpotifyOggHeader decode(byte[] header) throws IOException {
+		/* Create instance. */
+		SpotifyOggHeader decoded = new SpotifyOggHeader();
+		
+		/* Create DataInputStream from InputStream. */
 		DataInputStream input = new DataInputStream(new ByteArrayInputStream(header));
 		
 		/* Skip OGG page header (length is always 0x1C in this case). */
@@ -114,25 +120,25 @@ public class SpotifyOggHeader {
 		/* Read Spotify specific data. */
 		if(input.read() == 0x81){
 			while(input.available() >= 2){
-				int blockSize = this.swap(input.readShort());
+				int blockSize = swap(input.readShort());
 				
 				if(input.available() >= blockSize && blockSize > 0){
 					switch(input.read()){
 						/* Table lookup */
 						case 0: {
 							if(blockSize == 0x6e){
-								this.samples = this.swap(input.readInt());
-								this.length  = this.swap(input.readInt());
-								this.unknown = -this.headerTableDec[input.read()];
-								this.table   = new int[0x64];
+								decoded.samples = swap(input.readInt());
+								decoded.length  = swap(input.readInt());
+								decoded.unknown = -headerTableDec[input.read()];
+								decoded.table   = new int[0x64];
 								
-								int ack = this.unknown;
+								int ack = decoded.unknown;
 								int ctr = 0;
 								
 								for(int i = 0; i < 0x64; i++){
-									ack += this.headerTableDec[input.read()];
+									ack += headerTableDec[input.read()];
 									
-									this.table[ctr] = ack;
+									decoded.table[ctr] = ack;
 								}
 							}
 							
@@ -141,20 +147,20 @@ public class SpotifyOggHeader {
 						/* Gain */
 						case 1: {
 							if(blockSize > 0x10){
-								this.gainDb = 1.0f;
+								decoded.gainDb = 1.0f;
 								
 								int value;
 								
-								if((value = this.swap(input.readInt())) != -1){
-									this.gainDb = Float.intBitsToFloat(value);
+								if((value = swap(input.readInt())) != -1){
+									decoded.gainDb = Float.intBitsToFloat(value);
 								}
 								
-								if(this.gainDb < -40.0f){
-									this.gainDb = 0.0f;
+								if(decoded.gainDb < -40.0f){
+									decoded.gainDb = 0.0f;
 								}
 								
-								this.gainScale = this.gainDb * 0.05f;
-								this.gainScale = (float)Math.pow(10.0, this.gainScale);
+								decoded.gainScale = decoded.gainDb * 0.05f;
+								decoded.gainScale = (float)Math.pow(10.0, decoded.gainScale);
 							}
 							
 							break;
@@ -163,5 +169,8 @@ public class SpotifyOggHeader {
 				}
 			}
 		}
+		
+		/* Return decoded header. */
+		return decoded;
 	}
 }
