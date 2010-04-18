@@ -121,7 +121,10 @@ public class SpotifyInputStream extends InputStream implements ChannelListener {
 			throw new RuntimeException("NoPadding is not available!", e);
 		}
 		
-		/* Request AEY key for this track and file (blocks until key is available). */
+		/* 
+		 * Request AES key for this track and file
+		 * (blocks until key is available or timeout occurs).
+		 */
 		this.requestKey();
 		
 		/* Set status flags. */
@@ -158,14 +161,14 @@ public class SpotifyInputStream extends InputStream implements ChannelListener {
 		
 		/* Send AES key request. */
 		try{
-			this.protocol.sendAesKeyRequest(callback, track, this.file);
+			this.protocol.sendAesKeyRequest(callback, this.track, this.file);
 		}
 		catch(ProtocolException e){
 			return;
 		}
 		
 		/* Get AES key. */
-		byte[] key = callback.get(10, TimeUnit.SECONDS);
+		byte[] key = callback.get(1, TimeUnit.SECONDS);
 		
 		/* Create SecretKeySpec from AES key bytes and set initial IV. */
 		this.key = new SecretKeySpec(key, "AES");

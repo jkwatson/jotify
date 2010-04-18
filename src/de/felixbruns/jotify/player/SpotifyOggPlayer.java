@@ -124,16 +124,8 @@ public class SpotifyOggPlayer implements Runnable, Player {
 	 * to {@code null}.
 	 * 
 	 * @param protocol The {@link Protocol} instance to use for requesting substreams.
-	 * @param track    The {@link Track} to play with this player.
-	 * @param bitrate  The preferred bitrate to use.
-	 * @param listener The {@link PlaybackListener} to notify of playback events.
-	 * 
-	 * @throws TimeoutException         If a timeout occurs requesting the AES key for
-	 *                                  this {@link Track}.
-	 * @throws IOException              If there is an error with any I/O operation.
-	 * @throws LineUnavailableException If the audio line is not available for playback.
 	 */
-	public SpotifyOggPlayer(Protocol protocol) throws LineUnavailableException {
+	public SpotifyOggPlayer(Protocol protocol){
 		/* Set protocol. */
 		this.protocol = protocol;
 		
@@ -148,7 +140,10 @@ public class SpotifyOggPlayer implements Runnable, Player {
 	 * @param bitrate  The bitrate to prefer when choosing a {@link File} to play.
 	 * @param listener The {@link PlaybackListener} to use or {@code null}.
 	 * 
-	 * @throws TimeoutException, IOException, LineUnavailableException 
+	 * @throws TimeoutException         If a timeout occurs requesting the AES key for
+	 *                                  this {@link Track}.
+	 * @throws IOException              If there is an error with any I/O operation.
+	 * @throws LineUnavailableException If the audio line is not available for playback.
 	 */
 	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException {
 		/* Check if player was stopped before. */
@@ -264,11 +259,11 @@ public class SpotifyOggPlayer implements Runnable, Player {
 			throw new LineUnavailableException("The audio output line could not be opened due to security restrictions.");
 		}
 		
-		/* Start playback thread. */
-		new Thread(this).start();
-		
 		/* Set status. */
 		this.isInitialized = true;
+		
+		/* Start playback thread. */
+		new Thread(this).start();
 	}
 	
 	/**
@@ -432,10 +427,6 @@ public class SpotifyOggPlayer implements Runnable, Player {
 				/* Read more data from input stream. */
 				this.getMoreDataIfNecessary();
 			}
-			
-			//steps++;
-			
-			//System.out.println(steps);
 		}
 		
 		/* Release pause permit again. */
