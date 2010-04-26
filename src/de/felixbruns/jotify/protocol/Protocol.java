@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import de.felixbruns.jotify.crypto.DH;
 import de.felixbruns.jotify.exceptions.ConnectionException;
@@ -41,8 +43,8 @@ public class Protocol {
 	
 	/* Create a new protocol object. */
 	public Protocol(Session session){
-		this.session     = session;
-		this.listeners   = new ArrayList<CommandListener>();
+		this.session   = session;
+		this.listeners = new ArrayList<CommandListener>();
 	}
 	
 	/* Connect to one of the spotify servers. */
@@ -50,7 +52,7 @@ public class Protocol {
 		/* Lookup servers via DNS SRV query. */
 		List<InetSocketAddress> servers = DNS.lookupSRV("_spotify-client._tcp.spotify.com");
 		
-		/* Add a fallback servers if others don't work. */
+		/* Add fallback servers if others don't work. */
 		servers.add(new InetSocketAddress("ap.spotify.com", 4070));
 		servers.add(new InetSocketAddress("ap.spotify.com", 80));
 		servers.add(new InetSocketAddress("ap.spotify.com", 443));
@@ -107,7 +109,7 @@ public class Protocol {
 		buffer.putShort((short)3); /* Version: 3 */
 		buffer.putShort((short)0); /* Length (update later) */
 		buffer.putInt(0x00000000); /* Unknown */
-		buffer.putInt(0x00030C00); /* Unknown */
+		buffer.putInt(this.session.clientVersion);
 		buffer.putInt(this.session.clientRevision);
 		buffer.putInt(0x00000000); /* Unknown */
 		buffer.putInt(0x01000000); /* Unknown */
@@ -193,7 +195,16 @@ public class Protocol {
 					paddingLength = buffer[0x119] & 0xFF;
 					
 					if((ret = this.receive(buffer, paddingLength)) > 0){
-						message.append(new String(Arrays.copyOfRange(buffer, 0, ret)));
+						String  msg     = new String(Arrays.copyOfRange(buffer, 0, ret));
+						Pattern pattern = Pattern.compile("\\.([0-9]+)\\.exe");
+						Matcher matcher = pattern.matcher(msg);
+						
+						/* Update client revision. */
+						if(matcher.find()){
+							this.session.clientRevision = Integer.parseInt(matcher.group(1));
+						}
+						
+						message.append(msg);
 					}
 				}
 			}
@@ -367,7 +378,7 @@ public class Protocol {
 			throw new ProtocolException("Failed to read payload.");
 		}
 	}
-
+	
 	/* Send command with payload (will be encrypted with stream cipher). */
 	public synchronized void sendPacket(int command, ByteBuffer payload) throws ProtocolException {
 		ByteBuffer buffer = ByteBuffer.allocate(1 + 2 + payload.remaining());
@@ -486,7 +497,7 @@ public class Protocol {
 		
 		/* Append channel id and ad type. */
 		buffer.putShort((short)channel.getId());
-		buffer.put((byte)type); /* 0: audio, 1: banner */
+		buffer.put((byte)type); /* 0: audio, 1: banner, 2: fullscreen-banner.  */
 		buffer.flip();
 		
 		/* Register channel. */
@@ -775,13 +786,13 @@ public class Protocol {
 		/* Normal playlist. */
 		else{
 			buffer.put(Hex.toBytes(id)); /* 16 bytes */
-			buffer.put((byte)0x02); /* Playlist identifier. */
+			buffer.put((byte)0x02); /* Playlist identifier. TODO: 0x03 spotted. */
 		}
 		
-		buffer.putInt(-1); /* Playlist history. -1: current. 0: last change. */
-		buffer.putInt(0);
-		buffer.putInt(-1);
-		buffer.put((byte)0x01);
+		buffer.putInt(-1); /* Revision. */
+		buffer.putInt(0); /* Number of entries. */
+		buffer.putInt(-1); /* Checksum. */
+		buffer.put((byte)0x01); /* Collaborative. */
 		buffer.flip();
 		
 		/* Register channel. */

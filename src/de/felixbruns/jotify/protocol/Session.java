@@ -24,6 +24,7 @@ public class Session {
 	
 	/* Client identification */
 	protected byte[] clientId;
+	protected int    clientVersion;
 	protected int    clientRevision;
 	
 	/* 16 bytes of Shannon encryption output with random key */
@@ -81,6 +82,7 @@ public class Session {
 	protected byte[] initialServerPacket;
 	
 	/* Always up to date! ;-P */
+	public static final int CLIENT_VERSION  = 0x00031700; /* 0.3.23 */
 	public static final int CLIENT_REVISION = 99998;
 	
 	/* Constructor for a new spotify session. */
@@ -88,8 +90,9 @@ public class Session {
 		/* Initialize protocol with this session. */
 		this.protocol = new Protocol(this);
 		
-		/* Set client identification (Spotify 0.3.12 / r45126). */
-		this.clientId       = new byte[]{0x01, 0x04, 0x01, 0x01};
+		/* Set client identification. */
+		this.clientId       = new byte[]{0x01, 0x04, 0x01, 0x01}; // new byte[]{0x01, 0x0B, 0x00, 0x29}
+		this.clientVersion  = CLIENT_VERSION;
 		this.clientRevision = CLIENT_REVISION;
 		
 		/* Client and server generate 16 random bytes each. */
@@ -158,20 +161,31 @@ public class Session {
 	}
 	
 	public Protocol authenticate(String username, String password) throws ConnectionException, AuthenticationException {
+		/* Number of authentication tries. */
+		int tries = 3;
+		
 		/* Set username and password. */
 		this.username = username.getBytes();
 		this.password = password.getBytes();
 		
-		/* Connect to a spotify server. */
-		this.protocol.connect();
-		
-		/* Send and receive inital packets. */
-		try{
-			this.protocol.sendInitialPacket();
-			this.protocol.receiveInitialPacket();
-		}
-		catch(ProtocolException e){
-			throw new AuthenticationException(e);
+		while(true){
+			/* Connect to a spotify server. */
+			this.protocol.connect();
+			
+			/* Send and receive inital packets. */
+			try{
+				this.protocol.sendInitialPacket();
+				this.protocol.receiveInitialPacket();
+				
+				break;
+			}
+			catch(ProtocolException e){
+				if(tries-- > 0){
+					continue;
+				}
+				
+				throw new AuthenticationException(e.getMessage(), e);
+			}
 		}
 		
 		/* Generate auth hash. */
@@ -245,7 +259,7 @@ public class Session {
 			this.protocol.receiveAuthenticationPacket();
 		}
 		catch(ProtocolException e){
-			throw new AuthenticationException(e);
+			throw new AuthenticationException(e.getMessage(), e);
 		}
 		
 		return this.protocol;
