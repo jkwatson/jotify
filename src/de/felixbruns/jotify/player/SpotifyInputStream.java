@@ -343,7 +343,7 @@ public class SpotifyInputStream extends InputStream implements ChannelListener {
 		/* Acquire request lock. */
 		this.requestLock.lock();
 		
-		/* Request data until threshold (TODO) is reached. */
+		/* Request data. */
 		while(this.available() == 0){
 			/* Calculate stream offset for next data request. */
 			this.streamOffset = this.readIndex * CHUNK_SIZE;
@@ -353,7 +353,7 @@ public class SpotifyInputStream extends InputStream implements ChannelListener {
 				break;
 			}
 			
-			/* Wait until a chunk arrived. TODO: timeout here, throw IOException... */
+			/* Wait until a chunk arrived. (TODO: Timeout, then throw IOException!?) */
 			this.requestCondition.awaitUninterruptibly();
 		}
 		
@@ -419,6 +419,11 @@ public class SpotifyInputStream extends InputStream implements ChannelListener {
 	 *         negative, or {@code len} is greater than {@code b.length - off}
 	 */
 	public int read(byte[] b, int off, int len) throws IOException {
+		/* Check buffer. */
+		if(b == null){
+			throw new NullPointerException();
+		}
+		
 		/* Check offset and length arguments. */
 		if(off < 0 || len < 0 || len > b.length - off){
 			throw new IndexOutOfBoundsException();
@@ -435,22 +440,17 @@ public class SpotifyInputStream extends InputStream implements ChannelListener {
 		/* Acquire request lock. */
 		this.requestLock.lock();
 		
-		/* Request data until threshold (TODO) is reached. */
+		/* Request data. */
 		while(this.available() == 0){
-			/* Calculate stream offset for next data request. TODO: search next hole. */
-			//if(this.readPosition > 0){
-			//	this.streamOffset = (this.readIndex + 1) * CHUNK_SIZE;
-			//}
-			//else{
-				this.streamOffset = this.readIndex * CHUNK_SIZE;
-			//}
+			/* Calculate stream offset for next data request. (TODO: Search next hole in data) */
+			this.streamOffset = this.readIndex * CHUNK_SIZE;
 			
 			/* Try to request data, if this fails exit loop. */
 			if(!this.requestData()){
 				break;
 			}
 			
-			/* Wait until a chunk arrived. */
+			/* Wait until a chunk arrived. (TODO: Timeout, then throw IOException!?) */
 			this.requestCondition.awaitUninterruptibly();
 		}
 		
@@ -497,14 +497,36 @@ public class SpotifyInputStream extends InputStream implements ChannelListener {
 			}
 		}
 		
-		//this.debug();
-		
 		/* Return number of actually read bytes. */
 		return read;
 	}
 	
 	/**
-	 * TODO
+	 * Reads some number of bytes from the input stream and stores them into
+	 * the buffer array {@code b}. The number of bytes actually read is returned
+	 * as an integer. This method blocks until input data is available, end of
+	 * stream is detected, or an exception is thrown.
+	 * 
+	 * If the length of {@code b} is zero, then no bytes are read and 0 is returned;
+	 * otherwise, there is an attempt to read at least one byte. If no byte is available
+	 * because the stream is at the end, the value -1 is returned; otherwise, at least
+	 * one byte is read and stored into {@code b}.
+	 * 
+	 * The read(b) method for class InputStream has the same effect as:
+	 * 
+	 * {@code read(b, 0, b.length)} 
+	 * 
+	 * @param b The buffer into which the data is read.
+	 * 
+	 * @return The total number of bytes read into the buffer, or -1 is there is no more
+	 *         data because the end of the stream has been reached.
+	 * 
+	 * @throws IOException If the first byte cannot be read for any reason other than the
+	 *         end of the stream, if the input stream has been closed, or if some other
+	 *         I/O error occurs.
+	 * @throws NullPointerException If {@code b} is null.
+	 * 
+	 * @see {@link #read(byte[], int, int)}
 	 */
 	public int read(byte[] b) throws IOException {
 		return this.read(b, 0, b.length);

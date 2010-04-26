@@ -75,7 +75,6 @@ public class XMLUserParser extends XMLParser implements XMLStreamConstants {
 		while(this.reader.next() == START_ELEMENT){
 			user.setProperty(this.reader.getLocalName(), this.getElementString());
 		}
-		
 	}
 	
 	/**

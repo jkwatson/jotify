@@ -136,17 +136,22 @@ public class Link {
 				throw new InvalidSpotifyURIException();
 			}
 			
-			this.id = Link.toHex(mediaMatcher.group(2));
+			this.id    = Link.toHex(mediaMatcher.group(2));
+			this.user  = null;
+			this.query = null;
 		}
 		/* Check if URI matches playlist pattern. */
 		else if(playlistMatcher.matches()){
-			this.type = Type.PLAYLIST;
-			this.user = playlistMatcher.group(1);
-			this.id   = Link.toHex(playlistMatcher.group(2));
+			this.type  = Type.PLAYLIST;
+			this.user  = playlistMatcher.group(1);
+			this.id    = Link.toHex(playlistMatcher.group(2));
+			this.query = null;
 		}
 		/* Check if URI matches search pattern. */
 		else if(searchMatcher.matches()){
 			this.type = Type.SEARCH;
+			this.id   = null;
+			this.user = null;
 			
 			try{
 				this.query = URLDecoder.decode(searchMatcher.group(1), "UTF-8");

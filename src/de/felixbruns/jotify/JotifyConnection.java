@@ -122,7 +122,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		this.protocol.addListener(this);
 		
 		/* Start I/O thread. */
-		new Thread(this).start();
+		new Thread(this, "I/O-Thread").start();
 	}
 	
 	/**
@@ -494,13 +494,43 @@ public class JotifyConnection implements Jotify, CommandListener {
 		byte[] data;
 		
 		/* Create cache hash. */
-		String hash = "";
+		StringBuffer hashBuffer = new StringBuffer();
 		
-		for(String id : ids){
-			hash += id;
+		for(int i = 0; i < ids.size(); i++){
+			String id = ids.get(i);
+			
+			/*
+			 * Check if id is a 32-character hex string,
+			 * if not try to parse it as a Spotify URI.
+			 */
+			if(id.length() != 32 && !Hex.isHex(id)){
+				try{
+					Link link = Link.create(id);
+					
+					if(!link.isTrackLink()){
+						throw new IllegalArgumentException(
+							"Browse type doesn't match given Spotify URI."
+						);
+					}
+					
+					id = link.getId();
+					
+					/* Set parsed id in list. */
+					ids.set(i, id);
+				}
+				catch(InvalidSpotifyURIException e){
+					throw new IllegalArgumentException(
+						"Given id is neither a 32-character " +
+						"hex string nor a valid Spotify URI."
+					);
+				}
+			}
+			
+			/* Append id to buffer in order to create a cache hash. */
+			hashBuffer.append(id);
 		}
 		
-		hash = Hex.toHex(Hash.sha1(Hex.toBytes(hash)));
+		String hash = Hex.toHex(Hash.sha1(Hex.toBytes(hashBuffer.toString())));
 		
 		/* Check cache. */
 		if(this.cache != null && this.cache.contains("browse", hash)){
