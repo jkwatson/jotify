@@ -106,26 +106,24 @@ public class Protocol {
 		);
 		
 		/* Append fields to buffer. */
-		buffer.putShort((short)3); /* Version: 3 */
+		buffer.putShort((short)3); /* Version 3 */
 		buffer.putShort((short)0); /* Length (update later) */
-		buffer.putInt(0x00000300); /* Unknown */
-		buffer.putInt(this.session.clientVersion);
+		buffer.putInt(this.session.clientOs);
+		buffer.putInt(0x00000000); /* Unknown */
 		buffer.putInt(this.session.clientRevision);
-		buffer.putInt(0x00000000); /* Unknown */
-		buffer.putInt(0x01000000); /* Unknown */
-		buffer.put(this.session.clientId); /* 4 bytes */
-		buffer.putInt(0x00000000); /* Unknown */
+		buffer.putInt(0x00000000); /* Windows: 0x1541ECD0, Mac OSX: 0x00000000 */
+		buffer.putInt(0x01000000); /* Windows: 0x01000000, Mac OSX: 0x01040000 */
+		buffer.putInt(this.session.clientId); /* 4 bytes, Windows: 0x010B0029, Mac OSX: 0x026A0200 */
+		buffer.putInt(0x00000001); /* Unknown */
 		buffer.put(this.session.clientRandom); /* 16 bytes */
 		buffer.put(this.session.dhClientKeyPair.getPublicKeyBytes()); /* 96 bytes */
 		buffer.put(this.session.rsaClientKeyPair.getPublicKeyBytes()); /* 128 bytes */
 		buffer.put((byte)0); /* Random length */
 		buffer.put((byte)this.session.username.length); /* Username length */
 		buffer.putShort((short)0x0100); /* Unknown */
-		/* Random bytes here. */
+		/* Random bytes here... */
 		buffer.put(this.session.username);
-		buffer.put((byte)0x40); /* Unknown */
-		//buffer.put((byte)0x5c); /* Unknown */
-		//buffer.put((byte)(0x00)); /* Unknown */
+		buffer.put((byte)0x40); /* Unknown (probably flags), 0x5F */
 		
 		/* Update length byte. */
 		buffer.putShort(2, (short)buffer.position());
@@ -189,19 +187,28 @@ public class Protocol {
 					break;
 			}
 			
-			/* If substatus is 'Client upgrade required', read and append upgrade URL. */
+			/* If substatus is 'Client upgrade required', update client revision. */
 			if(this.session.serverRandom[1] == 0x01){
 				if((ret = this.receive(buffer, 0x11a)) > 0){
 					paddingLength = buffer[0x119] & 0xFF;
 					
 					if((ret = this.receive(buffer, paddingLength)) > 0){
 						String  msg     = new String(Arrays.copyOfRange(buffer, 0, ret));
-						Pattern pattern = Pattern.compile("\\.([0-9]+)\\.exe");
+						Pattern pattern = Pattern.compile("([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.[0-9a-z]+");
 						Matcher matcher = pattern.matcher(msg);
 						
 						/* Update client revision. */
 						if(matcher.find()){
-							this.session.clientRevision = Integer.parseInt(matcher.group(1));
+							/* 
+							 * 0x0266EF51: 40.300.369 -> 0.4.3.369.gd0ec4115
+							 * 0x0266EF5C: 40.300.380 -> 0.4.3.380.g88163066
+							 * 0x0266EF5C: 40.300.383 -> 0.4.3.380.g278a6e51
+							 * 
+							 * major * 1000000000 (???) + minor * 10000000 + maintenance * 100000 + build.
+							 */
+							this.session.clientRevision  = Integer.parseInt(matcher.group(2)) * 10000000;
+							this.session.clientRevision += Integer.parseInt(matcher.group(3)) * 100000;
+							this.session.clientRevision += Integer.parseInt(matcher.group(4));
 						}
 						
 						message.append(msg);
@@ -345,7 +352,7 @@ public class Protocol {
 		buffer.put((byte)0); /* Unknown. */
 		buffer.putShort((short)this.session.puzzleSolution.length);
 		buffer.putInt(0x0000000); /* Unknown. */
-		//buffer.put(randomBytes); /* Zero random bytes :-) */
+		/* Random bytes here... */
 		buffer.put(this.session.puzzleSolution); /* 8 bytes */
 		buffer.flip();
 		
@@ -789,10 +796,11 @@ public class Protocol {
 			buffer.put((byte)0x02); /* Playlist identifier. TODO: 0x03 spotted. */
 		}
 		
-		buffer.putInt(-1); /* Revision. */
+		/* TODO */
+		buffer.putInt(-1); /* Revision. -1: no cached data. */
 		buffer.putInt(0); /* Number of entries. */
-		buffer.putInt(-1); /* Checksum. */
-		buffer.put((byte)0x01); /* Collaborative. */
+		buffer.putInt(1); /* Checksum. */
+		buffer.put((byte)0x00); /* Collaborative. */
 		buffer.flip();
 		
 		/* Register channel. */

@@ -206,6 +206,6 @@ public class Playlist implements Iterable<Track> {
 	}
 	
 	public String toString(){
-		return String.format("[Playlist: %s, %s]", this.author, this.name, this.revision);
+		return String.format("[Playlist: %s, %s, %d]", this.author, this.name, this.revision);
 	}
 }

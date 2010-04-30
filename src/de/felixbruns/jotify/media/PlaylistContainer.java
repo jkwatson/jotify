@@ -73,4 +73,8 @@ public class PlaylistContainer implements Iterable<Playlist> {
 	public Iterator<Playlist> iterator(){
 		return this.playlists.iterator();
 	}
+	
+	public String toString(){
+		return String.format("[PlaylistContainer: %s, %d]", this.author, this.revision);
+	}
 }

@@ -23,9 +23,9 @@ public class Session {
 	private Protocol protocol;
 	
 	/* Client identification */
-	protected byte[] clientId;
-	protected int    clientVersion;
-	protected int    clientRevision;
+	protected int clientId;
+	protected int clientOs;
+	protected int clientRevision;
 	
 	/* 16 bytes of Shannon encryption output with random key */
 	protected byte[] clientRandom;
@@ -81,18 +81,27 @@ public class Session {
 	protected byte[] initialClientPacket;
 	protected byte[] initialServerPacket;
 	
-	/* Always up to date! ;-P */
-	public static final int CLIENT_VERSION  = 0x00031700; /* 0.3.23 */
-	public static final int CLIENT_REVISION = 99998;
+	/* Client operating systems. */
+	protected static final int CLIENT_OS_WINDOWS_X86 = 0x00000000; /* Windows x86 */
+	protected static final int CLIENT_OS_MACOSX_X86  = 0x00000100; /* Mac OSX x86 */
+	protected static final int CLIENT_OS_UNKNOWN_1   = 0x00000200; /* libspotify (guess) */
+	protected static final int CLIENT_OS_UNKNOWN_2   = 0x00000300; /* iPhone? / Android? / Symbian? */
+	protected static final int CLIENT_OS_UNKNOWN_3   = 0x00000400; /* iPhone? / Android? / Symbian? */
+	protected static final int CLIENT_OS_MACOSX_PPC  = 0x00000500; /* Mac OSX PPC */
+	protected static final int CLIENT_OS_UNKNOWN_4   = 0x00000600; /* iPhone? / Android? / Symbian? */
+	
+	/* Client ID and revision (Always up to date! ;-P) */
+	protected static final int CLIENT_ID       = 0x01040101; /* 0x010B0029 */
+	protected static final int CLIENT_REVISION = 0xFFFFFFFF;
 	
 	/* Constructor for a new spotify session. */
 	public Session(){
 		/* Initialize protocol with this session. */
 		this.protocol = new Protocol(this);
 		
-		/* Set client identification. */
-		this.clientId       = new byte[]{0x01, 0x04, 0x01, 0x01}; // new byte[]{0x01, 0x0B, 0x00, 0x29}
-		this.clientVersion  = CLIENT_VERSION;
+		/* Set client properties. */
+		this.clientId       = CLIENT_ID;
+		this.clientOs       = CLIENT_OS_WINDOWS_X86;
 		this.clientRevision = CLIENT_REVISION;
 		
 		/* Client and server generate 16 random bytes each. */
@@ -105,6 +114,8 @@ public class Session {
 		this.serverBlob = new byte[256];
 		
 		/* Allocate buffer for salt and auth hash. */
+		this.username = null;
+		this.password = null;
 		this.salt     = new byte[10];
 		this.authHash = new byte[20];
 		
@@ -172,7 +183,7 @@ public class Session {
 			/* Connect to a spotify server. */
 			this.protocol.connect();
 			
-			/* Send and receive inital packets. */
+			/* Send and receive initial packets. */
 			try{
 				this.protocol.sendInitialPacket();
 				this.protocol.receiveInitialPacket();
