@@ -108,7 +108,7 @@ public class Protocol {
 		/* Append fields to buffer. */
 		buffer.putShort((short)3); /* Version: 3 */
 		buffer.putShort((short)0); /* Length (update later) */
-		buffer.putInt(0x00000000); /* Unknown */
+		buffer.putInt(0x00000300); /* Unknown */
 		buffer.putInt(this.session.clientVersion);
 		buffer.putInt(this.session.clientRevision);
 		buffer.putInt(0x00000000); /* Unknown */
