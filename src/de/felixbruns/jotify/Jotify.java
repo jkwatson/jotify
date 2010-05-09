@@ -169,6 +169,28 @@ public interface Jotify extends Runnable, Player {
 	public List<Track> browseTracks(List<String> ids) throws TimeoutException;
 	
 	/**
+	 * Request a replacement track.
+	 * 
+	 * @param track The track to search the replacement for.
+	 * 
+	 * @return A {@link Track} object.
+	 * 
+	 * @see Track
+	 */
+	public Track replacement(Track track) throws TimeoutException;
+	
+	/**
+	 * Request multiple replacement track.
+	 * 
+	 * @param tracks The tracks to search the replacements for.
+	 * 
+	 * @return A list of {@link Track} objects.
+	 * 
+	 * @see Track
+	 */
+	public List<Track> replacement(List<Track> tracks) throws TimeoutException;
+	
+	/**
 	 * Get stored user playlists.
 	 * 
 	 * @return A {@link PlaylistContainer} holding {@link Playlist} objects

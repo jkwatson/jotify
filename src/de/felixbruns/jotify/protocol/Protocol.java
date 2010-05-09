@@ -111,7 +111,7 @@ public class Protocol {
 		buffer.putInt(this.session.clientOs);
 		buffer.putInt(0x00000000); /* Unknown */
 		buffer.putInt(this.session.clientRevision);
-		buffer.putInt(0x00000000); /* Windows: 0x1541ECD0, Mac OSX: 0x00000000 */
+		buffer.putInt(0x1541ECD0); /* Windows: 0x1541ECD0, Mac OSX: 0x00000000 */
 		buffer.putInt(0x01000000); /* Windows: 0x01000000, Mac OSX: 0x01040000 */
 		buffer.putInt(this.session.clientId); /* 4 bytes, Windows: 0x010B0029, Mac OSX: 0x026A0200 */
 		buffer.putInt(0x00000001); /* Unknown */
@@ -123,7 +123,7 @@ public class Protocol {
 		buffer.putShort((short)0x0100); /* Unknown */
 		/* Random bytes here... */
 		buffer.put(this.session.username);
-		buffer.put((byte)0x40); /* Unknown (probably flags), 0x5F */
+		buffer.put((byte)0x5F);/* Minor protocol version. */
 		
 		/* Update length byte. */
 		buffer.putShort(2, (short)buffer.position());
@@ -344,7 +344,7 @@ public class Protocol {
 	
 	/* Send authentication packet (puzzle solution, HMAC). */
 	public void sendAuthenticationPacket() throws ProtocolException {
-		ByteBuffer buffer = ByteBuffer.allocate(20 + 1 + 1 + 4 + 2 + 15 + 8);
+		ByteBuffer buffer = ByteBuffer.allocate(20 + 1 + 1 + 4 + 2 + 15 + this.session.puzzleSolution.length);
 		
 		/* Append fields to buffer. */
 		buffer.put(this.session.authHmac); /* 20 bytes */
@@ -372,7 +372,7 @@ public class Protocol {
 		
 		/* Check status. */
 		if(buffer[0] != 0x00){
-			throw new ProtocolException("Authentication failed! (Error " + buffer[1] + ")");
+			throw new ProtocolException("Authentication failed!");
 		}
 		
 		/* Check payload length. AND with 0x00FF so we don't get a negative integer. */
@@ -504,7 +504,7 @@ public class Protocol {
 		
 		/* Append channel id and ad type. */
 		buffer.putShort((short)channel.getId());
-		buffer.put((byte)type); /* 0: audio, 1: banner, 2: fullscreen-banner.  */
+		buffer.put((byte)type); /* 0: audio, 1: banner, 2: fullscreen-banner, 3: unknown.  */
 		buffer.flip();
 		
 		/* Register channel. */
@@ -544,8 +544,7 @@ public class Protocol {
 		
 		/* Append channel id, some values, query length and query. */
 		buffer.putShort((short)channel.getId());
-		buffer.putShort((short)0x0000);
-		buffer.putShort((short)0x0000);
+		buffer.putInt(0x00000000);
 		
 		for(Entry<byte[], byte[]> parameter : parameters.entrySet()){
 			byte[] key   = parameter.getKey();
@@ -570,7 +569,7 @@ public class Protocol {
 	public void sendImageRequest(ChannelListener listener, String id) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Image-Channel", Channel.Type.TYPE_IMAGE, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(2 + 20);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 2 + 20);
 		
 		/* Check length of id. */
 		if(id.length() != 40){
@@ -579,6 +578,7 @@ public class Protocol {
 		
 		/* Append channel id and image hash. */
 		buffer.putShort((short)channel.getId());
+		buffer.putShort((short)0x0000);
 		buffer.put(Hex.toBytes(id));
 		buffer.flip();
 		
@@ -594,7 +594,7 @@ public class Protocol {
 		/* Create channel and buffer. */
 		byte[]     queryBytes = query.getBytes(Charset.forName("UTF-8"));
 		Channel    channel    = new Channel("Search-Channel", Channel.Type.TYPE_SEARCH, listener);
-		ByteBuffer buffer     = ByteBuffer.allocate(2 + 4 + 4 + 2 + 1 + queryBytes.length);
+		ByteBuffer buffer     = ByteBuffer.allocate(2 + 2 + 6 * 4 + 2 + 1 + queryBytes.length);
 		
 		/* Check offset and limit. */
 		if(offset < 0){
@@ -604,11 +604,16 @@ public class Protocol {
 			throw new IllegalArgumentException("Limit needs to be either -1 for no limit or > 0");
 		}
 		
-		/* Append channel id, some values, query length and query. */
+		/* Append channel id, some unknown values, query length and query. */
 		buffer.putShort((short)channel.getId());
+		buffer.putShort((short)0x0000); /* Unknown. */
 		buffer.putInt(offset); /* Result offset. */
 		buffer.putInt(limit); /* Reply limit. */
-		buffer.putShort((short)0x0000);
+		buffer.putInt(0x00000000); /* Unknown. */
+		buffer.putInt(0xFFFFFFFF); /* Unknown. */
+		buffer.putInt(0x00000000); /* Unknown. */
+		buffer.putInt(0xFFFFFFFF); /* Unknown. */
+		buffer.putShort((short)0x0000); /* Unknown. */
 		buffer.put((byte)queryBytes.length);
 		buffer.put(queryBytes);
 		buffer.flip();
@@ -629,13 +634,14 @@ public class Protocol {
 	public void sendAesKeyRequest(ChannelListener listener, Track track, File file) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("AES-Key-Channel", Channel.Type.TYPE_AESKEY, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(20 + 16 + 2 + 2);
+		ByteBuffer buffer  = ByteBuffer.allocate(20 + 16 + 2 + 2 + 2);
 		
 		/* Request the AES key for this file by sending the file id and track id. */
 		buffer.put(Hex.toBytes(file.getId())); /* 20 bytes */
 		buffer.put(Hex.toBytes(track.getId())); /* 16 bytes */
 		buffer.putShort((short)0x0000);
 		buffer.putShort((short)channel.getId());
+		buffer.putShort((short)0x0000);
 		buffer.flip();
 		
 		/* Register channel. */
@@ -668,13 +674,14 @@ public class Protocol {
 	public void sendSubstreamRequest(ChannelListener listener, Track track, File file, int offset, int length) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Substream-Channel", Channel.Type.TYPE_SUBSTREAM, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(2 + 2 + 2 + 2 + 2 + 2 + 4 + 20 + 4 + 4);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 2 + 2 + 2 + 2 + 2 + 2 + 4 + 20 + 4 + 4);
 		
 		/* Append channel id. */
 		buffer.putShort((short)channel.getId());
 		
 		/* Unknown 10 bytes. */
 		buffer.putShort((short)0x0800);
+		buffer.putShort((short)0x0000);
 		buffer.putShort((short)0x0000);
 		buffer.putShort((short)0x0000);
 		buffer.putShort((short)0x0000);
@@ -724,7 +731,7 @@ public class Protocol {
 	public void sendBrowseRequest(ChannelListener listener, int type, Collection<String> ids) throws ProtocolException {
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Browse-Channel", Channel.Type.TYPE_BROWSE, listener);
-		ByteBuffer buffer  = ByteBuffer.allocate(2 + 1 + ids.size() * 16 + ((type == 1 || type == 2)?4:0));
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 2 + 1 + ids.size() * 16 + ((type == 1 || type == 2)?4:0));
 		
 		/* Check arguments. */
 		if(type != 1 && type != 2 && type != 3){
@@ -736,6 +743,7 @@ public class Protocol {
 		
 		/* Append channel id and type. */
 		buffer.putShort((short)channel.getId());
+		buffer.putShort((short)0x0000); /* Unknown. */
 		buffer.put((byte)type);
 		
 		/* Append (16 byte binary, 32 byte hex string) ids. */
@@ -750,7 +758,7 @@ public class Protocol {
 		
 		/* Append zero. */
 		if(type == 1 || type == 2){
-			buffer.putInt(0);
+			buffer.putInt(0); /* Timestamp of cached version? */
 		}
 		
 		buffer.flip();
@@ -769,6 +777,76 @@ public class Protocol {
 		list.add(id);
 		
 		this.sendBrowseRequest(listener, type, list);
+	}
+	
+	/* Request replacements for a list of tracks. The response comes as compressed XML. */
+	public void sendReplacementRequest(ChannelListener listener, Collection<Track> tracks) throws ProtocolException {
+		/* Calculate data length. */
+		int dataLength = 0;
+		
+		for(Track track : tracks){
+			if(track.getArtist() != null && track.getArtist().getName() != null){
+				dataLength += track.getArtist().getName().getBytes().length;
+			}
+			
+			if(track.getAlbum() != null && track.getAlbum().getName() != null){
+				dataLength += track.getAlbum().getName().getBytes().length;
+			}
+			
+			if(track.getTitle() != null){
+				dataLength += track.getTitle().getBytes().length;
+			}
+			
+			if(track.getLength() != -1){
+				dataLength += Integer.toString(track.getLength() / 1000).getBytes().length;
+			}
+			
+			dataLength += 4; /* Separators */
+		}
+		
+		/* Create channel and buffer. */
+		Channel    channel = new Channel("Browse-Channel", Channel.Type.TYPE_BROWSE, listener);
+		ByteBuffer buffer  = ByteBuffer.allocate(2 + 2 + 1 + dataLength);
+		
+		/* Append channel id and type. */
+		buffer.putShort((short)channel.getId());
+		buffer.putShort((short)0x0000); /* Unknown. */
+		buffer.put((byte)0x06);
+		
+		/* Append track info. */
+		for(Track track : tracks){
+			if(track.getArtist() != null && track.getArtist().getName() != null){
+				buffer.put(track.getArtist().getName().getBytes());
+			}
+			
+			buffer.put((byte)0x01); /* Separator. */
+			
+			if(track.getAlbum() != null && track.getAlbum().getName() != null){
+				buffer.put(track.getAlbum().getName().getBytes());
+			}
+			
+			buffer.put((byte)0x01); /* Separator. */
+			
+			if(track.getTitle() != null){
+				buffer.put(track.getTitle().getBytes());
+			}
+			
+			buffer.put((byte)0x01); /* Separator. */
+			
+			if(track.getLength() != -1){
+				buffer.put(Integer.toString(track.getLength() / 1000).getBytes());
+			}
+			
+			buffer.put((byte)0x00); /* Separator. */
+		}
+		
+		buffer.flip();
+		
+		/* Register channel. */
+		Channel.register(channel);
+		
+		/* Send packet. */
+		this.sendPacket(Command.COMMAND_BROWSE, buffer);
 	}
 	
 	/* Request playlist details. The response comes as plain XML. */
@@ -793,10 +871,13 @@ public class Protocol {
 		/* Normal playlist. */
 		else{
 			buffer.put(Hex.toBytes(id)); /* 16 bytes */
-			buffer.put((byte)0x02); /* Playlist identifier. TODO: 0x03 spotted. */
+			buffer.put((byte)0x02); /* Playlist identifier. */
 		}
+		/*
+		 * TODO: Other playlist identifiers (e.g. 0x03, starred tracks? inbox?).
+		 */
 		
-		/* TODO */
+		/* TODO: Use those fields to request only the information needed. */
 		buffer.putInt(-1); /* Revision. -1: no cached data. */
 		buffer.putInt(0); /* Number of entries. */
 		buffer.putInt(1); /* Checksum. */

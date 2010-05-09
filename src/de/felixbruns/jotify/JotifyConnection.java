@@ -22,33 +22,37 @@ import de.felixbruns.jotify.protocol.channel.*;
 import de.felixbruns.jotify.util.*;
 
 public class JotifyConnection implements Jotify, CommandListener {
-	private Session          session;
-	private Protocol         protocol;
-	private boolean          running;
-	private User             user;
-	private Semaphore        userSemaphore;
-	private SpotifyOggPlayer oggPlayer;
-	private Cache            cache;
-	private float            volume;
-	private long             timeout;
-	private TimeUnit         unit;
-	
-	/**
-	 * Enum for browsing media.
+	/*
+	 * Values for browsing media.
 	 */
-	private enum BrowseType {
-		ARTIST(1), ALBUM(2), TRACK(3);
-		
-		private int value;
-		
-		private BrowseType(int value){
-			this.value = value;
-		}
-		
-		public int getValue(){
-			return this.value;
-		}
-	}
+	private static final int BROWSE_ARTIST = 1;
+	private static final int BROWSE_ALBUM  = 2;
+	private static final int BROWSE_TRACK  = 3;
+	
+	/*
+	 * Session and protocol associated with this connection.
+	 */
+	protected Session  session;
+	protected Protocol protocol;
+	
+	/*
+	 * User information.
+	 */
+	private User      user;
+	private Semaphore userSemaphore;
+	
+	/*
+	 * Player and cache.
+	 */
+	private Player player;
+	private Cache  cache;
+	
+	/*
+	 * Status and timeout.
+	 */
+	private boolean  running;
+	private long     timeout;
+	private TimeUnit unit;
 	
 	/**
 	 * Create a new Jotify instance using the default {@link Cache}
@@ -76,9 +80,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 		this.running       = false;
 		this.user          = null;
 		this.userSemaphore = new Semaphore(2);
-		this.oggPlayer     = null;
+		this.player        = null;
 		this.cache         = cache;
-		this.volume        = 1.0f;
 		this.timeout       = timeout;
 		this.unit          = unit;
 		
@@ -95,6 +98,16 @@ public class JotifyConnection implements Jotify, CommandListener {
 	public void setTimeout(long timeout, TimeUnit unit){
 		this.timeout = timeout;
 		this.unit    = unit;
+	}
+	
+	/**
+	 * Set timeout for requests.
+	 * 
+	 * @param seconds Timeout in seconds to use.
+	 */
+	public void setTimeout(long seconds){
+		this.timeout = seconds;
+		this.unit    = TimeUnit.SECONDS;
 	}
 	
 	/**
@@ -327,7 +340,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * 
 	 * @see BrowseType
 	 */
-	private Object browse(BrowseType type, String id) throws TimeoutException {
+	private Object browse(int type, String id) throws TimeoutException {
 		/*
 		 * Check if id is a 32-character hex string,
 		 * if not try to parse it as a Spotify URI.
@@ -336,9 +349,9 @@ public class JotifyConnection implements Jotify, CommandListener {
 			try{
 				Link link = Link.create(id);
 				
-				if((type.equals(BrowseType.ARTIST) && !link.isArtistLink()) ||
-				   (type.equals(BrowseType.ALBUM)  && !link.isAlbumLink())  ||
-				   (type.equals(BrowseType.TRACK)  && !link.isTrackLink())){
+				if((type == BROWSE_ARTIST && !link.isArtistLink()) ||
+				   (type == BROWSE_ALBUM  && !link.isAlbumLink())  ||
+				   (type == BROWSE_TRACK  && !link.isTrackLink())){
 					throw new IllegalArgumentException(
 						"Browse type doesn't match given Spotify URI."
 					);
@@ -359,7 +372,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 		
 		/* Send browse request. */
 		try{
-			this.protocol.sendBrowseRequest(callback, type.getValue(), id);
+			this.protocol.sendBrowseRequest(callback, type, id);
 		}
 		catch(ProtocolException e){
 			return null;
@@ -383,7 +396,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 */
 	public Artist browseArtist(String id) throws TimeoutException {
 		/* Browse. */
-		Object artist = this.browse(BrowseType.ARTIST, id);
+		Object artist = this.browse(BROWSE_ARTIST, id);
 		
 		if(artist instanceof Artist){
 			return (Artist)artist;
@@ -418,7 +431,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 */
 	public Album browseAlbum(String id) throws TimeoutException {
 		/* Browse. */
-		Object album = this.browse(BrowseType.ALBUM, id);
+		Object album = this.browse(BROWSE_ALBUM, id);
 		
 		if(album instanceof Album){
 			return (Album)album;
@@ -452,7 +465,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 */
 	public Track browseTrack(String id) throws TimeoutException {
 		/* Browse. */
-		Object object = this.browse(BrowseType.TRACK, id);
+		Object object = this.browse(BROWSE_TRACK, id);
 		
 		if(object instanceof Result){
 			Result result = (Result)object;
@@ -542,7 +555,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 			
 			/* Send browse request. */
 			try{
-				this.protocol.sendBrowseRequest(callback, BrowseType.TRACK.getValue(), ids);
+				this.protocol.sendBrowseRequest(callback, BROWSE_TRACK, ids);
 			}
 			catch(ProtocolException e){
 				return null;
@@ -581,6 +594,48 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		return this.browseTracks(ids);
+	}
+	
+	/**
+	 * Request a replacement track.
+	 * 
+	 * @param track The track to search the replacement for.
+	 * 
+	 * @return A {@link Track} object.
+	 * 
+	 * @see Track
+	 */
+	public Track replacement(Track track) throws TimeoutException {
+		return this.replacement(Arrays.asList(track)).get(0);
+	}
+	
+	/**
+	 * Request multiple replacement track.
+	 * 
+	 * @param tracks The tracks to search the replacements for.
+	 * 
+	 * @return A list of {@link Track} objects.
+	 * @throws TimeoutException  
+	 * 
+	 * @see Track
+	 */
+	public List<Track> replacement(List<Track> tracks) throws TimeoutException {
+		/* Create channel callback */
+		ChannelCallback callback = new ChannelCallback();
+		
+		/* Send browse request. */
+		try{
+			this.protocol.sendReplacementRequest(callback, tracks);
+		}
+		catch(ProtocolException e){
+			return null;
+		}
+		
+		/* Get data. */
+		byte[] data = callback.get(this.timeout, this.unit);
+		
+		/* Create result from XML. */
+		return XMLMediaParser.parseResult(data, "UTF-8").getTracks();
 	}
 	
 	/**
@@ -1477,10 +1532,10 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 */
 	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException {
 		/* Stop previous ogg player. */
-		if(this.oggPlayer != null){
-			this.oggPlayer.stop();
+		if(this.player != null){
+			this.player.stop();
 			
-			this.oggPlayer = null;
+			this.player = null;
 		}
 		
 		try{
@@ -1488,13 +1543,10 @@ public class JotifyConnection implements Jotify, CommandListener {
 			this.protocol.sendPlayRequest();
 			
 			/* Create a new ogg player. */
-			this.oggPlayer = new SpotifyOggPlayer(this.protocol);
+			this.player = new SpotifyOggPlayer(this.protocol);
 			
 			/* Play track. */
-			this.oggPlayer.play(track, bitrate, listener);
-			
-			/* Set volume. */
-			this.oggPlayer.volume(this.volume);
+			this.player.play(track, bitrate, listener);
 		}
 		catch(Exception e){
 			e.printStackTrace();
@@ -1505,8 +1557,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * Start playing or resume current track.
 	 */
 	public void play(){
-		if(this.oggPlayer != null){
-			this.oggPlayer.play();
+		if(this.player != null){
+			this.player.play();
 		}
 	}
 	
@@ -1514,8 +1566,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * Pause playback of current track.
 	 */
 	public void pause(){
-		if(this.oggPlayer != null){
-			this.oggPlayer.pause();
+		if(this.player != null){
+			this.player.pause();
 		}
 	}
 	
@@ -1523,10 +1575,10 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * Stop playback of current track.
 	 */
 	public void stop(){
-		if(this.oggPlayer != null){
-			this.oggPlayer.stop();
+		if(this.player != null){
+			this.player.stop();
 			
-			this.oggPlayer = null;
+			this.player = null;
 		}
 	}
 	
@@ -1536,8 +1588,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @return Length in milliseconds or -1 if not available.
 	 */
 	public int length(){
-		if(this.oggPlayer != null){
-			return this.oggPlayer.length();
+		if(this.player != null){
+			return this.player.length();
 		}
 		
 		return -1;
@@ -1549,8 +1601,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @return Playback position in milliseconds or -1 if not available.
 	 */
 	public int position(){
-		if(this.oggPlayer != null){
-			return this.oggPlayer.position();
+		if(this.player != null){
+			return this.player.position();
 		}
 		
 		return -1;
@@ -1564,8 +1616,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @throws IOException If an I/O error occurs while seeking.
 	 */
 	public void seek(int ms) throws IOException {
-		if(this.oggPlayer != null){
-			this.oggPlayer.seek(ms);
+		if(this.player != null){
+			this.player.seek(ms);
 		}
 	}
 	
@@ -1575,8 +1627,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @return A value from 0.0 to 1.0.
 	 */
 	public float volume(){
-		if(this.oggPlayer != null){
-			return this.oggPlayer.volume();
+		if(this.player != null){
+			return this.player.volume();
 		}
 		
 		return -1.0f;
@@ -1588,10 +1640,8 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @param volume A value from 0.0 to 1.0.
 	 */
 	public void volume(float volume){
-		this.volume = volume;
-		
-		if(this.oggPlayer != null){
-			this.oggPlayer.volume(this.volume);
+		if(this.player != null){
+			this.player.volume(volume);
 		}
 	}
 	

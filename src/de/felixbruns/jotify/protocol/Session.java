@@ -299,7 +299,7 @@ public class Session {
 		buffer.put((byte)0); /* Unknown */
 		buffer.putShort((short)this.puzzleSolution.length);
 		buffer.putInt(0x0000000); /* Unknown */
-		//buffer.put(randomBytes); /* Zero random bytes :-) */
+		/* Random bytes here... */
 		buffer.put(this.puzzleSolution); /* 8 bytes */
 		
 		this.authHmac = Hash.hmacSha1(buffer.array(), this.keyHmac);

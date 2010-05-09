@@ -24,11 +24,12 @@ public class Command {
 	
 	/* Search and metadata. */
 	public static final int COMMAND_BROWSE          = 0x30;
-	public static final int COMMAND_SEARCH          = 0x31;
+	public static final int COMMAND_SEARCH_OLD      = 0x31;
 	public static final int COMMAND_PLAYLISTCHANGED = 0x34;
 	public static final int COMMAND_GETPLAYLIST     = 0x35;
 	public static final int COMMAND_CHANGEPLAYLIST  = 0x36;
 	public static final int COMMAND_GETTOPLIST      = 0x38;
+	public static final int COMMAND_SEARCH          = 0x39;
 	
 	/* Session management. */
 	public static final int COMMAND_NOTIFY      = 0x42;
@@ -40,6 +41,6 @@ public class Command {
 	public static final int COMMAND_REQUESTPLAY = 0x4f;
 	
 	/* Internal. */
-	public static final int COMMAND_PRODINFO    = 0x50;
-	public static final int COMMAND_WELCOME     = 0x69;
+	public static final int COMMAND_PRODINFO = 0x50;
+	public static final int COMMAND_WELCOME  = 0x69;
 }

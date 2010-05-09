@@ -266,6 +266,26 @@ public class JotifyPool implements Jotify, Player {
 		return result;
 	}
 	
+	public Track replacement(Track track) throws TimeoutException {
+		Jotify connection = this.getConnection();
+		
+		Track result = connection.replacement(track);
+		
+		this.releaseConnection(connection);
+		
+		return result;
+	}
+	
+	public List<Track> replacement(List<Track> tracks) throws TimeoutException {
+		Jotify connection = this.getConnection();
+		
+		List<Track> result = connection.replacement(tracks);
+		
+		this.releaseConnection(connection);
+		
+		return result;
+	}
+	
 	public PlaylistContainer playlistContainer() throws TimeoutException {
 		Jotify connection = this.getConnection();
 		
