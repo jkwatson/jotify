@@ -451,6 +451,7 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 								Track track = parseTrack();
 								
 								track.setAlbum(album);
+								track.setCover(album.getCover());
 								
 								tracks.add(track);
 							}
@@ -527,13 +528,9 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 			/* Process depending on element name. */
 			if(name.equals("id")){
 				/* TODO: handle different ID types. */
-				//if(this.getAttributeString("type") == null){
+				if(this.getAttributeString("type") == null){
 					track.setId(this.getElementString());
-				//}
-				//else{
-					/* Skip. */
-				//	this.getElementString();
-				//}
+				}
 			}
 			else if(name.equals("redirect")){
 				track.addRedirect(this.getElementString());

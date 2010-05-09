@@ -275,6 +275,26 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
 					}
 				}
 			}
+			else if(name.equals("set-attribute")){
+				while(this.reader.next() == START_ELEMENT){
+					name = this.reader.getLocalName();
+					
+					if(name.equals("i")){
+						this.reader.getElementText(); /* Skip. */
+					}
+					else if(name.equals("key")){
+						this.reader.getElementText(); /* Skip. */
+					}
+					else if(name.equals("value")){
+						this.reader.getElementText(); /* Skip. */
+					}
+					else{
+						throw new XMLParserException(
+							"Unexpected element '<" + name + ">'", this.reader.getLocation()
+						);
+					}
+				}
+			}
 			else{
 				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
