@@ -1,0 +1,4 @@
+dependencies {
+    compile project(':commons')
+    compile fileTree(dir: '../lib', include: '*.jar')
+}
