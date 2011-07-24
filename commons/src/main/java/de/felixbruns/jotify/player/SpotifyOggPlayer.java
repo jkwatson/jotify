@@ -55,7 +55,8 @@ import de.felixbruns.jotify.protocol.Protocol;
 import de.felixbruns.jotify.util.MathUtilities;
 
 public class SpotifyOggPlayer implements Runnable, Player {
-	/* Information on the track. */
+    private static final int DEFAULT_BUFFER_SIZE = 4096;
+    /* Information on the track. */
 	private Protocol protocol;
 	private Track    track;
 	private int      bitrate;
@@ -191,7 +192,7 @@ public class SpotifyOggPlayer implements Runnable, Player {
 		
 		/* Set up buffer for JOrbis. */
 		this.buffer     = null;
-		this.bufferSize = 2048;
+		this.bufferSize = DEFAULT_BUFFER_SIZE;
 		this.count      = 0;
 		this.index      = 0;
 		this.packet     = 1;

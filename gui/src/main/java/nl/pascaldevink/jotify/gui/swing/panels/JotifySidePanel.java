@@ -2,17 +2,16 @@ package nl.pascaldevink.jotify.gui.swing.panels;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.List;
 
-import javax.swing.DropMode;
-import javax.swing.ImageIcon;
-import javax.swing.JList;
-import javax.swing.JPanel;
-import javax.swing.TransferHandler;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import com.sun.javadoc.SeeTag;
 import de.felixbruns.jotify.Jotify;
 import nl.pascaldevink.jotify.gui.JotifyPlaybackQueue;
 import nl.pascaldevink.jotify.gui.listeners.ClearSelectionListener;
@@ -98,12 +97,47 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 		
 		/* Create and add list to panel. */
 		this.list = new JotifyList();
+        final JPopupMenu popup = new JPopupMenu();
+        popup.setEnabled(false);
+        final JMenuItem play = new JMenuItem("Play");
+        play.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Object selectedValue = list.getSelectedValue();
+                if (selectedValue instanceof Playlist) {
+                    broadcast.fireControlSelect(((Playlist) selectedValue).getTracks());
+                    broadcast.fireControlPlay();
+                }
+                else if (selectedValue instanceof Result) {
+                    broadcast.fireControlSelect(((Result) selectedValue).getTracks());
+                    broadcast.fireControlPlay();
+                }
+            }
+        });
+        popup.add(play);
+        play.setEnabled(false);
+        final JMenuItem addToQueue = new JMenuItem("Add to Queue");
+        addToQueue.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Object selectedValue = list.getSelectedValue();
+                if (selectedValue instanceof Playlist) {
+                    broadcast.fireControlAddTracksToQueue(((Playlist) selectedValue).getTracks());
+                }
+                else if (selectedValue instanceof Result) {
+                    broadcast.fireControlAddTracksToQueue(((Result) selectedValue).getTracks());
+                }
+            }
+        });
+        addToQueue.setEnabled(false);
+        popup.add(addToQueue);
+        this.list.setComponentPopupMenu(popup);
 		this.list.setBorder(new EmptyBorder(5, 0, 5, 0));
 		this.list.addListSelectionListener(new ListSelectionListener(){
 			public void valueChanged(ListSelectionEvent e){
 				/* Get selected object from list. */
 				Object value = list.getSelectedValue();
-				
+                popup.setEnabled(value != null);
+                play.setEnabled(value != null);
+                addToQueue.setEnabled(value != null);
 				/* Show result or playlist in content panel. */
 				if(value instanceof Result){
 					/* Update search query field. */
@@ -120,43 +154,43 @@ public class JotifySidePanel extends JPanel implements PlaylistListener, QueueLi
 		});
 		this.list.setDragEnabled(true);
 		this.list.setDropMode(DropMode.ON);
-		this.list.setTransferHandler(new TransferHandler(){
-			public boolean canImport(TransferHandler.TransferSupport info){
-				if(!info.isDataFlavorSupported(TrackListTransferable.TRACKLIST_FLAVOR)){
-					return false;
-				}
-				
-				final JList.DropLocation dropLocation = (JList.DropLocation)info.getDropLocation();
-				
-				return !dropLocation.isInsert() && dropLocation.getIndex() != -1;
-			}
-			
-			public boolean importData(TransferHandler.TransferSupport info){
-				if(!canImport(info) || !info.isDrop()){
-					return false;
-				}
-				
-				final JList              list         = (JList)info.getComponent();
-				final JList.DropLocation dropLocation = (JList.DropLocation)info.getDropLocation();
-				final Playlist           playlist     = (Playlist)list.getModel().getElementAt(dropLocation.getIndex());
-				
-				/* TODO: Actually send the playlist change to the server. */
-				try{
-					final List<?> trackList = (List<?>)info.getTransferable().getTransferData(TrackListTransferable.TRACKLIST_FLAVOR);
-					
-					for(Object o : trackList){
-						playlist.getTracks().add((Track)o);
-					}
-					
-					broadcast.firePlaylistUpdated(playlist);
-					
-					return true;
-				}
-				catch(Exception e){}
-				
-				return false;
-			}
-		});
+		this.list.setTransferHandler(new TransferHandler() {
+            public boolean canImport(TransferHandler.TransferSupport info) {
+                if (!info.isDataFlavorSupported(TrackListTransferable.TRACKLIST_FLAVOR)) {
+                    return false;
+                }
+
+                final JList.DropLocation dropLocation = (JList.DropLocation) info.getDropLocation();
+
+                return !dropLocation.isInsert() && dropLocation.getIndex() != -1;
+            }
+
+            public boolean importData(TransferHandler.TransferSupport info) {
+                if (!canImport(info) || !info.isDrop()) {
+                    return false;
+                }
+
+                final JList list = (JList) info.getComponent();
+                final JList.DropLocation dropLocation = (JList.DropLocation) info.getDropLocation();
+                final Playlist playlist = (Playlist) list.getModel().getElementAt(dropLocation.getIndex());
+
+                /* TODO: Actually send the playlist change to the server. */
+                try {
+                    final List<?> trackList = (List<?>) info.getTransferable().getTransferData(TrackListTransferable.TRACKLIST_FLAVOR);
+
+                    for (Object o : trackList) {
+                        playlist.getTracks().add((Track) o);
+                    }
+
+                    broadcast.firePlaylistUpdated(playlist);
+
+                    return true;
+                } catch (Exception e) {
+                }
+
+                return false;
+            }
+        });
 		this.add(this.list, BorderLayout.CENTER);
 		
 		this.info = new JotifyCurrentlyPlayingPanel(jotify);

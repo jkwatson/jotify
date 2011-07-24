@@ -203,7 +203,15 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
 				/* Skip characters. */
 				this.reader.next();
 			}
-			else{				
+            else if (name.equals("rid")) {
+                //skip it
+                this.getElementString();
+            }
+            else if (name.equals("version")) {
+                //skip it
+                this.getElementString();
+            }
+			else{
 				throw new XMLParserException(
 					"Unexpected element '<" + name + ">'", this.reader.getLocation()
 				);
@@ -248,7 +256,13 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
 							List<Track> tracks = new ArrayList<Track>();
 							
 							while(tokenizer.hasMoreTokens()){
-								tracks.add(new Track(tokenizer.nextToken().substring(0, 32)));
+                                try {
+                                    Track track = new Track(tokenizer.nextToken().substring(0, 32));
+                                    tracks.add(track);
+                                } catch (Exception e) {
+                                    System.out.println("Skipping track..possibly a local track?");
+//                                    e.printStackTrace();
+                                }
 							}
 							
 							((Playlist)object).setTracks(tracks);
@@ -346,9 +360,11 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
 			return parser.parse(id);
 		}
 		catch(XMLStreamException e){
+            e.printStackTrace();
 			return null;
 		}
 		catch(XMLParserException e){
+            e.printStackTrace();
 			return null;
 		}
 	}

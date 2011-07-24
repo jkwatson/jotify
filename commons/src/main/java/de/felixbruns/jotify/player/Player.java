@@ -5,10 +5,11 @@ import java.util.concurrent.TimeoutException;
 
 import javax.sound.sampled.LineUnavailableException;
 
+import de.felixbruns.jotify.exceptions.ProtocolException;
 import de.felixbruns.jotify.media.Track;
 
 public interface Player {
-	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException;
+	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException, ProtocolException;
 	public void play();
 	public void pause();
 	public void stop();

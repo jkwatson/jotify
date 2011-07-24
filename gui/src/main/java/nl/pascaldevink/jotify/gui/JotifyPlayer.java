@@ -20,7 +20,8 @@ import de.felixbruns.jotify.player.PlaybackListener;
  * playback queue.
  */
 public class JotifyPlayer implements ControlListener, PlaybackListener {
-	private JotifyBroadcast        broadcast;
+    private static final int DEFAULT_BIT_RATE = File.BITRATE_160;
+    private JotifyBroadcast        broadcast;
 	private JotifyPlaybackQueue    queue;
 	private List<PlaybackListener> listeners;
 	private float                  volume;
@@ -63,7 +64,7 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 			this.jotify.stop();
 			
 			try{
-				this.jotify.play(track, File.BITRATE_160, this);
+				this.jotify.play(track, DEFAULT_BIT_RATE, this);
 				this.jotify.volume(this.volume);
 				
 				this.broadcast.firePlayerTrackChanged(track);
@@ -82,7 +83,7 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 			this.jotify.stop();
 			
 			try{
-				this.jotify.play(track, File.BITRATE_160, this);
+				this.jotify.play(track, DEFAULT_BIT_RATE, this);
 				this.jotify.volume(this.volume);
 				
 				this.broadcast.firePlayerTrackChanged(track);
@@ -90,7 +91,8 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 				this.broadcast.fireQueueUpdated(this.queue);
 			}
 			catch(Exception e){
-				e.printStackTrace();
+                e.printStackTrace();
+                controlNext();
 			}
 		}
 	}
@@ -130,35 +132,44 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
 		
 		this.broadcast.fireQueueUpdated(this.queue);
 	}
-	
-	public void playbackFinished(Track track){
+
+    public void addTracks(List<Track> tracks) {
+        this.queue.addAll(tracks);
+        this.broadcast.fireQueueUpdated(this.queue);
+    }
+
+    public void shuffle() {
+        queue.shuffle();
+    }
+
+    public void playbackFinished(Track track){
 		this.controlNext();
-		
+
 		for(PlaybackListener listener : this.listeners){
 			listener.playbackFinished(track);
 		}
 	}
-	
+
 	public void playbackPosition(Track track, int position){
 		this.broadcast.firePlayerPositionChanged(position);
-		
+
 		for(PlaybackListener listener : this.listeners){
 			listener.playbackPosition(track, position);
 		}
 	}
-	
+
 	public void playbackStarted(Track track){
 		for(PlaybackListener listener : this.listeners){
 			listener.playbackStarted(track);
 		}
 	}
-	
+
 	public void playbackStopped(Track track){
 		for(PlaybackListener listener : this.listeners){
 			listener.playbackStopped(track);
 		}
 	}
-	
+
 	public void playbackResumed(Track track) {
 		for(PlaybackListener listener : this.listeners){
 			listener.playbackResumed(track);

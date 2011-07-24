@@ -13,6 +13,7 @@ import javax.sound.sampled.LineUnavailableException;
 
 import de.felixbruns.jotify.exceptions.AuthenticationException;
 import de.felixbruns.jotify.exceptions.ConnectionException;
+import de.felixbruns.jotify.exceptions.ProtocolException;
 import de.felixbruns.jotify.media.Album;
 import de.felixbruns.jotify.media.Artist;
 import de.felixbruns.jotify.media.Playlist;
@@ -480,16 +481,14 @@ public class JotifyPool implements Jotify, Player {
 		return success;
 	}
 	
-	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException {
+	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException, ProtocolException {
 		if(this.playConnection != null){
 			this.playConnection.stop();
 			
 			this.releaseConnection(this.playConnection);
-			
-			this.playConnection = null;
 		}
 		
-		this.playConnection = this.getConnection();
+		this.playConnection = getConnection();
 		
 		this.playConnection.play(track, bitrate, listener);
 	}

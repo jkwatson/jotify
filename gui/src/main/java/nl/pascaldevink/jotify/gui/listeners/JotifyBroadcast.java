@@ -182,6 +182,12 @@ public class JotifyBroadcast {
 			listener.controlSelect(tracks);
 		}
 	}
+
+    public void fireControlAddTracksToQueue(List<Track> tracks) {
+        for(ControlListener listener : this.controlListeners){
+            listener.addTracks(tracks);
+        }
+    }
 	
 	public void fireControlQueue(Track track){
 		for(ControlListener listener : this.controlListeners){

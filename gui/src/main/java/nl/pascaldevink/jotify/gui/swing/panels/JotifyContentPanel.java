@@ -1,11 +1,6 @@
 package nl.pascaldevink.jotify.gui.swing.panels;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Image;
-import java.awt.Toolkit;
+import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
@@ -18,16 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import javax.swing.ImageIcon;
-import javax.swing.JComponent;
-import javax.swing.JEditorPane;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.TransferHandler;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
@@ -88,7 +74,12 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.infoPane.setFocusable(false);
 		this.infoPane.addHyperlinkListener(this);
 		this.infoPane.setOpaque(false);
-		this.add(this.infoPane, BorderLayout.NORTH);
+        JScrollPane jScrollPane = new JScrollPane(this.infoPane);
+        jScrollPane.getViewport().setOpaque(false);
+        jScrollPane.setBackground(new Color(55, 55, 55));
+
+
+//        this.add(jScrollPane, BorderLayout.NORTH);
 		
 		this.imageLabel = new JLabel();
 		this.imageLabel.setOpaque(false);
@@ -254,7 +245,9 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 		this.scrollPane.setOpaque(false);
 		this.scrollPane.getViewport().setOpaque(false);
 		this.scrollPane.setBorder(new EmptyBorder(0, 0, 0, 0));
-		this.add(this.scrollPane, BorderLayout.CENTER);
+        JSplitPane mainContent = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true, jScrollPane, this.scrollPane);
+
+        this.add(mainContent, BorderLayout.CENTER);
 	}
 	
 	/* TODO: Beautify :-P */
@@ -360,7 +353,7 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			Artist artist = artists.next();
 			
 			artistsHtml +=
-				"<a style=\"text-decoration: none;\" href=\"artist:" + artist.getName() + "\">" + artist.getName() + "</a>" +
+				"<a style=\"text-decoration: none;\" href=\"spotify:artist:" + artist.getId() + "\">" + artist.getName() + "</a>" +
 				(artists.hasNext()?" &bull; ":"");
 		}
 		
@@ -369,9 +362,9 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 			Artist artist = album.getArtist();
 			
 			albumsHtml +=
-				"<a style=\"text-decoration: none;\" href=\"album:" + album.getId() + "\">" + album.getName() + "</a>" +
+				"<a style=\"text-decoration: none;\" href=\"spotify:album:" + album.getId() + "\">" + album.getName() + "</a>" +
 				" <span style=\"color: #545454;\">by " +
-				"<a style=\"text-decoration: none;\" href=\"artist:" + artist.getName() + "\">" + artist.getName() + "</a>" +
+				"<a style=\"text-decoration: none;\" href=\"spotify:artist:" + artist.getId() + "\">" + artist.getName() + "</a>" +
 				"</span>" +
 				(albums.hasNext()?" &bull; ":"");
 		}
@@ -509,10 +502,10 @@ public class JotifyContentPanel extends JPanel implements HyperlinkListener, Pla
 				}
 			}
 			catch(InvalidSpotifyURIException ex){
-				/* Ignore. */
+				ex.printStackTrace();
 			}
 			catch(TimeoutException ex){
-				/* Ignore. */
+				ex.printStackTrace();
 			}
 		}
 	}

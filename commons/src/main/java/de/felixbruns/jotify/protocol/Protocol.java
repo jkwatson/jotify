@@ -567,6 +567,7 @@ public class Protocol {
 	
 	/* Request image using a 20 byte id. The response is a JPG. */
 	public void sendImageRequest(ChannelListener listener, String id) throws ProtocolException {
+        System.out.println("image id = " + id);
 		/* Create channel and buffer. */
 		Channel    channel = new Channel("Image-Channel", Channel.Type.TYPE_IMAGE, listener);
 		ByteBuffer buffer  = ByteBuffer.allocate(2 + 2 + 20);

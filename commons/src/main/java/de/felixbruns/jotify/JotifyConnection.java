@@ -659,9 +659,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 			this.protocol.sendPlaylistRequest(callback, null);
 			
 			/* Create and return playlist. */
-			return XMLPlaylistParser.parsePlaylistContainer(
-				callback.get(this.timeout, this.unit), "UTF-8"
-			);
+			return XMLPlaylistParser.parsePlaylistContainer(callback.get(this.timeout, this.unit), "UTF-8");
 		}
 		catch(ProtocolException e){
 			return PlaylistContainer.EMPTY;
@@ -894,11 +892,13 @@ public class JotifyConnection implements Jotify, CommandListener {
 				
 				id = link.getId();
 			}
-			catch(InvalidSpotifyURIException e){
-				throw new IllegalArgumentException(
-					"Given id is neither a 32-character " +
-					"hex string nor a valid Spotify URI."
-				);
+			catch(Exception e){
+                e.printStackTrace();
+                return null;
+//				throw new IllegalArgumentException(
+//					"Given id is neither a 32-character " +
+//					"hex string nor a valid Spotify URI."
+//				);
 			}
 		}
 		
@@ -930,8 +930,13 @@ public class JotifyConnection implements Jotify, CommandListener {
 		}
 		
 		/* Create and return playlist. */
-		return XMLPlaylistParser.parsePlaylist(data, "UTF-8", id);
-	}
+        try {
+            return XMLPlaylistParser.parsePlaylist(data, "UTF-8", id);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 	
 	/**
 	 * Get a playlist.
@@ -1530,7 +1535,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 	 * @param track    A {@link Track} object identifying the track to be played.
 	 * @param listener A {@link PlaybackListener} receiving playback status updates.
 	 */
-	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException {
+	public void play(Track track, int bitrate, PlaybackListener listener) throws TimeoutException, IOException, LineUnavailableException, ProtocolException {
 		/* Stop previous ogg player. */
 		if(this.player != null){
 			this.player.stop();
@@ -1538,7 +1543,6 @@ public class JotifyConnection implements Jotify, CommandListener {
 			this.player = null;
 		}
 		
-		try{
 			/* Send play request. */
 			this.protocol.sendPlayRequest();
 			
@@ -1547,10 +1551,6 @@ public class JotifyConnection implements Jotify, CommandListener {
 			
 			/* Play track. */
 			this.player.play(track, bitrate, listener);
-		}
-		catch(Exception e){
-			e.printStackTrace();
-		}
 	}
 	
 	/**

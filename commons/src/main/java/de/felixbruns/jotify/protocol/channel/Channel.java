@@ -3,12 +3,13 @@ package de.felixbruns.jotify.protocol.channel;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import de.felixbruns.jotify.util.ShortUtilities;
 
 public class Channel {
 	/* Static channel id counter. */
-	private static int nextId = 0;
+	private static AtomicInteger nextId = new AtomicInteger(0);
 	private static Map<Integer, Channel> channels;
 	
 	static {
@@ -25,7 +26,7 @@ public class Channel {
 	private ChannelListener listener;
 	
 	public Channel(String name, Type type, ChannelListener listener){
-		this.id           = Channel.nextId++;
+		this.id           = nextId.getAndIncrement();
 		this.name         = name + "-" + this.id;
 		this.state        = State.STATE_HEADER;
 		this.type         = type;

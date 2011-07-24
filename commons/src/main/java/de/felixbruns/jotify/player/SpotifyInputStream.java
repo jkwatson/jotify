@@ -34,11 +34,11 @@ import de.felixbruns.jotify.util.IntegerUtilities;
 public class SpotifyInputStream extends InputStream implements ChannelListener {
 	/*
 	 * Fixed chunk size of 4096 bytes and
-	 * substream size of 5 seconds 160 kbps
+	 * substream size of 5 seconds 320 kbps
 	 * audio data.
 	 */
 	private static final int CHUNK_SIZE     = 4096;
-	private static final int SUBSTREAM_SIZE = 160 * 1024 * 5 / 8;
+	private static final int SUBSTREAM_SIZE = 320 * 1024 * 5 / 8;
 	
 	/* 
 	 * Protocol, track and file for

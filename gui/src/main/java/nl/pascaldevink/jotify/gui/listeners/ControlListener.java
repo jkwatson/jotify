@@ -14,4 +14,5 @@ public interface ControlListener {
 	public void controlSelect(Track track);
 	public void controlSelect(List<Track> tracks);
 	public void controlQueue(Track track);
+    public void addTracks(List<Track> tracks);
 }

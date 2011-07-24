@@ -21,11 +21,11 @@ import de.felixbruns.jotify.util.BaseConvert;
  * @author Felix Bruns <felixbruns@web.de>
  */
 public class Link {
-	/**
+    /**
 	 * Different possible link types.
 	 */
 	public enum Type {
-		ARTIST, ALBUM, TRACK, PLAYLIST, SEARCH;
+		ARTIST, ALBUM, TRACK, PLAYLIST, SEARCH, LOCAL;
 		
 		/**
 		 * Returns the lower-case name of this enum constant.
@@ -49,7 +49,7 @@ public class Link {
 	 * 
 	 * <pre>spotify:(artist|album|track):([0-9A-Za-z]{22})</pre>
 	 */
-	private static final Pattern mediaPattern = Pattern.compile("spotify:(artist|album|track):([0-9A-Za-z]{22})");
+	private static final Pattern mediaPattern = Pattern.compile("spotify:(artist|album|track):([0-9A-Za-z]{22,32})");
 	
 	/**
 	 * A regular expression to match playlist URIs:
@@ -64,7 +64,9 @@ public class Link {
 	 * <pre>spotify:search:([^\\s]+)</pre>
 	 */
 	private static final Pattern searchPattern = Pattern.compile("spotify:search:([^\\s]+)");
-	
+
+	private static final Pattern localPattern = Pattern.compile("spotify:local:([^\\s]+)");
+
 	/**
 	 * The {@link Link.Type} of this link.
 	 */
@@ -118,7 +120,8 @@ public class Link {
 		Matcher mediaMatcher    = mediaPattern.matcher(uri);
 		Matcher playlistMatcher = playlistPattern.matcher(uri);
 		Matcher searchMatcher   = searchPattern.matcher(uri);
-		
+		Matcher localMatcher   = localPattern.matcher(uri);
+
 		/* Check if URI matches artist/album/track pattern. */
 		if(mediaMatcher.matches()){
 			String type = mediaMatcher.group(1);
@@ -135,8 +138,14 @@ public class Link {
 			else{
 				throw new InvalidSpotifyURIException();
 			}
-			
-			this.id    = Link.toHex(mediaMatcher.group(2));
+
+            String id = mediaMatcher.group(2);
+            if (id.length() == 32) {
+                this.id = id;
+            }
+            else {
+                this.id = Link.toHex(id);
+            }
 			this.user  = null;
 			this.query = null;
 		}
@@ -160,6 +169,17 @@ public class Link {
 				throw new InvalidSpotifyURIException();
 			}
 		}
+        else if (localMatcher.matches()) {
+            this.type = Type.LOCAL;
+            this.id = null;
+            this.user = null;
+            try{
+                this.query = URLDecoder.decode(localMatcher.group(1), "UTF-8");
+            }
+            catch(UnsupportedEncodingException e){
+                throw new InvalidSpotifyURIException();
+            }
+        }
 		/* If nothing was matched. */
 		else{
 			throw new InvalidSpotifyURIException();
@@ -351,7 +371,7 @@ public class Link {
 	public static Link create(String uri) throws InvalidSpotifyURIException {
 		return new Link(uri);
 	}
-	
+
 	/**
 	 * Create a {@link Link} from an {@link Artist}.
 	 * 

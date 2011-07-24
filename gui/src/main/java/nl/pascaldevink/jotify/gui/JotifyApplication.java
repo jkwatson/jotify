@@ -157,7 +157,7 @@ public class JotifyApplication {
 					menu.add(trackItem);
 					menu.addSeparator();
 					menu.add(openItem);
-					//menu.addSeparator();
+					menu.addSeparator();
 					//menu.add(playItem);
 					//menu.add(nextItem);
 					//menu.add(prevItem);
@@ -190,7 +190,7 @@ public class JotifyApplication {
 				new Thread("Playlist-Loading-Thread"){
 					public void run(){
 						/* Get information about account playlists. */
-						PlaylistContainer playlists = null;
+						PlaylistContainer playlists;
 						boolean           cached    = true;
 						
 						while(true){
@@ -205,9 +205,9 @@ public class JotifyApplication {
 						}
 						
 						/* Fire playlist added events. */
-						for(Playlist playlist : playlists){
-							broadcast.firePlaylistAdded(playlist);
-						}
+//						for(Playlist playlist : playlists){
+//							broadcast.firePlaylistAdded(playlist);
+//						}
 						
 						/* Check for changes in playlists. */
 						if(playlists.getRevision() > settings.getPlaylistsRevision()){
@@ -223,7 +223,6 @@ public class JotifyApplication {
 							while(true){
 								try{
 									playlist = jotify.playlist(playlist.getId(), cached);
-									
 									break;
 								}
 								catch(TimeoutException e){
@@ -232,14 +231,15 @@ public class JotifyApplication {
 							}
 							
 							/* If playlist contains tracks, browse for track information. */
-							if(!playlist.getTracks().isEmpty()){
+							if(playlist != null && !playlist.getTracks().isEmpty()){
+                                broadcast.firePlaylistAdded(playlist);
 								int totalTracks = playlist.getTracks().size();
 								int numTracks   = 200;
-								int numRequests = (int)(totalTracks / numTracks) + 1;
+								int numRequests = totalTracks / numTracks + 1;
 								
 								/* Browse for 200 tracks at a time tracks and add them to the playlist. */
 								for(int i = 0; i < numRequests; i++){
-									List<Track> tracks = null;
+									List<Track> tracks;
 									
 									while(true){
 										try{
@@ -253,7 +253,7 @@ public class JotifyApplication {
 											break;
 										}
 										catch(TimeoutException e){
-											continue;
+                                            //skip this one
 										}
 									}
 									
@@ -269,8 +269,10 @@ public class JotifyApplication {
 							}
 							
 							/* Fire playlist updated events. */
-							broadcast.firePlaylistUpdated(playlist);
-						}
+                            if (playlist != null &!playlist.getTracks().isEmpty()) {
+                                broadcast.firePlaylistUpdated(playlist);
+                            }
+                        }
 					}
 				}.start();
 				
@@ -319,7 +321,7 @@ public class JotifyApplication {
 	
 	/* Main entry point of program. Create application and initialize it. */
 	public static void main(String[] args) throws Exception {
-		JotifyApplication application = new JotifyApplication(new JotifyPool());
+		JotifyApplication application = new JotifyApplication(new JotifyPool(4));
 		
 		application.initialize();
 	}
