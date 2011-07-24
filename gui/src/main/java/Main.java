@@ -22,7 +22,7 @@ public class Main {
     public static void main(String[] args) throws AuthenticationException, ConnectionException, TimeoutException, IOException, LineUnavailableException, Link.InvalidSpotifyURIException, ProtocolException {
         JotifyPool jotify = new JotifyPool(2);
         try {
-            jotify.login("jkwatson", "landheart");
+            jotify.login("username", "password");
             Track track = jotify.browseTrack("spotify:track:5OnyZ56HLhrWOXdzeETqLk");
             System.out.println("track = " + track);
 
