@@ -1,4 +1,3 @@
-import de.felixbruns.jotify.Jotify;
 import de.felixbruns.jotify.JotifyPool;
 import de.felixbruns.jotify.exceptions.AuthenticationException;
 import de.felixbruns.jotify.exceptions.ConnectionException;
@@ -12,8 +11,6 @@ import nl.pascaldevink.jotify.gui.JotifyPlayer;
 
 import javax.sound.sampled.LineUnavailableException;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -45,9 +42,11 @@ public class Main {
                 }
                 System.out.println("playlist = " + playlist1);
                 if (playlist1 != null && playlist1.hasTracks()) {
-                    List<Track> tracks = playlist1.getTracks();
-                    List<Track> tracks1 = jotify.browse(tracks);
-                    jotifyPlayer.addTracks(tracks1);
+                    if ("stuff to listen to".equals(playlist1.getName())) {
+                        List<Track> tracks = playlist1.getTracks();
+                        List<Track> tracks1 = jotify.browse(tracks);
+                        jotifyPlayer.addTracks(tracks1);
+                    }
                 }
             }
             jotifyPlayer.shuffle();
