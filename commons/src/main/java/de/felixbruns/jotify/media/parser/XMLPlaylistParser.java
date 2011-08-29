@@ -230,10 +230,10 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
                                 try {
                                     Track track = new Track(tokenizer.nextToken().substring(0, 32));
                                     tracks.add(track);
-                                } catch (Exception e) {
+                                } catch (IllegalStateException e) {
                                     //what to do here? We can't currently deal with local tracks, which cause an exception here.
 //                                    System.out.println("Skipping track..possibly a local track?");
-                                    e.printStackTrace();
+//                                    e.printStackTrace();
                                 }
                             }
 
