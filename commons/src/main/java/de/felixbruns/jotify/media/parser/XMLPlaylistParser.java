@@ -316,7 +316,9 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
      */
     public static Object parse(byte[] data, String encoding, String id) {
         try {
-            XMLPlaylistParser parser = new XMLPlaylistParser(new ByteArrayInputStream(data), encoding);
+            ByteArrayInputStream stream = new ByteArrayInputStream(data);
+//            System.out.println(new String(data, encoding));
+            XMLPlaylistParser parser = new XMLPlaylistParser(stream, encoding);
 
             return parser.parse(id);
         } catch (XMLStreamException e) {
@@ -326,6 +328,10 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
             e.printStackTrace();
             return null;
         }
+//        catch (UnsupportedEncodingException e) {
+//            e.printStackTrace();
+//            return null;
+//        }
     }
 
     /**
@@ -337,12 +343,9 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
      */
     public static PlaylistContainer parsePlaylistContainer(byte[] data, String encoding) {
         /* Wrap xml data in corrent document element. */
-        Object playlistContainer = parse(
-                ("<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlists>" +
-                        new String(data) +
-                        "</playlists>").getBytes(),
-                encoding, null
-        );
+        String xml = "<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlists>" + new String(data) + "</playlists>";
+        System.out.println("xml = " + xml);
+        Object playlistContainer = parse(xml.getBytes(), encoding, null);
 
         if (playlistContainer instanceof PlaylistContainer) {
             return (PlaylistContainer) playlistContainer;

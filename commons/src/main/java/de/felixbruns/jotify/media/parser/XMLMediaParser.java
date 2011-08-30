@@ -549,26 +549,9 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
                 /* Skip text. */
                 this.getElementString();
             } else if (name.equals("alternatives")) {
-                skipAlternatives();
+                parseAlternatives(track);
             } else if (name.equals("similar-tracks")) {
-                List<Track> similarTracks = new ArrayList<Track>();
-
-                /* Go to next element and check if it is a start element. */
-                while (this.reader.next() == START_ELEMENT) {
-                    name = this.reader.getLocalName();
-
-                    /* Process depending on element name. */
-                    if (name.equals("id")) {
-                        similarTracks.add(new Track(this.getElementString()));
-                    } else {
-                        throw new XMLParserException(
-                                "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                        );
-                    }
-                }
-
-                /* Set similar tracks. */
-                track.setSimilarTracks(similarTracks);
+                parseSimilarTracks(track);
             } else if (name.equals("external-ids")) {
                 track.setExternalIds(parseExternalIds());
             } else {
@@ -584,6 +567,40 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
         }
 
         return track;
+    }
+
+    private void parseSimilarTracks(Track track) throws XMLStreamException, XMLParserException {
+        String name;
+        List<Track> similarTracks = new ArrayList<Track>();
+        while (this.reader.next() == START_ELEMENT) {
+            name = this.reader.getLocalName();
+            if (name.equals("id")) {
+                similarTracks.add(new Track(this.getElementString()));
+            } else {
+                throw new XMLParserException(
+                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
+                );
+            }
+        }
+        track.setSimilarTracks(similarTracks);
+    }
+
+    private void parseAlternatives(Track track) throws XMLStreamException, XMLParserException {
+        String name;
+        List<Track> alternatives = new ArrayList<Track>();
+        while (this.reader.next() == START_ELEMENT) {
+            name = this.reader.getLocalName();
+
+            /* Process depending on element name. */
+            if (name.equals("track")) {
+                alternatives.add(parseTrack());
+            } else {
+                throw new XMLParserException(
+                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
+                );
+            }
+        }
+        track.setAlternatives(alternatives);
     }
 
     /**
@@ -807,10 +824,7 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             name = this.reader.getLocalName();
 
             /* Process depending on element name. */
-            if (name.equals("alternative")) {
-                /* Skip text. */
-                this.getElementString();
-            } else if (name.equals("track")) {
+            if (name.equals("track")) {
                 parseTrack();
             } else {
                 throw new XMLParserException(
@@ -873,6 +887,7 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
      */
     public static Object parse(byte[] xml, String encoding) {
         try {
+//            System.out.println("xml: " + new String(xml, encoding));
             XMLMediaParser parser = new XMLMediaParser(new ByteArrayInputStream(xml, 0, xml.length - 1), encoding);
 
             return parser.parse();
@@ -885,6 +900,10 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
 
             return null;
         }
+//        catch (UnsupportedEncodingException e) {
+//            e.printStackTrace();
+//            return null;
+//        }
     }
 
     /**
