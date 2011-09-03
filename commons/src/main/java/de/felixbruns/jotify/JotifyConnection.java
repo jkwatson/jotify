@@ -506,7 +506,7 @@ public class JotifyConnection implements Jotify, CommandListener {
 
         /* Create cache hash. */
         StringBuilder hashBuffer = new StringBuilder();
-        if (ids.size() == 0) {
+        if (ids.isEmpty()) {
             return new ArrayList<Track>();
         }
         for (int i = 0; i < ids.size(); i++) {
@@ -631,6 +631,9 @@ public class JotifyConnection implements Jotify, CommandListener {
      * @see Track
      */
     public List<Track> replacement(List<Track> tracks) throws TimeoutException {
+        if (tracks.isEmpty()) {
+            return new ArrayList<Track>();
+        }
         /* Create channel callback */
         ChannelCallback callback = new ChannelCallback();
 

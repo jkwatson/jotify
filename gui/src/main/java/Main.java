@@ -52,7 +52,7 @@ public class Main {
 
                 System.out.println("playlist = " + playlist1.getName());
                 if (playlist1 != null && playlist1.hasTracks()) {
-                    if (playlist1.getName().startsWith("Sweet")) {
+                    if (playlist1.getName().startsWith("Cake")) {
                         System.out.println("********************************************************");
                         System.out.println("********************************************************");
                         System.out.println("********************************************************");
@@ -60,6 +60,7 @@ public class Main {
                         List<Track> tracks = playlist1.getTracks();
                         List<Track> browse = jotify.browse(tracks);
                         jotifyPlayer.addTracks(browse);
+                        jotifyPlayer.controlVolume(.3434f);
                     }
                 }
             }
