@@ -505,8 +505,10 @@ public class JotifyConnection implements Jotify, CommandListener {
         byte[] data;
 
         /* Create cache hash. */
-        StringBuffer hashBuffer = new StringBuffer();
-
+        StringBuilder hashBuffer = new StringBuilder();
+        if (ids.size() == 0) {
+            return new ArrayList<Track>();
+        }
         for (int i = 0; i < ids.size(); i++) {
             String id = ids.get(i);
 
@@ -540,7 +542,8 @@ public class JotifyConnection implements Jotify, CommandListener {
             hashBuffer.append(id);
         }
 
-        String hash = Hex.toHex(Hash.sha1(Hex.toBytes(hashBuffer.toString())));
+        String hex = hashBuffer.toString();
+        String hash = Hex.toHex(Hash.sha1(Hex.toBytes(hex)));
 
         /* Check cache. */
         if (this.cache != null && this.cache.contains("browse", hash)) {
@@ -593,12 +596,19 @@ public class JotifyConnection implements Jotify, CommandListener {
     public List<Track> browse(List<Track> tracks) throws TimeoutException {
         /* Create id list. */
         List<String> ids = new ArrayList<String>();
-
+        List<Track> localTracks = new ArrayList<Track>();
         for (Track track : tracks) {
-            ids.add(track.getId());
+            if (track.getId().equals(Media.LOCAL_DUMMY_ID)) {
+                localTracks.add(track);
+            } else {
+                ids.add(track.getId());
+            }
         }
-
-        return this.browseTracks(ids);
+        //todo fix the order here, so that they are in the same order they came in
+        List<Track> results = new ArrayList<Track>(tracks.size());
+        results.addAll(browseTracks(ids));
+        results.addAll(replacement(localTracks));
+        return results;
     }
 
     /**

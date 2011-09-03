@@ -1,19 +1,19 @@
 package de.felixbruns.jotify.media.parser;
 
-import de.felixbruns.jotify.media.Playlist;
-import de.felixbruns.jotify.media.PlaylistConfirmation;
-import de.felixbruns.jotify.media.PlaylistContainer;
-import de.felixbruns.jotify.media.Track;
+import de.felixbruns.jotify.media.*;
 
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
 public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
+
     /**
      * Create a new stream parser from the given input stream.
      *
@@ -228,12 +228,26 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
 
                             while (tokenizer.hasMoreTokens()) {
                                 try {
-                                    Track track = new Track(tokenizer.nextToken().substring(0, 32));
-                                    tracks.add(track);
+                                    String s = tokenizer.nextToken();
+                                    if (s.startsWith("spotify:local")) {
+                                        String[] pieces = s.split(":");
+                                        try {
+                                            String title = URLDecoder.decode(pieces[4], "UTF-8");
+                                            String artistName = URLDecoder.decode(pieces[2], "UTF-8");
+                                            String albumName = URLDecoder.decode(pieces[3], "UTF-8");
+                                            Artist artist = new Artist(Media.LOCAL_DUMMY_ID, artistName);
+                                            tracks.add(new Track(Media.LOCAL_DUMMY_ID, title, artist, new Album(Media.LOCAL_DUMMY_ID, albumName, artist)));
+                                        } catch (UnsupportedEncodingException e) {
+                                            //really, this should never happen with UTF-8 as the encoding....
+                                            e.printStackTrace();
+                                        }
+                                    } else {
+                                        tracks.add(new Track(s.substring(0, 32)));
+                                    }
                                 } catch (IllegalStateException e) {
                                     //what to do here? We can't currently deal with local tracks, which cause an exception here.
-//                                    System.out.println("Skipping track..possibly a local track?");
-//                                    e.printStackTrace();
+                                    System.out.println("Skipping track..possibly a local track?");
+                                    e.printStackTrace();
                                 }
                             }
 
@@ -359,16 +373,13 @@ public class XMLPlaylistParser extends XMLParser implements XMLStreamConstants {
      *
      * @param data     The xml as bytes.
      * @param encoding The encoding to use.
+     * @param id       the playlist id.
      * @return A {@link Playlist} object if successful, null if not.
      */
     public static Playlist parsePlaylist(byte[] data, String encoding, String id) {
-        /* Wrap xml data in corrent document element. */
-        Object playlist = parse(
-                ("<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" +
-                        new String(data) +
-                        "</playlist>").getBytes(),
-                encoding, id
-        );
+        String xml = "<?xml version=\"1.0\" encoding=\"utf-8\" ?><playlist>" + new String(data) + "</playlist>";
+        System.out.println("playlist xml = " + xml);
+        Object playlist = parse(xml.getBytes(), encoding, id);
 
         if (playlist instanceof Playlist) {
             return (Playlist) playlist;
