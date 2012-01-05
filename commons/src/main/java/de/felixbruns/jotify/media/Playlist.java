@@ -53,8 +53,7 @@ public class Playlist implements Iterable<Track> {
 			}
 			catch(InvalidSpotifyURIException e){
 				throw new IllegalArgumentException(
-					"Given id is neither a 32-character" +
-					"hex string nor a valid Spotify URI.", e
+					"Given id is neither a 32-character hex string nor a valid Spotify URI: " + id, e
 				);
 			}
 		}

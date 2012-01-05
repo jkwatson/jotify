@@ -25,7 +25,7 @@ public class Link {
 	 * Different possible link types.
 	 */
 	public enum Type {
-		ARTIST, ALBUM, TRACK, PLAYLIST, SEARCH, LOCAL;
+		ARTIST, ALBUM, TRACK, PLAYLIST, SEARCH, LOCAL, UNKNOWN;
 		
 		/**
 		 * Returns the lower-case name of this enum constant.
@@ -66,6 +66,7 @@ public class Link {
 	private static final Pattern searchPattern = Pattern.compile("spotify:search:([^\\s]+)");
 
 	private static final Pattern localPattern = Pattern.compile("spotify:local:([^\\s]+)");
+	private static final Pattern startGroupPattern = Pattern.compile("spotify:(start-group|end-group):([^\\s]+)");
 
 	/**
 	 * The {@link Link.Type} of this link.
@@ -121,6 +122,7 @@ public class Link {
 		Matcher playlistMatcher = playlistPattern.matcher(uri);
 		Matcher searchMatcher   = searchPattern.matcher(uri);
 		Matcher localMatcher   = localPattern.matcher(uri);
+		Matcher groupMatcher   = startGroupPattern.matcher(uri);
 
 		/* Check if URI matches artist/album/track pattern. */
 		if(mediaMatcher.matches()){
@@ -179,6 +181,12 @@ public class Link {
             catch(UnsupportedEncodingException e){
                 throw new InvalidSpotifyURIException();
             }
+        }
+        else if (groupMatcher.matches()) {
+            this.type = Type.UNKNOWN;
+            this.id = Link.toHex(groupMatcher.group(2));
+            this.user = null;
+            this.query = null;
         }
 		/* If nothing was matched. */
 		else{

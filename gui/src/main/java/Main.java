@@ -16,7 +16,7 @@ import java.util.concurrent.TimeoutException;
 
 public class Main {
 
-    public static void main(String[] args) throws AuthenticationException, ConnectionException, TimeoutException, IOException, LineUnavailableException, Link.InvalidSpotifyURIException, ProtocolException {
+    public static void main(String[] args) throws Exception {
         JotifyPool jotify = new JotifyPool(2);
         try {
             jotify.login("username", "password");
@@ -72,7 +72,7 @@ public class Main {
             jotifyPlayer.controlPlay();
 
 //            jotify.play(track, 256, new MyPlaybackAdapter());
-//            System.in.read();
+            System.in.read();
         } finally {
             jotify.close();
         }
