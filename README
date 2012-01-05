@@ -11,3 +11,8 @@ Extra dependancies (GUI):
 	
 Extra dependancies (Gateway):
 	- org.json             ( http://www.json.org/java )
+
+
+TO BUILD:
+gradle jar
+this will build a jar file in commons/build/lib/commons-1.0.jar, which can then be used.
