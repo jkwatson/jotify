@@ -49,9 +49,7 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             } else if (name.equals("track")) {
                 return this.parseTrack();
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                System.out.println("Unexpected element '<" + name + ">' while parsing root xml.");
             }
         }
 
@@ -98,9 +96,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             } else if (name.equals("tracks")) {
                 result.setTracks(parseTracks());
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing result.");
             }
         }
 
@@ -126,9 +123,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             if (name.equals("artist")) {
                 artists.add(parseArtist());
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing artists.");
             }
         }
 
@@ -154,9 +150,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             if (name.equals("album")) {
                 albums.add(parseAlbum());
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing albums.");
             }
         }
 
@@ -182,9 +177,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             if (name.equals("track")) {
                 tracks.add(parseTrack());
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing tracks.");
             }
         }
 
@@ -248,9 +242,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             } else if (name.equals("external-ids")) {
                 artist.setExternalIds(parseExternalIds());
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing artist.");
             }
         }
 
@@ -429,9 +422,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             } else if (name.equals("external-ids")) {
                 album.setExternalIds(parseExternalIds());
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing album.");
             }
         }
 
@@ -555,9 +547,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             } else if (name.equals("external-ids")) {
                 track.setExternalIds(parseExternalIds());
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                String value = getElementString();
+                System.out.println("Unexpected element '<" + name + ">' with value '" + value + "' while parsing track.");
             }
         }
 
@@ -577,9 +568,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             if (name.equals("id")) {
                 similarTracks.add(new Track(this.getElementString()));
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing similar tracks.");
             }
         }
         track.setSimilarTracks(similarTracks);
@@ -595,9 +585,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             if (name.equals("track")) {
                 alternatives.add(parseTrack());
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing alternatives.");
             }
         }
         track.setAlternatives(alternatives);
@@ -627,9 +616,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
             } else if (name.equals("height")) {
                 this.getElementString(); /* Skip. */
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing image.");
             }
         }
 
@@ -682,27 +670,24 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
                             if (name.equals("portrait")) {
                                 portraits.add(parseImage());
                             } else {
-                                throw new XMLParserException(
-                                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                                );
+                                getElementString();
+                                System.out.println("Unexpected element '<" + name + ">' while parsing bios (portrait).");
                             }
                         }
 
                         /* Add portraits to biography. */
                         bio.setPortraits(portraits);
                     } else {
-                        throw new XMLParserException(
-                                "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                        );
+                        getElementString();
+                        System.out.println("Unexpected element '<" + name + ">' while parsing bios (portraits).");
                     }
                 }
 
                 /* Add biograhpy to list. */
                 bios.add(bio);
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing bios.");
             }
         }
 
@@ -733,9 +718,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
                 /* Skip to end element, since we only read the attributes. */
                 this.reader.next();
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing files.");
             }
         }
 
@@ -768,9 +752,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
                 /* Skip to end element since we only read the attributes. */
                 this.reader.next();
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing restrictions.");
             }
         }
 
@@ -801,9 +784,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
                 /* Skip to end element since we only read the attributes. */
                 this.reader.next();
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing external ids.");
             }
         }
 
@@ -852,9 +834,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
                 /* Skip text. */
                 this.getElementString();
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing links.");
             }
         }
     }
@@ -871,9 +852,8 @@ public class XMLMediaParser extends XMLParser implements XMLStreamConstants {
                 /* Skip text. */
                 this.getElementString();
             } else {
-                throw new XMLParserException(
-                        "Unexpected element '<" + name + ">'", this.reader.getLocation()
-                );
+                getElementString();
+                System.out.println("Unexpected element '<" + name + ">' while parsing availability.");
             }
         }
     }
