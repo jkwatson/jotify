@@ -93,7 +93,7 @@ public class JotifyPlayer implements ControlListener, PlaybackListener {
                 this.broadcast.fireQueueUpdated(this.queue);
             } catch (Exception e) {
                 e.printStackTrace();
-                controlNext();
+                throw new IllegalStateException("Failed to play next.", e);
             }
         }
     }

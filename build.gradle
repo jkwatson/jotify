@@ -1,10 +1,10 @@
 apply plugin: 'idea'
 
-ideaProject {
-    withXml { root ->
-        root.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'Git'
-    }
-}
+//ideaProject {
+ //   withXml { root ->
+  //      root.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'Git'
+   // }
+//}
 
 subprojects {
   apply plugin: 'java'

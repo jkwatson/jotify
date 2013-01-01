@@ -435,7 +435,18 @@ public class SpotifyInputStream extends InputStream implements ChannelListener {
             }
 
             /* Wait until a chunk arrived. (TODO: Timeout, then throw IOException!?) */
-            this.requestCondition.awaitUninterruptibly();
+            try {
+                boolean success = this.requestCondition.await(30, TimeUnit.SECONDS);
+                if (!success) {
+                    this.requestLock.unlock();
+                    throw new IOException("No data received from Spotify for 30 seconds. Failed to play.");
+                }
+            } catch (InterruptedException e) {
+                Thread.interrupted();
+                this.requestLock.unlock();
+                //is this even remotely correct?
+                return -1;
+            }
         }
 
         /* Release request lock again. */
